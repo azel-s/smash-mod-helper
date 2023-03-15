@@ -2902,6 +2902,287 @@ void SmashData::patchXMLInkColors(map<int, InklingColor>& inklingColors)
 	}
 }
 
+void SmashData::createPRCXML(map<string, map<int, Name>>& names, map<string, map<int, string>>& announcers, map<string, int>& maxSlots)
+{
+	if (!maxSlots.empty() && !announcers.empty())
+	{
+		ifstream uiVanilla("ui_chara_db.xml");
+		ofstream uiEdit("ui_chara_db.prcxml");
+		ofstream msg;
+
+		if (!names.empty())
+		{
+			msg.open("msg_name.xmsbt", ios::out | ios::binary);
+
+			if (msg.is_open())
+			{
+				// UTF-16 LE BOM
+				unsigned char smarker[2];
+				smarker[0] = 0xFF;
+				smarker[1] = 0xFE;
+
+				msg << smarker[0];
+				msg << smarker[1];
+
+				msg.close();
+			}
+			else
+			{
+				log->LogText("> Error: " + fs::current_path().string() + "/msg_name.xmsbt could not be opened!");
+			}
+		}
+
+		if (uiVanilla.is_open() && uiEdit.is_open())
+		{
+			wofstream msgUTF;
+			if (!names.empty())
+			{
+				msgUTF.open("msg_name.xmsbt", ios::binary | ios::app);
+				msgUTF.imbue(std::locale(msgUTF.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian>));
+
+				if (!msgUTF.is_open())
+				{
+					log->LogText("> " + fs::current_path().string() + "/msg_name.xmsbt could not be opened!");
+					return;
+				}
+
+				outputUTF(msgUTF, "<?xml version=\"1.0\" encoding=\"utf-16\"?>");
+				outputUTF(msgUTF, "\n<xmsbt>");
+			}
+
+			uiEdit << "<?xml version=\"1.0\" encoding=\"UTF-16\"?>";
+			uiEdit << "\n<struct>";
+			uiEdit << "\n\t<list hash=\"db_root\">";
+
+			string charcode;
+			string line;
+			string currIndex = "";
+			char status = -1;	// 0 = nothing changed, 1 = struct started, 2 = struct ended
+
+			while (!uiVanilla.eof())
+			{
+				getline(uiVanilla, line);
+
+				if (line.find("<struct index=") != string::npos)
+				{
+					// TODO: Make efficent
+					currIndex = line.substr(line.find('"') + 1, line.rfind('"') - line.find('"') - 1);
+
+					if (status == 0)
+					{
+						uiEdit << "\n\t\t<hash40 index=\"" << currIndex << "\">dummy</hash40>";
+					}
+					else if (status == 1)
+					{
+						uiEdit << "\n\t\t</struct>";
+						status = 0;
+					}
+					else
+					{
+						status = 0;
+					}
+				}
+				else if (line.find("\"name_id\"") != string::npos)
+				{
+					int begin = line.find(">") + 1;
+					int end = line.find("<", begin);
+					charcode = line.substr(begin, end - begin);
+
+					// Deal with max-slots first
+					if (maxSlots.find(charcode) != maxSlots.end())
+					{
+						status = 1;
+						uiEdit << "\n\t\t<struct index=\"" << currIndex << "\">";
+						uiEdit << "\n\t\t\t<byte hash=\"color_num\">" << to_string(maxSlots[charcode]) << "</byte>";
+					}
+
+					// Deal with names second
+					if (!names.empty() && names.find(charcode) != names.end())
+					{
+						if (status != 1)
+						{
+							uiEdit << "\n\t\t<struct index=\"" << currIndex << "\">";
+							status = 1;
+						}
+						auto charIter = names.find(charcode);
+
+						auto i = charIter->second.begin();
+						while (i != charIter->second.end())
+						{
+							string slot;
+							string nameSlot = to_string(i->first + 8);
+
+							if (nameSlot.size() == 1)
+							{
+								nameSlot = "0" + nameSlot;
+							}
+
+							if (i->first > 9)
+							{
+								slot = to_string(i->first);
+							}
+							else
+							{
+								slot = "0" + to_string(i->first);
+							}
+
+							uiEdit << "\n\t\t\t<byte hash=\"n" << slot << "_index\">" << nameSlot << "</byte>";
+
+							if (nameSlot == "08")
+							{
+								outputUTF(msgUTF, "\n\t<entry label=\"nam_chr3_" + nameSlot + "_" + charcode + "\">");
+								outputUTF(msgUTF, "\n\t\t<text>");
+								outputUTF(msgUTF, i->second.cssName, true);
+								outputUTF(msgUTF, "</text>");
+								outputUTF(msgUTF, "\n\t</entry>");
+							}
+
+							outputUTF(msgUTF, "\n\t<entry label=\"nam_chr1_" + nameSlot + "_" + charcode + "\">");
+							outputUTF(msgUTF, "\n\t\t<text>");
+							outputUTF(msgUTF, i->second.cspName, true);
+							outputUTF(msgUTF, "</text>");
+							outputUTF(msgUTF, "\n\t</entry>");
+
+							outputUTF(msgUTF, "\n\t<entry label=\"nam_chr2_" + nameSlot + "_" + charcode + "\">");
+							outputUTF(msgUTF, "\n\t\t<text>");
+							outputUTF(msgUTF, i->second.vsName, true);
+							outputUTF(msgUTF, "</text>");
+							outputUTF(msgUTF, "\n\t</entry>");
+
+							if (charcode != "eflame_first" && charcode != "elight_first")
+							{
+								outputUTF(msgUTF, "\n\t<entry label=\"nam_stage_name_" + nameSlot + "_" + charcode + "\">");
+								outputUTF(msgUTF, "\n\t\t<text>");
+								outputUTF(msgUTF, i->second.stageName, true);
+								outputUTF(msgUTF, "</text>");
+								outputUTF(msgUTF, "\n\t</entry>");
+							}
+
+							i++;
+						}
+					}
+
+					// Deal with announcers third
+					if (!announcers.empty() && announcers.find(charcode) != announcers.end())
+					{
+						if (status != 1)
+						{
+							uiEdit << "\n\t\t<struct index=\"" << currIndex << "\">";
+							status = 1;
+						}
+						auto charIter = announcers.find(charcode);
+
+						vector<string> vanillaLabels;
+						string label = "";
+						bool action = false;
+
+						// Deal with characall_label
+						while (line.find("</struct>") == string::npos)
+						{
+							getline(uiVanilla, line);
+
+							// Store vanillaLabels
+							if (line.find("\"characall_label") != string::npos)
+							{
+								auto startPos = line.find('>') + 1;
+								vanillaLabels.push_back(line.substr(startPos, line.rfind("<") - startPos));
+							}
+
+							if (line.find("\"characall_label_c07\"") != string::npos)
+							{
+								label = "characall_label_c";
+								action = true;
+							}
+							else if (line.find("\"characall_label_article_c07\"") != string::npos)
+							{
+								label = "characall_label_article_c";
+								action = true;
+							}
+
+							if (action)
+							{
+								for (auto i = charIter->second.begin(); i != charIter->second.end(); i++)
+								{
+									string slot = (i->first + 8 > 9 ? "" : "0") + to_string(i->first + 8);
+
+									if (i->second == "Default")
+									{
+										string temp = (i->first > 9 ? "" : "0") + to_string(i->first);
+
+										// Find base slot
+										if (i->first > 7)
+										{
+											for (auto j = baseSlots[charcode].begin(); j != baseSlots[charcode].end(); j++)
+											{
+												if (j->second.find(temp) != j->second.end())
+												{
+													temp = vanillaLabels[stoi(j->first)];
+													break;
+												}
+											}
+										}
+										else
+										{
+											temp = vanillaLabels[i->first];
+										}
+
+										// Replace with 00's announcer if 0#'s announcer is empty
+										if (temp == "")
+										{
+											temp = vanillaLabels[0];
+										}
+
+										line = "<hash40 hash=\"" + label + slot + "\">" + temp + "</hash40>";
+									}
+									else
+									{
+										line = "<hash40 hash=\"" + label + slot + "\">vc_narration_characall_" + i->second + "</hash40>";
+									}
+
+									uiEdit << "\n\t\t\t" << line;
+								}
+
+								vanillaLabels.clear();
+								action = false;
+							}
+						}
+					}
+				}
+			}
+
+			if (!names.empty())
+			{
+				outputUTF(msgUTF, "\n</xmsbt>");
+				msgUTF.close();
+
+				fs::create_directories(rootPath + "/ui/message/");
+				fs::rename(fs::current_path() / "msg_name.xmsbt", rootPath + "/ui/message/msg_name.xmsbt");
+			}
+
+
+			uiEdit << "\n\t</list>";
+			uiEdit << "\n</struct>";
+
+			uiVanilla.close();
+			uiEdit.close();
+
+			fs::remove(fs::current_path() / "ui_chara_db.xml");
+		}
+		else
+		{
+			if (!uiVanilla.is_open())
+			{
+				log->LogText("> Error: " + fs::current_path().string() + "/ui_chara_db.xml could not be opened!");
+			}
+
+			if (!uiEdit.is_open())
+			{
+				log->LogText("> Error: " + fs::current_path().string() + "/ui_chara_db_EDIT.xml could not be opened!");
+			}
+		}
+	}
+}
+
 void SmashData::outputUTF(wofstream& file, string str, bool parse)
 {
 	if (parse)

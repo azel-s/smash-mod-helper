@@ -108,6 +108,7 @@ struct SmashData
 	void patchXMLNames(map<string, map<int, Name>>& names);
 	void patchXMLAnnouncer(map<string, map<int, string>>& announcers);
 	void patchXMLInkColors(map<int, InklingColor>& inklingColors);
+	void createPRCXML(map<string, map<int, Name>>& names, map<string, map<int, string>>& announcers, map<string, int>& maxSlots);
 	void outputUTF(wofstream& file, string str, bool parse = false);
 
 	// Clear Mod Data

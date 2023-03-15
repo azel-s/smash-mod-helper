@@ -53,6 +53,7 @@ class MainFrame : public wxFrame
 		void onBasePressed(wxCommandEvent& evt);
 		void onInkPressed(wxCommandEvent& evt);
 		void onPrcxPressed(wxCommandEvent& evt);
+		void onPrcxPressed2(wxCommandEvent& evt);
 		void onClose(wxCloseEvent& evt);
 
 		// Destructor
