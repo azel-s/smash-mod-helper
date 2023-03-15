@@ -2957,7 +2957,7 @@ void SmashData::createPRCXML(map<string, map<int, Name>>& names, map<string, map
 			string charcode;
 			string line;
 			string currIndex = "";
-			char status = -1;	// 0 = nothing changed, 1 = struct started, 2 = struct ended
+			char status = 0;
 
 			while (!uiVanilla.eof())
 			{
@@ -2967,20 +2967,6 @@ void SmashData::createPRCXML(map<string, map<int, Name>>& names, map<string, map
 				{
 					// TODO: Make efficent
 					currIndex = line.substr(line.find('"') + 1, line.rfind('"') - line.find('"') - 1);
-
-					if (status == 0)
-					{
-						uiEdit << "\n\t\t<hash40 index=\"" << currIndex << "\">dummy</hash40>";
-					}
-					else if (status == 1)
-					{
-						uiEdit << "\n\t\t</struct>";
-						status = 0;
-					}
-					else
-					{
-						status = 0;
-					}
 				}
 				else if (line.find("\"name_id\"") != string::npos)
 				{
@@ -3077,7 +3063,7 @@ void SmashData::createPRCXML(map<string, map<int, Name>>& names, map<string, map
 						bool action = false;
 
 						// Deal with characall_label
-						while (line.find("</struct>") == string::npos)
+						while (line.find("shop_item_tag") == string::npos)
 						{
 							getline(uiVanilla, line);
 
@@ -3146,6 +3132,30 @@ void SmashData::createPRCXML(map<string, map<int, Name>>& names, map<string, map
 								action = false;
 							}
 						}
+					}
+				}
+				else if (line.find("</struct>") != string::npos)
+				{
+					if (status == 0)
+					{
+						if (currIndex != "-1")
+						{
+							uiEdit << "\n\t\t<hash40 index=\"" << currIndex << "\">dummy</hash40>";
+						}
+
+						if (currIndex == "120")
+						{
+							currIndex = "-1";
+						}
+					}
+					else if (status == 1)
+					{
+						uiEdit << "\n\t\t</struct>";
+						status = 0;
+					}
+					else
+					{
+						status = 0;
 					}
 				}
 			}

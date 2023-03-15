@@ -866,7 +866,7 @@ void MainFrame::onPrcxPressed(wxCommandEvent& evt)
 
 				bool error = true;
 
-				if (exeLog.size() == 2)
+				if (exeLog.size() == 1)
 				{
 					if (exeLog[0].substr(0, 9) == "Completed")
 					{
