@@ -9,7 +9,7 @@ namespace fs = std::filesystem;
 using std::string;
 using std::string; using std::ofstream;
 
-MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxDEFAULT_FRAME_STYLE & ~wxRESIZE_BORDER)
+MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxSYSTEM_MENU | wxCAPTION | wxCLOSE_BOX | wxMINIMIZE_BOX & ~wxRESIZE_BORDER)
 {
 	// Create main panel
 	panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
@@ -47,7 +47,7 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	// Create log window
 	logWindow = new wxTextCtrl(panel, wxID_ANY, "Log Window:\n", wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
 	logWindow->SetEditable(false);
-	logWindow->Show(false);
+	logWindow->Show(settings.showLogWindow);
 	log = new wxLogTextCtrl(logWindow);
 	data.log = log;
 
@@ -539,6 +539,8 @@ void MainFrame::onDeletePressed(wxCommandEvent& evt)
 
 void MainFrame::onLogPressed(wxCommandEvent& evt)
 {
+	settings.showLogWindow = !settings.showLogWindow;
+
 	if (logWindow->IsShown())
 	{
 		logWindow->Show(false);

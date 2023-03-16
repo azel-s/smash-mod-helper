@@ -7,8 +7,8 @@ using std::vector;
 
 struct Settings
 {
-	// true = PRCX, false = PRCXML
 	bool prcxOutput = false;
+	bool showLogWindow = false;
 };
 
 class MainFrame : public wxFrame
