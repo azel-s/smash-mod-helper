@@ -5,14 +5,25 @@
 #include <wx/spinctrl.h>
 using std::vector;
 
+struct Settings
+{
+	// true = PRCX, false = PRCXML
+	bool prcxOutput = false;
+};
+
 class MainFrame : public wxFrame
 {
 	private:
 		// Data Variables
 		SmashData data;
 
+		// Settings
+		Settings settings;
+
 		// GUI Parts
 		wxPanel* panel;
+		wxMenuBar* menuBar;
+		wxMenuItem* inkMenu;
 
 		wxBrowse browse;
 		wxListBox* charsList;
@@ -23,9 +34,6 @@ class MainFrame : public wxFrame
 		wxLogTextCtrl* log;
 		wxTextCtrl* logWindow;
 		wxStatusBar* statusBar;
-
-		// UI Setup Helper(s)
-		void setupFileTypeBoxes(wxPanel* panel);
 
 		// Reset Helpers
 		void resetFileTypeBoxes();
@@ -38,8 +46,10 @@ class MainFrame : public wxFrame
 		// Updaters/Modifiers
 		void updateFileTypeBoxes();
 		void updateButtons();
+		void updateInkMenu();
 
 		// Bind Functions
+		void togglePRCOutput(wxCommandEvent& evt);
 		void onBrowse(wxCommandEvent& evt);
 		void onCharSelect(wxCommandEvent& evt);
 		void onFileTypeSelect(wxCommandEvent& evt);
@@ -54,6 +64,7 @@ class MainFrame : public wxFrame
 		void onInkPressed(wxCommandEvent& evt);
 		void onPrcxPressed(wxCommandEvent& evt);
 		void onPrcxPressed2(wxCommandEvent& evt);
+		void onMenuClose(wxCommandEvent& evt);
 		void onClose(wxCloseEvent& evt);
 
 		// Destructor

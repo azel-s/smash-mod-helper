@@ -14,6 +14,36 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	// Create main panel
 	panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
 
+	// Setup Menu
+	menuBar = new wxMenuBar();
+
+	wxMenu* fileMenu = new wxMenu();
+	this->Bind(wxEVT_MENU, &MainFrame::onBrowse, this, fileMenu->Append(wxID_ANY, "&Open Folder\tCtrl-O")->GetId());
+	this->Bind(wxEVT_MENU, &MainFrame::onMenuClose, this, fileMenu->Append(wxID_ANY, "Close\tAlt-F4")->GetId());
+
+	wxMenu* toolsMenu = new wxMenu();
+	inkMenu = new wxMenuItem(fileMenu, wxID_ANY, "Edit Inkling Colors");
+	this->Bind(wxEVT_MENU, &MainFrame::onInkPressed, this, toolsMenu->Append(inkMenu)->GetId());
+	inkMenu->Enable(false);
+
+	wxMenu* optionsMenu = new wxMenu();
+	wxMenu* prcOutput = new wxMenu();
+	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcOutput->AppendRadioItem(wxID_ANY, "PRCXML")->GetId());
+	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcOutput->AppendRadioItem(wxID_ANY, "PRCX")->GetId());
+	optionsMenu->AppendSubMenu(prcOutput, "Set PRC Output");
+
+	menuBar->Append(fileMenu, "&File");
+	menuBar->Append(toolsMenu, "&Tools");
+	menuBar->Append(optionsMenu, "&Options");
+
+	SetMenuBar(menuBar);
+	
+	// Create browse button and text field
+	browse.text = new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize);
+	browse.button = new wxButton(panel, wxID_ANY, "Browse...", wxDefaultPosition, wxDefaultSize);
+	browse.button->Bind(wxEVT_BUTTON, &MainFrame::onBrowse, this);
+	browse.button->Disable();
+
 	// Create log window
 	logWindow = new wxTextCtrl(panel, wxID_ANY, "Log Window:\n", wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
 	logWindow->SetEditable(false);
@@ -21,12 +51,7 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	log = new wxLogTextCtrl(logWindow);
 	data.log = log;
 
-	// Create browse button and text field
-	browse.text = new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize);
-	browse.button = new wxButton(panel, wxID_ANY, "Browse...", wxDefaultPosition, wxDefaultSize);
-	browse.button->Bind(wxEVT_BUTTON, &MainFrame::onBrowse, this);
-	browse.button->Disable();
-
+	// TODO: Look into having less polling for the thread
 	// Setup actions for background thread
 	const auto readVanillaFiles = [this]()
 	{
@@ -45,8 +70,7 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 		if (!data.stopVanillaThread)
 		{
 			buttons.config->Enable();
-			buttons.prcx->Enable();
-			buttons.ink->Enable();
+			buttons.prc->Enable();
 		}
 	};
 
@@ -55,15 +79,18 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	data.vanillaThread.detach();
 	data.vanillaThreadActive = true;
 
-	// Statusbar
-	statusBar = CreateStatusBar();
-
 	// Create characters List
 	charsList = new wxListBox(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
 	charsList->Bind(wxEVT_LISTBOX, &MainFrame::onCharSelect, this);
 
 	// Create file type checkboxes
-	this->setupFileTypeBoxes(panel);
+	fileTypeBoxes = new wxCheckBox* [data.fileTypes.size()];
+	for (int i = 0; i < data.fileTypes.size(); i++)
+	{
+		fileTypeBoxes[i] = new wxCheckBox(panel, wxID_ANY, data.fileTypes[i], wxDefaultPosition, wxDefaultSize);
+		fileTypeBoxes[i]->Bind(wxEVT_CHECKBOX, &MainFrame::onFileTypeSelect, this);
+		fileTypeBoxes[i]->Disable();
+	}
 	
 	// Create mod slot list
 	initSlots.text = new wxStaticText(panel, wxID_ANY, "Initial Slot: ", wxDefaultPosition, wxSize(55, -1));
@@ -106,19 +133,16 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	buttons.config->Hide();
 
 	// Create prcx Buttons
-	buttons.prcx = new wxButton(panel, wxID_ANY, "Create prcx", wxDefaultPosition, wxDefaultSize);
-	buttons.prcx->Bind(wxEVT_BUTTON, &MainFrame::onPrcxPressed, this);
-	buttons.prcx->Disable();
-	buttons.prcx->Hide();
-
-	// Create Inkling Button
-	buttons.ink = new wxButton(panel, wxID_ANY, "Edit Inkling Colors", wxDefaultPosition, wxDefaultSize);
-	buttons.ink->Bind(wxEVT_BUTTON, &MainFrame::onInkPressed, this);
-	buttons.ink->Disable();
-	buttons.ink->Hide();
+	buttons.prc = new wxButton(panel, wxID_ANY, "Create PRCXML", wxDefaultPosition, wxDefaultSize);
+	buttons.prc->Bind(wxEVT_BUTTON, &MainFrame::onPrcxPressed, this);
+	buttons.prc->Disable();
+	buttons.prc->Hide();
 
 	// Set Close Window Bind
 	this->Bind(wxEVT_CLOSE_WINDOW, &MainFrame::onClose, this);
+
+	// Create Statusbar
+	statusBar = CreateStatusBar();
 
 	// Setup Sizer
 	wxBoxSizer* sizerM = new wxBoxSizer(wxVERTICAL);
@@ -175,30 +199,18 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 
 	// C
 	sizerC->Add(buttons.log, 1, wxALIGN_CENTER_VERTICAL);
-	sizerC->Add(buttons.ink, 1, wxALIGN_CENTER_VERTICAL);
 
 	sizerC->AddStretchSpacer();
 	sizerC->AddStretchSpacer();
 
 	sizerC->Add(buttons.config, 1, wxALIGN_CENTER_VERTICAL);
-	sizerC->Add(buttons.prcx, 1, wxALIGN_CENTER_VERTICAL);
+	sizerC->Add(buttons.prc, 1, wxALIGN_CENTER_VERTICAL);
 	sizerC->Add(buttons.base, 1, wxALIGN_CENTER_VERTICAL);
 
 	// D
 	sizerD->Add(logWindow, 1, wxEXPAND);
 
 	panel->SetSizerAndFit(sizerM);
-}
-
-void MainFrame::setupFileTypeBoxes(wxPanel* panel)
-{
-	fileTypeBoxes = new wxCheckBox* [data.fileTypes.size()];
-	for (int i = 0; i < data.fileTypes.size(); i++)
-	{
-		fileTypeBoxes[i] = new wxCheckBox(panel, wxID_ANY, data.fileTypes[i], wxDefaultPosition, wxDefaultSize);
-		fileTypeBoxes[i]->Bind(wxEVT_CHECKBOX, &MainFrame::onFileTypeSelect, this);
-		fileTypeBoxes[i]->Disable();
-	}
 }
 
 void MainFrame::resetFileTypeBoxes()
@@ -270,21 +282,6 @@ void MainFrame::updateFileTypeBoxes()
 
 void MainFrame::updateButtons()
 {
-	if (charsList->GetSelection() != wxNOT_FOUND)
-	{
-		if (charsList->GetStringSelection() == " Inkling")
-		{
-			if (!data.hasAdditionalSlot("inkling"))
-			{
-				buttons.ink->Show();
-			}
-		}
-		else
-		{
-			buttons.ink->Hide();
-		}
-	}
-
 	if (initSlots.list->GetSelection() != wxNOT_FOUND)
 	{
 		try
@@ -324,6 +321,35 @@ void MainFrame::updateButtons()
 	panel->SendSizeEvent();
 }
 
+void MainFrame::updateInkMenu()
+{
+	// Update Inkling Menu
+	if (data.mod.find("inkling") != data.mod.end() && data.hasAdditionalSlot("inkling"))
+	{
+		inkMenu->Enable(false);
+	}
+	else
+	{
+		inkMenu->Enable();
+	}
+}
+
+void MainFrame::togglePRCOutput(wxCommandEvent& evt)
+{
+	settings.prcxOutput = !settings.prcxOutput;
+
+	if (settings.prcxOutput)
+	{
+		log->LogText("> Set PRC output to PRCX");
+		buttons.prc->SetLabel("Create PRCX");
+	}
+	else
+	{
+		log->LogText("> Set PRC output to PRCXML");
+		buttons.prc->SetLabel("Create PRCXML");
+	}
+}
+
 void MainFrame::onBrowse(wxCommandEvent& evt)
 {
 	wxDirDialog dialog(this, "Choose the root directory of your mod...", "", wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
@@ -349,16 +375,16 @@ void MainFrame::onBrowse(wxCommandEvent& evt)
 		{
 			buttons.base->Show();
 			buttons.config->Hide();
-			buttons.prcx->Hide();
-			buttons.ink->Hide();
+			buttons.prc->Hide();
 		}
 		else
 		{
 			buttons.base->Hide();
 			buttons.config->Show();
-			buttons.prcx->Show();
-			buttons.ink->Hide();
+			buttons.prc->Show();
 		}
+
+		updateInkMenu();
 
 		panel->SendSizeEvent();
 	}
@@ -426,14 +452,16 @@ void MainFrame::onMovePressed(wxCommandEvent& evt)
 	{
 		buttons.base->Show();
 		buttons.config->Hide();
-		buttons.prcx->Hide();
+		buttons.prc->Hide();
 	}
 	else
 	{
 		buttons.base->Hide();
 		buttons.config->Show();
-		buttons.prcx->Show();
+		buttons.prc->Show();
 	}
+
+	updateInkMenu();
 
 	panel->SendSizeEvent();
 }
@@ -462,8 +490,10 @@ void MainFrame::onDuplicatePressed(wxCommandEvent& evt)
 	{
 		buttons.base->Show();
 		buttons.config->Hide();
-		buttons.prcx->Hide();
+		buttons.prc->Hide();
 	}
+
+	updateInkMenu();
 
 	panel->SendSizeEvent();
 }
@@ -499,10 +529,12 @@ void MainFrame::onDeletePressed(wxCommandEvent& evt)
 	{
 		buttons.base->Hide();
 		buttons.config->Show();
-		buttons.prcx->Show();
-
-		panel->SendSizeEvent();
+		buttons.prc->Show();
 	}
+
+	updateInkMenu();
+
+	panel->SendSizeEvent();
 }
 
 void MainFrame::onLogPressed(wxCommandEvent& evt)
@@ -536,8 +568,7 @@ void MainFrame::onBasePressed(wxCommandEvent& evt)
 		// Update Buttons
 		buttons.base->Hide();
 		buttons.config->Show();
-		buttons.prcx->Show();
-		buttons.ink->Show();
+		buttons.prc->Show();
 		panel->SendSizeEvent();
 	}
 }
@@ -922,6 +953,11 @@ void MainFrame::onPrcxPressed(wxCommandEvent& evt)
 	{
 		log->LogText("> N/A: No additional slots detected.");
 	}
+}
+
+void MainFrame::onMenuClose(wxCommandEvent& evt)
+{
+	Close(true);
 }
 
 void MainFrame::onClose(wxCloseEvent& evt)

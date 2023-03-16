@@ -30,10 +30,9 @@ struct wxButtons
 	wxButton* del;
 
 	wxButton* log;
-	wxButton* ink;
 	wxButton* base;
 	wxButton* config;
-	wxButton* prcx;
+	wxButton* prc;
 };
 
 struct Name
