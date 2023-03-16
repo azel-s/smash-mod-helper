@@ -2904,7 +2904,7 @@ void SmashData::patchXMLInkColors(map<int, InklingColor>& inklingColors)
 
 void SmashData::createPRCXML(map<string, map<int, Name>>& names, map<string, map<int, string>>& announcers, map<string, int>& maxSlots)
 {
-	if (!maxSlots.empty() && !announcers.empty())
+	if (!maxSlots.empty() || !announcers.empty() || !names.empty())
 	{
 		ifstream uiVanilla("ui_chara_db.xml");
 		ofstream uiEdit("ui_chara_db.prcxml");
@@ -3138,15 +3138,8 @@ void SmashData::createPRCXML(map<string, map<int, Name>>& names, map<string, map
 				{
 					if (status == 0)
 					{
-						if (currIndex != "-1")
-						{
-							uiEdit << "\n\t\t<hash40 index=\"" << currIndex << "\">dummy</hash40>";
-						}
+						uiEdit << "\n\t\t<hash40 index=\"" << currIndex << "\">dummy</hash40>";
 
-						if (currIndex == "120")
-						{
-							currIndex = "-1";
-						}
 					}
 					else if (status == 1)
 					{
@@ -3156,6 +3149,12 @@ void SmashData::createPRCXML(map<string, map<int, Name>>& names, map<string, map
 					else
 					{
 						status = 0;
+					}
+
+					// Skip everything else as demon is the last charcode.
+					if (currIndex == "120")
+					{
+						break;
 					}
 				}
 			}

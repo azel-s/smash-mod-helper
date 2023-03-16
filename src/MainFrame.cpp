@@ -134,7 +134,7 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 
 	// Create prcx Buttons
 	buttons.prc = new wxButton(panel, wxID_ANY, "Create PRCXML", wxDefaultPosition, wxDefaultSize);
-	buttons.prc->Bind(wxEVT_BUTTON, &MainFrame::onPrcxPressed, this);
+	buttons.prc->Bind(wxEVT_BUTTON, &MainFrame::onPrcPressed, this);
 	buttons.prc->Disable();
 	buttons.prc->Hide();
 
@@ -158,9 +158,9 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 
 	// Main Sizer
 	sizerM->Add(sizerA, 0, wxEXPAND | wxALL, 20);
-	sizerM->Add(sizerB, 3, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxBOTTOM | wxRIGHT, 20);
-	sizerM->Add(sizerC, 1, wxLEFT | wxBOTTOM | wxRIGHT, 20);
-	sizerM->Add(sizerD, 3, wxEXPAND | wxLEFT | wxBOTTOM | wxRIGHT, 20);
+	sizerM->Add(sizerB, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxBOTTOM | wxRIGHT, 20);
+	sizerM->Add(sizerC, 0, wxLEFT | wxBOTTOM | wxRIGHT, 20);
+	sizerM->Add(sizerD, 0, wxEXPAND | wxLEFT | wxBOTTOM | wxRIGHT, 20);
 
 	// A
 	sizerA->Add(browse.text, 1, wxRIGHT, 10);
@@ -730,7 +730,7 @@ void MainFrame::onInkPressed(wxCommandEvent& evt)
 	}
 }
 
-void MainFrame::onPrcxPressed2(wxCommandEvent& evt)
+void MainFrame::onPrcPressed(wxCommandEvent& evt)
 {
 	bool hasAddSlots = data.hasAdditionalSlot();
 
@@ -764,76 +764,100 @@ void MainFrame::onPrcxPressed2(wxCommandEvent& evt)
 
 			if (hasAddSlots || !finalNames.empty() || !finalAnnouncers.empty())
 			{
-				// Change directory to parcel and param-xml's location
-				// INFO: parcel requires current working directory to be the same,
-				wxSetWorkingDirectory("Files/prc/");
-
-				// Create XML
-				wxExecute("param-xml disasm vanilla.prc -o ui_chara_db.xml -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
-
-				// Edit Vanilla XML
-				if (hasAddSlots)
+				if (settings.prcxOutput)
 				{
-					data.patchXMLSlots(finalSlots);
-				}
-				if (!finalNames.empty())
-				{
-					data.patchXMLNames(finalNames);
-				}
-				if (!finalAnnouncers.empty())
-				{
-					data.patchXMLAnnouncer(finalAnnouncers);
-				}
+					// Change directory to parcel and param-xml's location
+					// INFO: parcel requires current working directory to be the same,
+					wxSetWorkingDirectory("Files/prc/");
 
-				// Create Modif PRC
-				wxExecute("param-xml asm ui_chara_db.xml -o modif.prc -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
+					// Create XML
+					wxExecute("param-xml disasm vanilla.prc -o ui_chara_db.xml -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
 
-				// Create Modif PRCX
-				wxExecute("parcel diff vanilla.prc modif.prc ui_chara_db.prcx", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
-
-				bool error = true;
-
-				if (exeLog.size() == 2)
-				{
-					if (exeLog[0].substr(0, 9) == "Completed")
+					// Edit Vanilla XML
+					if (hasAddSlots)
 					{
-						if (hasAddSlots && !finalNames.empty())
-						{
-							log->LogText("> Success! ui_chara_db.prcx and msg_name.xmsbt were created!");
-						}
-						else if (hasAddSlots)
-						{
-							log->LogText("> Success! ui_chara_db.prcx was created!");
-						}
-						else
+						data.patchXMLSlots(finalSlots);
+					}
+					if (!finalNames.empty())
+					{
+						data.patchXMLNames(finalNames);
+					}
+					if (!finalAnnouncers.empty())
+					{
+						data.patchXMLAnnouncer(finalAnnouncers);
+					}
+
+					// Create Modif PRC
+					wxExecute("param-xml asm ui_chara_db.xml -o modif.prc -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
+
+					// Create Modif PRCX
+					wxExecute("parcel diff vanilla.prc modif.prc ui_chara_db.prcx", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
+
+					if (exeLog.size() == 2 && exeLog[0].substr(0, 9) == "Completed")
+					{
+						log->LogText("> Success! ui_chara_db.prcx was created!");
+
+						if (!finalNames.empty())
 						{
 							log->LogText("> Success! msg_name.xmsbt was created!");
 						}
 
-						error = false;
+						fs::create_directories(data.rootPath + "/ui/param/database/");
+						fs::rename(fs::current_path() / "ui_chara_db.prcx", data.rootPath + "/ui/param/database/ui_chara_db.prcx");
+
+						fs::remove(fs::current_path() / "modif.prc");
+						//fs::remove(fs::current_path() / "ui_chara_db.xml");
 					}
-				}
-
-				if (error)
-				{
-					log->LogText("> Error: Something went wrong, possible issue below:");
-
-					for (int i = 0; i < exeLog.size(); i++)
+					else
 					{
-						log->LogText(">" + exeLog[i]);
+						log->LogText("> Error: Something went wrong, possible issue below:");
+
+						for (int i = 0; i < exeLog.size(); i++)
+						{
+							log->LogText(">" + exeLog[i]);
+						}
 					}
+
+					// Restore working directory
+					wxSetWorkingDirectory("../../");
 				}
 				else
 				{
-					fs::create_directories(data.rootPath + "/ui/param/database/");
-					fs::rename(fs::current_path() / "ui_chara_db.prcx", data.rootPath + "/ui/param/database/ui_chara_db.prcx");
+					// Change directory to parcel and param-xml's location
+					// INFO: parcel requires current working directory to be the same,
+					wxSetWorkingDirectory("Files/prc/");
 
-					fs::remove(fs::current_path() / "modif.prc");
-					//fs::remove(fs::current_path() / "ui_chara_db.xml");
+					// Create XML
+					wxExecute("param-xml disasm vanilla.prc -o ui_chara_db.xml -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
+
+					// Create PRCXML
+					data.createPRCXML(finalNames, finalAnnouncers, finalSlots);
+
+					if (exeLog.size() == 1 && exeLog[0].substr(0, 9) == "Completed")
+					{
+						log->LogText("> Success! ui_chara_db.prcx was created!");
+						
+						if (!finalNames.empty())
+						{
+							log->LogText("> Success! msg_name.xmsbt was created!");
+						}
+
+						fs::create_directories(data.rootPath + "/ui/param/database/");
+						fs::rename(fs::current_path() / "ui_chara_db.prcxml", data.rootPath + "/ui/param/database/ui_chara_db.prcxml");
+					}
+					else
+					{
+						log->LogText("> Error: Something went wrong, possible issue below:");
+
+						for (int i = 0; i < exeLog.size(); i++)
+						{
+							log->LogText(">" + exeLog[i]);
+						}
+					}
+
+					// Restore working directory
+					wxSetWorkingDirectory("../../");
 				}
-
-				// Restore working directory
-				wxSetWorkingDirectory("../../");
 			}
 			else
 			{
@@ -842,112 +866,6 @@ void MainFrame::onPrcxPressed2(wxCommandEvent& evt)
 		}
 	}
 	else if(data.mod.empty())
-	{
-		log->LogText("> N/A: Mod is empty, cannot create a prcx!");
-	}
-	else
-	{
-		log->LogText("> N/A: No additional slots detected.");
-	}
-}
-
-void MainFrame::onPrcxPressed(wxCommandEvent& evt)
-{
-	bool hasAddSlots = data.hasAdditionalSlot();
-
-	if (hasAddSlots || !data.mod.empty())
-	{
-		// Make character-slots map
-		map<string, set<string>> allSlots;
-		for (auto i = data.mod.begin(); i != data.mod.end(); i++)
-		{
-			wxArrayString slots = data.getSlots(i->first);
-
-			for (auto j = slots.begin(); j != slots.end(); j++)
-			{
-				if (*j == "all")
-				{
-					continue;
-				}
-
-				allSlots[i->first].insert(j->ToStdString());
-			}
-		}
-
-		prcxDialog dlg(this, wxID_ANY, "Make Selection", allSlots, data.charNames, hasAddSlots, true);
-		if (dlg.ShowModal() == wxID_OK)
-		{
-			map<string, int> finalSlots = dlg.getMaxSlots(allSlots);
-			map<string, map<int, Name>> finalNames = dlg.getNames();
-			map<string, map<int, string>> finalAnnouncers = dlg.getAnnouncers();
-
-			wxArrayString exeLog;
-
-			if (hasAddSlots || !finalNames.empty() || !finalAnnouncers.empty())
-			{
-				// Change directory to parcel and param-xml's location
-				// INFO: parcel requires current working directory to be the same,
-				wxSetWorkingDirectory("Files/prc/");
-
-				// Create XML
-				wxExecute("param-xml disasm vanilla.prc -o ui_chara_db.xml -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
-
-				data.createPRCXML(finalNames, finalAnnouncers, finalSlots);
-
-				// Rename to prcxml
-				// TODO:
-
-				bool error = true;
-
-				if (exeLog.size() == 1)
-				{
-					if (exeLog[0].substr(0, 9) == "Completed")
-					{
-						if (hasAddSlots && !finalNames.empty())
-						{
-							log->LogText("> Success! ui_chara_db.prcx and msg_name.xmsbt were created!");
-						}
-						else if (hasAddSlots)
-						{
-							log->LogText("> Success! ui_chara_db.prcx was created!");
-						}
-						else
-						{
-							log->LogText("> Success! msg_name.xmsbt was created!");
-						}
-
-						error = false;
-					}
-				}
-
-				if (error)
-				{
-					log->LogText("> Error: Something went wrong, possible issue below:");
-
-					for (int i = 0; i < exeLog.size(); i++)
-					{
-						log->LogText(">" + exeLog[i]);
-					}
-				}
-				else
-				{
-					fs::create_directories(data.rootPath + "/ui/param/database/");
-					fs::rename(fs::current_path() / "ui_chara_db.prcxml", data.rootPath + "/ui/param/database/ui_chara_db.prcxml");
-
-					fs::remove(fs::current_path() / "modif.prc");
-					//fs::remove(fs::current_path() / "ui_chara_db.xml");
-				}
-
-				// Restore working directory
-				wxSetWorkingDirectory("../../");
-			}
-			else
-			{
-				log->LogText("> N/A: No changes were made.");
-			}
-		}
-	}
-	else if (data.mod.empty())
 	{
 		log->LogText("> N/A: Mod is empty, cannot create a prcx!");
 	}

@@ -62,8 +62,7 @@ class MainFrame : public wxFrame
 		void onConfigPressed(wxCommandEvent& evt);
 		void onBasePressed(wxCommandEvent& evt);
 		void onInkPressed(wxCommandEvent& evt);
-		void onPrcxPressed(wxCommandEvent& evt);
-		void onPrcxPressed2(wxCommandEvent& evt);
+		void onPrcPressed(wxCommandEvent& evt);
 		void onMenuClose(wxCommandEvent& evt);
 		void onClose(wxCloseEvent& evt);
 
