@@ -19,17 +19,21 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\App.cpp" />
-    <ClCompile Include="src\Dialogs.cpp" />
-    <ClCompile Include="src\MainFrame.cpp" />
-    <ClCompile Include="src\SmashData.cpp" />
+    <ClInclude Include="src\App.h" />
+    <ClInclude Include="src\BaseSelection.h" />
+    <ClInclude Include="src\HelperStructures.h" />
+    <ClInclude Include="src\InkSelection.h" />
+    <ClInclude Include="src\MainFrame.h" />
+    <ClInclude Include="src\PrcSelection.h" />
+    <ClInclude Include="src\SmashData.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\App.h" />
-    <ClInclude Include="src\Dialogs.h" />
-    <ClInclude Include="src\HelperStructures.h" />
-    <ClInclude Include="src\MainFrame.h" />
-    <ClInclude Include="src\SmashData.h" />
+    <ClCompile Include="src\App.cpp" />
+    <ClCompile Include="src\BaseSelection.cpp" />
+    <ClCompile Include="src\InkSelection.cpp" />
+    <ClCompile Include="src\MainFrame.cpp" />
+    <ClCompile Include="src\PrcSelection.cpp" />
+    <ClCompile Include="src\SmashData.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="res\resource.rc" />
