@@ -43,6 +43,7 @@ class InkSelection : public wxDialog
         InkSelection(wxWindow* parent, wxWindowID id,
             const wxString& title,
             SmashData& mod,
+            bool readPrevInk,
             const wxPoint& pos = wxDefaultPosition,
             const wxSize& size = wxDefaultSize,
             long style = wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER,

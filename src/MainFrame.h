@@ -49,6 +49,7 @@ private:
 	void togglePRCOutput(wxCommandEvent& evt);
 	void toggleBaseReading(wxCommandEvent& evt);
 	void toggleNameReading(wxCommandEvent& evt);
+	void toggleInkReading(wxCommandEvent& evt);
 	void onBrowse(wxCommandEvent& evt);
 	void onCharSelect(wxCommandEvent& evt);
 	void onFileTypeSelect(wxCommandEvent& evt);

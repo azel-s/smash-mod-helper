@@ -3232,6 +3232,118 @@ void SmashData::createPRCXML(map<string, map<int, Name>>& names, map<string, map
 	}
 }
 
+void SmashData::createInkPRCXML(map<int, InklingColor>& inklingColors)
+{
+	if (!inklingColors.empty())
+	{
+		ifstream effectVanilla("effect.prcxml");
+		ofstream effectEdit("effect_EDIT.prcxml");
+
+		if (effectVanilla.is_open() && effectEdit.is_open())
+		{
+			string line;
+
+			while (!effectVanilla.eof())
+			{
+				getline(effectVanilla, line);
+
+				if (line.find("hash=\"ink_") != string::npos)
+				{
+					char action;
+
+					if (line.find("ink_effect_color") != string::npos)
+					{
+						action = 'E';
+					}
+					else
+					{
+						action = 'A';
+					}
+
+					effectEdit << line << endl;
+
+					auto iter = inklingColors.begin();
+
+					// Fill out 0-7
+					for (int i = 0; i < 8; i++)
+					{
+						auto iter = inklingColors.find(i);
+
+						if (iter != inklingColors.end())
+						{
+							effectEdit << "    <struct index=\"" << to_string(i) << "\">" << endl;
+
+							if (action == 'E')
+							{
+								effectEdit << "      <float hash=\"r\">" << (iter->second.effect.Red() / 255.0) << "</float>" << endl;
+								effectEdit << "      <float hash=\"g\">" << (iter->second.effect.Green() / 255.0) << "</float>" << endl;
+								effectEdit << "      <float hash=\"b\">" << (iter->second.effect.Blue() / 255.0) << "</float>" << endl;
+							}
+							else
+							{
+								effectEdit << "      <float hash=\"r\">" << (iter->second.arrow.Red() / 255.0) << "</float>" << endl;
+								effectEdit << "      <float hash=\"g\">" << (iter->second.arrow.Green() / 255.0) << "</float>" << endl;
+								effectEdit << "      <float hash=\"b\">" << (iter->second.arrow.Blue() / 255.0) << "</float>" << endl;
+							}
+
+							effectEdit << "    </struct>" << endl;
+						}
+						else
+						{
+							effectEdit << "    <hash40 index=\"" << to_string(i) << "\">dummy</hash40>" << endl;
+						}
+					}
+					
+					// Move iter to earliest additional slot
+					while (iter->first <= 7 && iter != inklingColors.end())
+					{
+						iter++;
+					}
+
+					while (iter != inklingColors.end())
+					{
+						effectEdit << "    <struct index=\"" << to_string(iter->first) << "\">" << endl;
+
+						if (action == 'E')
+						{
+							effectEdit << "      <float hash=\"r\">" << (iter->second.effect.Red() / 255.0) << "</float>" << endl;
+							effectEdit << "      <float hash=\"g\">" << (iter->second.effect.Green() / 255.0) << "</float>" << endl;
+							effectEdit << "      <float hash=\"b\">" << (iter->second.effect.Blue() / 255.0) << "</float>" << endl;
+						}
+						else
+						{
+							effectEdit << "      <float hash=\"r\">" << (iter->second.arrow.Red() / 255.0) << "</float>" << endl;
+							effectEdit << "      <float hash=\"g\">" << (iter->second.arrow.Green() / 255.0) << "</float>" << endl;
+							effectEdit << "      <float hash=\"b\">" << (iter->second.arrow.Blue() / 255.0) << "</float>" << endl;
+						}
+
+						effectEdit << "    </struct>" << endl;
+					}
+				}
+				else
+				{
+					effectEdit << line << endl;
+				}
+			}
+
+			effectVanilla.close();
+			effectEdit.close();
+		}
+		else
+		{
+			if (!effectVanilla.is_open())
+			{
+				log->LogText("> Error: " + fs::current_path().string() + "/effect.prcxml could not be opened!");
+			}
+
+			if (!effectEdit.is_open())
+			{
+				log->LogText("> Error: " + fs::current_path().string() + "/effect_EDIT.prcxml could not be opened!");
+			}
+		}
+	}
+}
+
 void SmashData::outputUTF(wofstream& file, string str, bool parse)
 {
 	if (parse)
@@ -3500,9 +3612,6 @@ map<string, map<string, Name>> SmashData::readNames()
 					{
 						log->LogText("> ERROR: Unable to correctly read names from msg_name.xmsbt!");
 					}
-
-
-					log->LogText(charcode + ' ' + slot + ' ' + name);
 
 					action = false;
 					i += 2;

@@ -12,6 +12,7 @@ struct Settings
 
 	bool readNames = true;
 	bool readBase = true;
+	bool readInk = true;
 };
 
 struct wxBrowse

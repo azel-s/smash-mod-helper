@@ -3,13 +3,13 @@
 InkSelection::InkSelection(wxWindow* parent, wxWindowID id,
     const wxString& title,
     SmashData& mod,
+    bool readPrevInk,
     const wxPoint& pos,
     const wxSize& size,
     long style,
     const wxString& name) :
     wxDialog(parent, id, title, pos, size, style, name)
 {
-    this->slotsMap = slotsMap;
     list.Add("00");
     list.Add("01");
     list.Add("02");
@@ -19,11 +19,15 @@ InkSelection::InkSelection(wxWindow* parent, wxWindowID id,
     list.Add("06");
     list.Add("07");
 
-    auto inklingColors = mod.readInk();
+    map<int, InklingColor> inklingColors;
+
+    if (readPrevInk)
+    {
+        inklingColors = mod.readInk();
+    }
 
     // TODO: Make a getBaseSlots() function
     auto slots = mod.getSlots("inkling");
-    map<string, string> slotsMap;
     for (auto i = slots.begin(); i != slots.end(); i++)
     {
         slotsMap[i->ToStdString()] = mod.getBaseSlot("inkling", i->ToStdString());
@@ -63,42 +67,45 @@ InkSelection::InkSelection(wxWindow* parent, wxWindowID id,
 
     int index = 0;
 
-    for (auto i = inklingColors.begin(); i != inklingColors.end(); i++)
+    if (readPrevInk)
     {
-        // Create new section after every 4 boxes
-        if (index % 3 == 0)
+        for (auto i = inklingColors.begin(); i != inklingColors.end(); i++)
         {
-            sizerH = new wxBoxSizer(wxHORIZONTAL);
-            sizerM->Add(sizerH, 1, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxTOP | wxRIGHT, 20);
+            // Create new section after every 4 boxes
+            if (index % 3 == 0)
+            {
+                sizerH = new wxBoxSizer(wxHORIZONTAL);
+                sizerM->Add(sizerH, 1, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxTOP | wxRIGHT, 20);
+            }
+
+            sizerV = new wxBoxSizer(wxVERTICAL);
+            sizerH->Add(sizerV, 1, wxALIGN_CENTER_VERTICAL);
+
+            wxColourPickerCtrl* effectPicker = new wxColourPickerCtrl(this, wxID_ANY, wxStockGDI::COLOUR_BLUE, wxDefaultPosition, wxDefaultSize);
+            sizerV->Add(effectPicker, 1, wxALIGN_CENTER_HORIZONTAL);
+            effectPicker->SetColour(i->second.effect);
+            finalEffects.push_back(effectPicker);
+
+            wxColourPickerCtrl* arrowPicker = new wxColourPickerCtrl(this, wxID_ANY, wxStockGDI::COLOUR_BLUE, wxDefaultPosition, wxDefaultSize);
+            sizerV->Add(arrowPicker, 1, wxALIGN_CENTER_HORIZONTAL);
+            arrowPicker->SetColour(i->second.arrow);
+            finalArrows.push_back(arrowPicker);
+
+            wxChoice* slotList = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxSize(40, -1), list);
+            sizerV->Add(slotList, 1, wxALIGN_CENTER_HORIZONTAL);
+            finalSlots.push_back(slotList);
+
+            if (i->first > 9)
+            {
+                slotList->SetStringSelection(to_string(i->first));
+            }
+            else
+            {
+                slotList->SetStringSelection("0" + to_string(i->first));
+            }
+
+            index++;
         }
-
-        sizerV = new wxBoxSizer(wxVERTICAL);
-        sizerH->Add(sizerV, 1, wxALIGN_CENTER_VERTICAL);
-
-        wxColourPickerCtrl* effectPicker = new wxColourPickerCtrl(this, wxID_ANY, wxStockGDI::COLOUR_BLUE, wxDefaultPosition, wxDefaultSize);
-        sizerV->Add(effectPicker, 1, wxALIGN_CENTER_HORIZONTAL);
-        effectPicker->SetColour(i->second.effect);
-        finalEffects.push_back(effectPicker);
-
-        wxColourPickerCtrl* arrowPicker = new wxColourPickerCtrl(this, wxID_ANY, wxStockGDI::COLOUR_BLUE, wxDefaultPosition, wxDefaultSize);
-        sizerV->Add(arrowPicker, 1, wxALIGN_CENTER_HORIZONTAL);
-        arrowPicker->SetColour(i->second.arrow);
-        finalArrows.push_back(arrowPicker);
-
-        wxChoice* slotList = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxSize(40, -1), list);
-        sizerV->Add(slotList, 1, wxALIGN_CENTER_HORIZONTAL);
-        finalSlots.push_back(slotList);
-
-        if (i->first > 9)
-        {
-            slotList->SetStringSelection(to_string(i->first));
-        }
-        else
-        {
-            slotList->SetStringSelection("0" + to_string(i->first));
-        }
-
-        index++;
     }
 
     // Add Button

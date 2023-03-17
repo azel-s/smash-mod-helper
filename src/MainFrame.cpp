@@ -36,20 +36,23 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	this->Bind(wxEVT_MENU, &MainFrame::test, this, toolsMenu->Append(wxID_ANY, "TEST")->GetId());
 
 	wxMenu* optionsMenu = new wxMenu();
-	
+
 	wxMenu* prcOutput = new wxMenu();
 	optionsMenu->AppendSubMenu(prcOutput, "Set PRC output");
 	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcOutput->AppendRadioItem(wxID_ANY, "PRCXML")->GetId());
 	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcOutput->AppendRadioItem(wxID_ANY, "PRCX")->GetId());
-	
+
 	wxMenu* loadFromMod = new wxMenu();
 	optionsMenu->AppendSubMenu(loadFromMod, "Load from mod");
 	auto readBaseID = loadFromMod->AppendCheckItem(wxID_ANY, "Base Slots")->GetId();
 	auto readNameID = loadFromMod->AppendCheckItem(wxID_ANY, "Custom Names")->GetId();
+	auto readInkID = loadFromMod->AppendCheckItem(wxID_ANY, "Inkling Colors")->GetId();
 	this->Bind(wxEVT_MENU, &MainFrame::toggleBaseReading, this, readBaseID);
 	this->Bind(wxEVT_MENU, &MainFrame::toggleNameReading, this, readNameID);
+	this->Bind(wxEVT_MENU, &MainFrame::toggleInkReading, this, readInkID);
 	loadFromMod->Check(readBaseID, true);
 	loadFromMod->Check(readNameID, true);
+	loadFromMod->Check(readInkID, true);
 
 	menuBar->Append(fileMenu, "&File");
 	menuBar->Append(toolsMenu, "&Tools");
@@ -383,7 +386,7 @@ void MainFrame::toggleBaseReading(wxCommandEvent& evt)
 	{
 		log->LogText("> Base slots will NOT be read from mods.");
 	}
-	
+
 	// TODO: Update Settings
 }
 
@@ -398,6 +401,22 @@ void MainFrame::toggleNameReading(wxCommandEvent& evt)
 	else
 	{
 		log->LogText("> Custom names will NOT be read from mods.");
+	}
+
+	// TODO: Update Settings
+}
+
+void MainFrame::toggleInkReading(wxCommandEvent& evt)
+{
+	settings.readInk = !settings.readInk;
+
+	if (settings.readInk)
+	{
+		log->LogText("> Inkling colors will now be read from mods.");
+	}
+	else
+	{
+		log->LogText("> Inkling colors will NOT be read from mods.");
 	}
 
 	// TODO: Update Settings
@@ -622,6 +641,9 @@ void MainFrame::onBasePressed(wxCommandEvent& evt)
 		buttons.base->Hide();
 		buttons.config->Show();
 		buttons.prc->Show();
+
+		inkMenu->Enable(true);
+
 		panel->SendSizeEvent();
 	}
 }
@@ -641,85 +663,17 @@ void MainFrame::onConfigPressed(wxCommandEvent& evt)
 
 void MainFrame::onInkPressed(wxCommandEvent& evt)
 {
-	auto slots = data.getSlots("inkling");
-	map<string, string> slotsMap;
+	auto inklingColors = data.readInk();
 
-	for (auto i = slots.begin(); i != slots.end(); i++)
+	InkSelection dlg(this, wxID_ANY, "Choose Inkling Colors", data, settings.readInk);
+
+	if (dlg.ShowModal() == wxID_OK)
 	{
-		slotsMap[i->ToStdString()] = data.getBaseSlot("inkling", i->ToStdString());
-	}
+		auto finalColors = dlg.getFinalColors();
 
-	map<int, InklingColor> inklingColors;
-
-	// Read XML
-	if (fs::exists(data.rootPath + "/fighter/common/param/effect.prcxml"))
-	{
-		ifstream inFile(data.rootPath + "/fighter/common/param/effect.prcxml");
-		char action = 'F';
-		string line;
-
-		// Go through effect.prcxml line by line
-		while (getline(inFile, line))
+		if (!finalColors.empty())
 		{
-			// If Inkling related data is found, make a copy of the data.
-			if (line.find("ink_effect_color") != string::npos)
-			{
-				action = 'E';
-			}
-			else if (line.find("ink_arrow_color") != string::npos)
-			{
-				action = 'A';
-			}
-
-			if (action != 'F')
-			{
-				while (line.find("</list>") == string::npos)
-				{
-					if (line.find("<struct") != string::npos)
-					{
-						auto start = line.find("\"");
-						auto end = line.rfind("\"");
-
-						int slot = stoi(line.substr(start + 1, end - start - 1));
-
-						getline(inFile, line);
-						double red = stod(line.substr(line.find(">") + 1, line.rfind("<") - line.find(">") - 1));
-
-						getline(inFile, line);
-						double green = stod(line.substr(line.find(">") + 1, line.rfind("<") - line.find(">") - 1));
-
-						getline(inFile, line);
-						double blue = stod(line.substr(line.find(">") + 1, line.rfind("<") - line.find(">") - 1));
-
-						// Red
-						if (action == 'E')
-						{
-							inklingColors[slot].effect.Set(red * 255, green * 255, blue * 255);
-						}
-						else
-						{
-							inklingColors[slot].arrow.Set(red * 255, green * 255, blue * 255);
-						}
-					}
-
-					getline(inFile, line);
-				}
-
-				action = 'F';
-			}
-		}
-	}
-
-	// Read XML to get current colors
-	if (true)
-	{
-		InkSelection dlg(this, wxID_ANY, "Choose Inkling Colors", data);
-
-		if (dlg.ShowModal() == wxID_OK)
-		{
-			auto finalColors = dlg.getFinalColors();
-
-			if (!finalColors.empty())
+			if (settings.prcxOutput)
 			{
 				wxArrayString exeLog;
 
@@ -775,8 +729,22 @@ void MainFrame::onInkPressed(wxCommandEvent& evt)
 			}
 			else
 			{
-				log->LogText("> N/A: No changes were made.");
+				// Change directory to parcel and param-xml's location
+				// TODO: Make function not rely on directory change
+				wxSetWorkingDirectory("Files/prc/");
+
+				data.createInkPRCXML(finalColors);
+
+				fs::create_directories(data.rootPath + "/fighter/common/param/");
+				fs::rename(fs::current_path() / "effect_Edit.prcxml", data.rootPath + "/fighter/common/param/effect.prcxml");
+
+				// Restore working directory
+				wxSetWorkingDirectory("../../");
 			}
+		}
+		else
+		{
+			log->LogText("> N/A: No changes were made.");
 		}
 	}
 }
