@@ -5,6 +5,9 @@
 #include <wx/dirdlg.h>
 #include <filesystem>
 #include <fstream>
+#include <codecvt>
+namespace fs = std::filesystem;
+using std::string, std::ifstream, std::ofstream;
 namespace fs = std::filesystem;
 using std::string;
 using std::string; using std::ofstream;
@@ -25,6 +28,7 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	inkMenu = new wxMenuItem(fileMenu, wxID_ANY, "Edit Inkling Colors");
 	this->Bind(wxEVT_MENU, &MainFrame::onInkPressed, this, toolsMenu->Append(inkMenu)->GetId());
 	inkMenu->Enable(false);
+	this->Bind(wxEVT_MENU, &MainFrame::readNames, this, toolsMenu->Append(wxID_ANY, "TEST")->GetId());
 
 	wxMenu* optionsMenu = new wxMenu();
 	wxMenu* prcOutput = new wxMenu();
@@ -894,6 +898,24 @@ void MainFrame::onClose(wxCloseEvent& evt)
 	}
 
 	evt.Skip();
+}
+
+void MainFrame::readNames(wxCommandEvent& evt)
+{
+	map<string, map<string, Name>> names;
+
+	if (fs::exists(data.rootPath + "/ui/message/msg_name.xmsbt"))
+	{
+		std::wifstream inFile(data.rootPath + "/ui/message/msg_name.xmsbt", ios::binary);
+		inFile.imbue(std::locale(inFile.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::consume_header>));
+
+		for (wchar_t c; inFile.get(c); )
+		{
+			log->LogText((char) c);
+		}
+
+		inFile.close();
+	}
 }
 
 MainFrame::~MainFrame()

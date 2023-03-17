@@ -467,9 +467,9 @@
   </list>
   <list hash="ink_effect_color">
     <struct index="0">
-      <float hash="r">0.758027</float>
-      <float hash="g">0.115859</float>
-      <float hash="b">0.04</float>
+      <float hash="r">0.756863</float>
+      <float hash="g">0.113725</float>
+      <float hash="b">0.0392157</float>
     </struct>
     <struct index="1">
       <float hash="r">0.04</float>
@@ -477,9 +477,9 @@
       <float hash="b">0.758027</float>
     </struct>
     <struct index="2">
-      <float hash="r">0.788235</float>
-      <float hash="g">0.501961</float>
-      <float hash="b">0.0392157</float>
+      <float hash="r">0.79</float>
+      <float hash="g">0.504014</float>
+      <float hash="b">0.04</float>
     </struct>
     <struct index="3">
       <float hash="r">0.347369</float>
@@ -509,9 +509,9 @@
   </list>
   <list hash="ink_arrow_color">
     <struct index="0">
-      <float hash="r">0.92</float>
+      <float hash="r">0.917647</float>
       <float hash="g">1</float>
-      <float hash="b">0.1</float>
+      <float hash="b">0.0980392</float>
     </struct>
     <struct index="1">
       <float hash="r">0.1</float>
@@ -520,7 +520,7 @@
     </struct>
     <struct index="2">
       <float hash="r">1</float>
-      <float hash="g">0.466667</float>
+      <float hash="g">0.47</float>
       <float hash="b">0</float>
     </struct>
     <struct index="3">

@@ -134,7 +134,6 @@ prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
     text->SetFont(*boldFont);
     gridSizer->Add(text, wxGBPosition(0, 0));
 
-
     // Check if slot 00 exists anywhere
     bool hasSlot00 = false;
     for (auto i = allSlots.begin(); i != allSlots.end(); i++)

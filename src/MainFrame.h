@@ -9,6 +9,8 @@ struct Settings
 {
 	bool prcxOutput = false;
 	bool showLogWindow = false;
+
+	bool readNames = true;
 };
 
 class MainFrame : public wxFrame
@@ -42,6 +44,9 @@ class MainFrame : public wxFrame
 		// Getters
 		wxArrayString getSelectedFileTypes();
 		bool isFileTypeSelected();
+
+		// Readers
+		void readNames(wxCommandEvent& evt);
 
 		// Updaters/Modifiers
 		void updateFileTypeBoxes();
