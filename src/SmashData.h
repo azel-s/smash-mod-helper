@@ -73,6 +73,8 @@ struct SmashData
 	wxArrayString getSlots(string charcode, wxArrayString fileTypes) const;
 
 	string getBaseSlot(string charcode, string addSlot);
+	// Make character-slots map
+	map<string, set<string>> getAllSlots(string charcode = "all");
 
 	// Mod Verifiers
 	// Returns true if the fileType exists in any character
@@ -91,7 +93,7 @@ struct SmashData
 	void adjustFiles(string action, string charcode, wxArrayString fileTypes, string initSlot, string finalSlot);
 
 	// Config Getters
-	map<string, set<string>> getAdditionalSlots();
+	map<string, set<string>> getAddSlots();
 	void getNewDirSlots
 	(
 		const map<string, map<string, set<string>>>& baseSlots,
@@ -112,7 +114,8 @@ struct SmashData
 	void outputUTF(wofstream& file, string str, bool parse = false);
 
 	// Readers
-	map<string, map<string, string>> readBaseSlots();
+	map<int, InklingColor> readInk();
+	map<string, map<string, int>> readBaseSlots();
 	map<string, map<string, Name>> readNames();
 
 	// Clear Mod Data

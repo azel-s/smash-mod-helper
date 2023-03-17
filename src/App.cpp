@@ -11,6 +11,6 @@ bool App::OnInit()
 	mainFrame->SetClientSize(400, 300);
 	mainFrame->SetMinSize(mainFrame->GetSize());
 	mainFrame->Show();
-	
+
 	return true;
 }

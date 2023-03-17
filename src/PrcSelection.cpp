@@ -1,118 +1,10 @@
-#include "Dialogs.h"
+#include "PrcSelection.h"
 #include <wx/gbsizer.h>
 
-BaseSlotsDialog::BaseSlotsDialog(wxWindow* parent, wxWindowID id,
+PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
     const wxString& title,
-    map<string, set<string>>& additionalSlots,
-    unordered_map<string, string>& charNames,
-    const wxPoint& pos,
-    const wxSize& size,
-    long style,
-    const wxString& name) :
-    wxDialog(parent, id, title, pos, size, style, name)
-{
-    wxArrayString slotList;
-    slotList.Add("00");
-    slotList.Add("01");
-    slotList.Add("02");
-    slotList.Add("03");
-    slotList.Add("04");
-    slotList.Add("05");
-    slotList.Add("06");
-    slotList.Add("07");
-
-    wxBoxSizer* sizerM = new wxBoxSizer(wxVERTICAL);
-
-    // Max number of listboxes for a character
-    int maxSlotBoxes = 0;
-    for (auto i = additionalSlots.begin(); i != additionalSlots.end(); i++)
-    {
-        if (i->second.size() > maxSlotBoxes)
-        {
-            if (i->second.size() / 5 == 0)
-            {
-                maxSlotBoxes = i->second.size() % 5;
-            }
-            else
-            {
-                maxSlotBoxes = 5;
-            }
-        }
-    }
-
-    // Create Dialog
-    for (auto i = additionalSlots.begin(); i != additionalSlots.end(); i++)
-    {
-        wxBoxSizer* sizerA = new wxBoxSizer(wxHORIZONTAL);
-        wxBoxSizer* sizerA1 = new wxBoxSizer(wxVERTICAL);
-        wxBoxSizer* sizerA2 = new wxBoxSizer(wxVERTICAL);
-
-        int proportion = i->second.size() / 5;
-        if (proportion == 0)
-        {
-            proportion = 1;
-        }
-
-        sizerM->AddSpacer(20);
-
-        sizerM->Add(sizerA, proportion, wxEXPAND | wxLEFT | wxRIGHT, 20);
-
-        wxStaticText* charName = new wxStaticText(this, wxID_ANY, charNames[i->first]);
-        sizerA1->Add(charName, proportion, wxALIGN_CENTER_HORIZONTAL);
-        sizerA->Add(sizerA1, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 20);
-
-        wxBoxSizer* sizerA2A = nullptr;
-        int index = 0;
-        for (auto j = i->second.begin(); j != i->second.end(); j++)
-        {
-            // Create new section after every 5 boxes
-            if (index % 5 == 0)
-            {
-                sizerA2A = new wxBoxSizer(wxHORIZONTAL);
-                sizerA2->Add(sizerA2A, 1);
-            }
-
-            wxStaticText* slot = new wxStaticText(this, wxID_ANY, "Slot " + *j + ": ", wxDefaultPosition, wxSize(45, -1));
-            sizerA2A->Add(slot, 0, wxALIGN_CENTER_VERTICAL);
-
-            wxChoice* baseSlotList = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxSize(40, -1), slotList);
-            baseSlotList->Select(0);
-            baseSlots.push_back(baseSlotList);
-            sizerA2A->Add(baseSlotList, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 10);
-
-            index++;
-        }
-
-        sizerA->Add(sizerA2, maxSlotBoxes - 1, wxALIGN_CENTER_VERTICAL);
-    }
-
-    sizerM->Add(CreateButtonSizer(wxOK | wxCANCEL), 0, wxALIGN_RIGHT | wxTOP | wxRIGHT | wxBOTTOM, 20);
-
-    this->SetSizerAndFit(sizerM);
-}
-
-map<string, map<string, set<string>>> BaseSlotsDialog::getBaseSlots(map<string, set<string>>& additionalSlots)
-{
-    int index = 0;
-
-    for (auto i = additionalSlots.begin(); i != additionalSlots.end(); i++)
-    {
-        for (auto j = i->second.begin(); j != i->second.end(); j++)
-        {
-            slots[i->first][baseSlots[index]->GetStringSelection().ToStdString()].insert(*j);
-            index++;
-        }
-    }
-
-    return slots;
-}
-
-prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
-    const wxString& title,
-    map<string, set<string>>& allSlots,
-    unordered_map<string, string>& charNames,
-    bool slots,
-    bool names,
+    SmashData& mod,
+    bool readPrevNames,
     const wxPoint& pos,
     const wxSize& size,
     long style,
@@ -128,6 +20,15 @@ prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
     boldFont->SetWeight(wxFONTWEIGHT_BOLD);
 
     gridSizer->SetFlexibleDirection(wxBOTH);
+
+    auto allSlots = mod.getAllSlots();
+    auto prevNames = mod.readNames();
+    bool slots = mod.hasAdditionalSlot();
+    
+    string fieldName;
+
+    bool hasChar = false;
+    bool hasSlot = false;
 
     // Create Header
     text = new wxStaticText(this, wxID_ANY, "Characters");
@@ -152,7 +53,7 @@ prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
         gridSizer->Add(text, wxGBPosition(0, 1), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
     }
 
-    if (names)
+    if (true)
     {
         int currCol = 2;
 
@@ -206,9 +107,14 @@ prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
     // Create fields
     for (auto i = allSlots.begin(); i != allSlots.end(); i++)
     {
-        text = new wxStaticText(this, wxID_ANY, charNames[i->first]);
+        if (readPrevNames && prevNames.find(i->first) != prevNames.end())
+        {
+            hasChar = true;
+        }
 
-        if (names)
+        text = new wxStaticText(this, wxID_ANY, mod.charNames[i->first]);
+
+        if (true)
         {
             gridSizer->Add(text, wxGBPosition(currRow, currCol), wxGBSpan(i->second.size(), 1), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
         }
@@ -223,7 +129,7 @@ prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
             wxSpinCtrl* userSlot = new wxSpinCtrl(this, wxID_ANY, "", wxDefaultPosition, wxSize(50, -1), wxSP_WRAP, 8, 255, stoi((*(i->second.rbegin()))) + 1);
             maxSlots.push_back(userSlot);
 
-            if (names)
+            if (true)
             {
                 gridSizer->Add(userSlot, wxGBPosition(currRow, currCol), wxGBSpan(i->second.size(), 1), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
             }
@@ -234,10 +140,15 @@ prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
         }
         currCol++;
 
-        if (names && i->first != "element")
+        if (true && i->first != "element")
         {
             for (auto j = i->second.begin(); j != i->second.end(); j++)
             {
+                if (hasChar && prevNames[i->first].find(*j) != prevNames[i->first].end())
+                {
+                    hasSlot = true;
+                }
+
                 text = new wxStaticText(this, wxID_ANY, "c" + *j);
                 gridSizer->Add(text, wxGBPosition(currRow, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
                 currCol++;
@@ -255,7 +166,9 @@ prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
 
                 if (hasSlot00 && *j == "00")
                 {
-                    textCtrl = new wxTextCtrl(this, wxID_ANY, "Name", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+                    fieldName = hasSlot ? prevNames[i->first][*j].cssName : "Name";
+
+                    textCtrl = new wxTextCtrl(this, wxID_ANY, name, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
                     slotNames[charcode][*j].cssName = textCtrl;
                     gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
                     currCol++;
@@ -265,17 +178,20 @@ prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
                     currCol++;
                 }
 
-                textCtrl = new wxTextCtrl(this, wxID_ANY, "Name", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+                fieldName = hasSlot ? prevNames[i->first][*j].cspName : "Name";
+                textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
                 slotNames[charcode][*j].cspName = textCtrl;
                 gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
                 currCol++;
 
-                textCtrl = new wxTextCtrl(this, wxID_ANY, "NAME", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+                fieldName = hasSlot ? prevNames[i->first][*j].vsName : "NAME";
+                textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
                 slotNames[charcode][*j].vsName = textCtrl;
                 gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
                 currCol++;
 
-                textCtrl = new wxTextCtrl(this, wxID_ANY, "Stage Name", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+                fieldName = hasSlot ? prevNames[i->first][*j].stageName : "Stage Name";
+                textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
                 slotNames[charcode][*j].stageName = textCtrl;
                 gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
                 currCol++;
@@ -287,6 +203,8 @@ prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
 
                 currRow++;
                 currCol = 2;
+
+                hasSlot = true;
             }
 
             // Pyra and Mythra both have same slots
@@ -309,6 +227,17 @@ prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
                 // Display Special names
                 if (!slotUnion.empty())
                 {
+                    bool hasFlame = false;
+                    bool hasLight = false;
+                    if (readPrevNames && prevNames.find("eflame_first") != prevNames.end())
+                    {
+                        hasFlame = true;
+                    }
+                    if (hasChar && prevNames.find("elight_first") != prevNames.end())
+                    {
+                        hasLight = true;
+                    }
+
                     text = new wxStaticText(this, wxID_ANY, "Pyra/Mythra");
                     gridSizer->Add(text, wxGBPosition(currRow, currCol), wxGBSpan(slotUnion.size() * 2, 1), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
                     currCol++;
@@ -319,13 +248,21 @@ prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
 
                     for (auto j = slotUnion.begin(); j != slotUnion.end(); j++)
                     {
+                        bool hasFlameSlot = false;
+
+                        if (hasFlame && prevNames["eflame_first"].find(*j) != prevNames["eflame_first"].end())
+                        {
+                            hasFlameSlot = true;
+                        }
+
                         text = new wxStaticText(this, wxID_ANY, "c" + *j + " P/M");
                         gridSizer->Add(text, wxGBPosition(currRow, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
                         currCol++;
 
                         if (hasSlot00 && *j == "00")
                         {
-                            textCtrl = new wxTextCtrl(this, wxID_ANY, "Name", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+                            fieldName = hasFlameSlot ? prevNames[i->first][*j].cssName : "Name";
+                            textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
                             slotNames["eflame_first"][*j].cssName = textCtrl;
                             gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
                             currCol++;
@@ -335,12 +272,14 @@ prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
                             currCol++;
                         }
 
-                        textCtrl = new wxTextCtrl(this, wxID_ANY, "Name", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+                        fieldName = hasFlameSlot ? prevNames[i->first][*j].cspName : "Name";
+                        textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
                         slotNames["eflame_first"][*j].cspName = textCtrl;
                         gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
                         currCol++;
 
-                        textCtrl = new wxTextCtrl(this, wxID_ANY, "NAME", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+                        fieldName = hasFlameSlot ? prevNames[i->first][*j].vsName : "NAME";
+                        textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
                         slotNames["eflame_first"][*j].vsName = textCtrl;
                         gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
                         currCol += 2;
@@ -356,9 +295,17 @@ prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
                         gridSizer->Add(text, wxGBPosition(currRow, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
                         currCol++;
 
+                        bool hasLightSlot = false;
+
+                        if (hasLight && prevNames["elight_first"].find(*j) != prevNames["elight_first"].end())
+                        {
+                            hasLightSlot = true;
+                        }
+
                         if (hasSlot00 && *j == "00")
                         {
-                            textCtrl = new wxTextCtrl(this, wxID_ANY, "Name", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+                            fieldName = hasLightSlot ? prevNames[i->first][*j].cssName : "Name";
+                            textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
                             slotNames["elight_first"][*j].cssName = textCtrl;
                             gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
                             currCol++;
@@ -368,12 +315,14 @@ prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
                             currCol++;
                         }
 
-                        textCtrl = new wxTextCtrl(this, wxID_ANY, "Name", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+                        fieldName = hasLightSlot ? prevNames[i->first][*j].cspName : "Name";
+                        textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
                         slotNames["elight_first"][*j].cspName = textCtrl;
                         gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
                         currCol++;
 
-                        textCtrl = new wxTextCtrl(this, wxID_ANY, "NAME", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+                        fieldName = hasLightSlot ? prevNames[i->first][*j].vsName : "NAME";
+                        textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
                         slotNames["elight_first"][*j].vsName = textCtrl;
                         gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
                         currCol += 2;
@@ -387,6 +336,8 @@ prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
                     }
                 }
             }
+
+            hasChar = false;
         }
 
         currRow++;
@@ -399,7 +350,7 @@ prcxDialog::prcxDialog(wxWindow* parent, wxWindowID id,
     this->SetSizerAndFit(sizerM);
 }
 
-map<string, int> prcxDialog::getMaxSlots(map<string, set<string>>& allSlots)
+map<string, int> PrcSelection::getMaxSlots(map<string, set<string>>& allSlots)
 {
     map<string, int> result;
 
@@ -435,7 +386,7 @@ map<string, int> prcxDialog::getMaxSlots(map<string, set<string>>& allSlots)
     return result;
 }
 
-map<string, map<int, Name>> prcxDialog::getNames()
+map<string, map<int, Name>> PrcSelection::getNames()
 {
     map<string, map<int, Name>> result;
 
@@ -465,7 +416,7 @@ map<string, map<int, Name>> prcxDialog::getNames()
     return result;
 }
 
-map<string, map<int, string>> prcxDialog::getAnnouncers()
+map<string, map<int, string>> PrcSelection::getAnnouncers()
 {
     map<string, map<int, string>> result;
 
@@ -482,198 +433,4 @@ map<string, map<int, string>> prcxDialog::getAnnouncers()
     }
 
     return result;
-}
-
-InklingDialog::InklingDialog(wxWindow* parent, wxWindowID id,
-    const wxString& title,
-    map<string, string>& slotsMap,
-    map<int, InklingColor>& inklingColors,
-    unordered_map<string, string>& charNames,
-    const wxPoint& pos,
-    const wxSize& size,
-    long style,
-    const wxString& name) :
-    wxDialog(parent, id, title, pos, size, style, name)
-{
-    this->slotsMap = slotsMap;
-
-    list.Add("00");
-    list.Add("01");
-    list.Add("02");
-    list.Add("03");
-    list.Add("04");
-    list.Add("05");
-    list.Add("06");
-    list.Add("07");
-
-    for (auto i = slotsMap.begin(); i != slotsMap.end(); i++)
-    {
-        int slot = stoi(i->first);
-
-        if (slot > 7)
-        {
-            if (slot < 10)
-            {
-                list.Add("0" + to_string(slot));
-            }
-            else
-            {
-                list.Add(to_string(slot));
-            }
-        }
-    }
-
-    sizerM = new wxBoxSizer(wxVERTICAL);
-    sizerV = nullptr;
-    sizerH = nullptr;
-
-    wxFont* boldFont = new wxFont();
-    boldFont->SetWeight(wxFONTWEIGHT_BOLD);
-
-    // Create Header
-    wxStaticText* header = new wxStaticText(this, wxID_ANY, "General Effect Color | Roller Color | Slot Number");
-    header->SetFont(*boldFont);
-
-    sizerV = new wxBoxSizer(wxVERTICAL);
-    sizerV->Add(header, 0, wxALIGN_CENTER_HORIZONTAL);
-    sizerM->Add(sizerV, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxTOP | wxRIGHT, 20);
-
-    int index = 0;
-
-    for (auto i = inklingColors.begin(); i != inklingColors.end(); i++)
-    {
-        // Create new section after every 4 boxes
-        if (index % 3 == 0)
-        {
-            sizerH = new wxBoxSizer(wxHORIZONTAL);
-            sizerM->Add(sizerH, 1, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxTOP | wxRIGHT, 20);
-        }
-
-        sizerV = new wxBoxSizer(wxVERTICAL);
-        sizerH->Add(sizerV, 1, wxALIGN_CENTER_VERTICAL);
-
-        wxColourPickerCtrl* effectPicker = new wxColourPickerCtrl(this, wxID_ANY, wxStockGDI::COLOUR_BLUE, wxDefaultPosition, wxDefaultSize);
-        sizerV->Add(effectPicker, 1, wxALIGN_CENTER_HORIZONTAL);
-        effectPicker->SetColour(i->second.effect);
-        finalEffects.push_back(effectPicker);
-
-        wxColourPickerCtrl* arrowPicker = new wxColourPickerCtrl(this, wxID_ANY, wxStockGDI::COLOUR_BLUE, wxDefaultPosition, wxDefaultSize);
-        sizerV->Add(arrowPicker, 1, wxALIGN_CENTER_HORIZONTAL);
-        arrowPicker->SetColour(i->second.arrow);
-        finalArrows.push_back(arrowPicker);
-
-        wxChoice* slotList = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxSize(40, -1), list);
-        sizerV->Add(slotList, 1, wxALIGN_CENTER_HORIZONTAL);
-        finalSlots.push_back(slotList);
-
-        if (i->first > 9)
-        {
-            slotList->SetStringSelection(to_string(i->first));
-        }
-        else
-        {
-            slotList->SetStringSelection("0" + to_string(i->first));
-        }
-
-        index++;
-    }
-
-    // Add Button
-    add.sizer = new wxBoxSizer(wxVERTICAL);
-    add.button = new wxButton(this, wxID_ANY, "+", wxDefaultPosition, wxSize(40, -1));
-
-    add.sizer->Add(add.button, 1, wxALIGN_CENTER_HORIZONTAL);
-    add.button->Bind(wxEVT_BUTTON, &InklingDialog::onAddPressed, this);
-
-    add.list = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxSize(40, -1), list);
-    add.list->Select(0);
-    add.sizer->Add(add.list, 1, wxALIGN_CENTER_HORIZONTAL);
-
-    if (sizerH == nullptr || sizerH->GetItemCount() == 3)
-    {
-        sizerH = new wxBoxSizer(wxHORIZONTAL);
-        sizerH->Add(add.sizer, 1, wxALIGN_CENTER_VERTICAL);
-
-        sizerM->Add(sizerH, 1, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxTOP | wxRIGHT, 20);
-    }
-    else
-    {
-        sizerH->Add(add.sizer, 1, wxALIGN_CENTER_VERTICAL | wxLEFT, 20);
-    }
-
-    sizerM->Add(CreateButtonSizer(wxOK | wxCANCEL), 0, wxALIGN_RIGHT | wxALL, 20);
-    this->SetSizerAndFit(sizerM);
-
-    this->SetClientSize(350, -1);
-    this->SetMinSize(wxSize(350, -1));
-}
-
-
-void InklingDialog::onAddPressed(wxCommandEvent& evt)
-{
-    InklingColor color;
-    string slot = add.list->GetStringSelection().ToStdString();
-
-    if (stoi(slot) > 7)
-    {
-        color = vanillaColors[stoi(slotsMap[slot])];
-    }
-    else
-    {
-        color = vanillaColors[stoi(slot)];
-    }
-
-    sizerV = new wxBoxSizer(wxVERTICAL);
-
-    wxColourPickerCtrl* effectPicker = new wxColourPickerCtrl(this, wxID_ANY, wxStockGDI::COLOUR_BLUE, wxDefaultPosition, wxDefaultSize);
-    effectPicker->SetColour(color.effect);
-    sizerV->Add(effectPicker, 1, wxALIGN_CENTER_HORIZONTAL);
-    finalEffects.push_back(effectPicker);
-
-    wxColourPickerCtrl* arrowPicker = new wxColourPickerCtrl(this, wxID_ANY, wxStockGDI::COLOUR_BLUE, wxDefaultPosition, wxDefaultSize);
-    arrowPicker->SetColour(color.arrow);
-    sizerV->Add(arrowPicker, 1, wxALIGN_CENTER_HORIZONTAL);
-    finalArrows.push_back(arrowPicker);
-
-    wxChoice* slotList = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxSize(40, -1), list);
-    slotList->SetSelection(add.list->GetSelection());
-    sizerV->Add(slotList, 1, wxALIGN_CENTER_HORIZONTAL);
-    finalSlots.push_back(slotList);
-
-    sizerH->Insert(sizerH->GetItemCount() - 1, sizerV, 1, wxALIGN_CENTER_VERTICAL);
-
-    if (sizerH->GetItemCount() == 4)
-    {
-        sizerH->Detach(add.sizer);
-
-        sizerH = new wxBoxSizer(wxHORIZONTAL);
-        sizerH->Add(add.sizer, 1, wxALIGN_CENTER_VERTICAL);
-
-        sizerM->Insert(sizerM->GetItemCount() - 1, sizerH, 1, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxTOP | wxRIGHT, 20);
-    }
-
-    SendSizeEvent();
-
-    // Adjust Size for best fit
-    if (this->GetSize().x < this->GetBestSize().x)
-    {
-        this->SetSize(wxSize(this->GetBestSize().x, this->GetSize().y));
-    }
-    if (this->GetSize().y < this->GetBestSize().y)
-    {
-        this->SetSize(wxSize(this->GetSize().x, this->GetBestSize().y));
-    }
-}
-
-map<int, InklingColor> InklingDialog::getFinalColors()
-{
-    map<int, InklingColor> finalColors;
-
-    for (int i = 0; i < finalSlots.size(); i++)
-    {
-        finalColors[stoi(finalSlots[i]->GetStringSelection().ToStdString())].effect = finalEffects[i]->GetColour();
-        finalColors[stoi(finalSlots[i]->GetStringSelection().ToStdString())].arrow = finalArrows[i]->GetColour();
-    }
-
-    return finalColors;
 }

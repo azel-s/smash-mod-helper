@@ -1,5 +1,7 @@
 #include "MainFrame.h"
-#include "Dialogs.h"
+#include "BaseSelection.h"
+#include "PrcSelection.h"
+#include "InkSelection.h"
 #include <wx/wx.h>
 #include <wx/spinctrl.h>
 #include <wx/dirdlg.h>
@@ -29,17 +31,27 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	this->Bind(wxEVT_MENU, &MainFrame::test, this, toolsMenu->Append(wxID_ANY, "TEST")->GetId());
 
 	wxMenu* optionsMenu = new wxMenu();
+	
 	wxMenu* prcOutput = new wxMenu();
+	optionsMenu->AppendSubMenu(prcOutput, "Set PRC output");
 	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcOutput->AppendRadioItem(wxID_ANY, "PRCXML")->GetId());
 	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcOutput->AppendRadioItem(wxID_ANY, "PRCX")->GetId());
-	optionsMenu->AppendSubMenu(prcOutput, "Set PRC Output");
+	
+	wxMenu* loadFromMod = new wxMenu();
+	optionsMenu->AppendSubMenu(loadFromMod, "Load from mod");
+	auto readBaseID = loadFromMod->AppendCheckItem(wxID_ANY, "Base Slots")->GetId();
+	auto readNameID = loadFromMod->AppendCheckItem(wxID_ANY, "Custom Names")->GetId();
+	this->Bind(wxEVT_MENU, &MainFrame::toggleBaseReading, this, readBaseID);
+	this->Bind(wxEVT_MENU, &MainFrame::toggleNameReading, this, readNameID);
+	loadFromMod->Check(readBaseID, true);
+	loadFromMod->Check(readNameID, true);
 
 	menuBar->Append(fileMenu, "&File");
 	menuBar->Append(toolsMenu, "&Tools");
 	menuBar->Append(optionsMenu, "&Options");
 
 	SetMenuBar(menuBar);
-	
+
 	// Create browse button and text field
 	browse.text = new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize);
 	browse.button = new wxButton(panel, wxID_ANY, "Browse...", wxDefaultPosition, wxDefaultSize);
@@ -86,14 +98,14 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	charsList->Bind(wxEVT_LISTBOX, &MainFrame::onCharSelect, this);
 
 	// Create file type checkboxes
-	fileTypeBoxes = new wxCheckBox* [data.fileTypes.size()];
+	fileTypeBoxes = new wxCheckBox * [data.fileTypes.size()];
 	for (int i = 0; i < data.fileTypes.size(); i++)
 	{
 		fileTypeBoxes[i] = new wxCheckBox(panel, wxID_ANY, data.fileTypes[i], wxDefaultPosition, wxDefaultSize);
 		fileTypeBoxes[i]->Bind(wxEVT_CHECKBOX, &MainFrame::onFileTypeSelect, this);
 		fileTypeBoxes[i]->Disable();
 	}
-	
+
 	// Create mod slot list
 	initSlots.text = new wxStaticText(panel, wxID_ANY, "Initial Slot: ", wxDefaultPosition, wxSize(55, -1));
 	initSlots.list = new wxChoice(panel, wxID_ANY, wxDefaultPosition, wxSize(50, -1));
@@ -352,6 +364,34 @@ void MainFrame::togglePRCOutput(wxCommandEvent& evt)
 	}
 }
 
+void MainFrame::toggleBaseReading(wxCommandEvent& evt)
+{
+	settings.readBase = !settings.readBase;
+
+	if (settings.readBase)
+	{
+		log->LogText("> Base slots will now be read from mods.");
+	}
+	else
+	{
+		log->LogText("> Base slots will NOT be read from mods.");
+	}
+}
+
+void MainFrame::toggleNameReading(wxCommandEvent& evt)
+{
+	settings.readNames = !settings.readNames;
+
+	if (settings.readNames)
+	{
+		log->LogText("> Custom names will now be read from mods.");
+	}
+	else
+	{
+		log->LogText("> Custom names will NOT be read from mods.");
+	}
+}
+
 void MainFrame::onBrowse(wxCommandEvent& evt)
 {
 	wxDirDialog dialog(this, "Choose the root directory of your mod...", "", wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
@@ -367,7 +407,7 @@ void MainFrame::onBrowse(wxCommandEvent& evt)
 
 		// Update path field
 		browse.text->SetValue(dialog.GetPath());
-		
+
 		// Update data
 		data.readData(dialog.GetPath().ToStdString());
 		charsList->Set(data.getCharacters());
@@ -411,7 +451,7 @@ void MainFrame::onFileTypeSelect(wxCommandEvent& evt)
 	wxArrayString fileTypes = getSelectedFileTypes();
 
 	initSlots.list->Set(data.getSlots(data.charCodes[charsList->GetStringSelection().ToStdString()], fileTypes));
-	
+
 	if (!initSlots.list->IsEmpty())
 	{
 		initSlots.list->Select(0);
@@ -561,13 +601,11 @@ void MainFrame::onLogPressed(wxCommandEvent& evt)
 
 void MainFrame::onBasePressed(wxCommandEvent& evt)
 {
-	auto additionalSlots = data.getAdditionalSlots();
-
-	BaseSlotsDialog dlg(this, wxID_ANY, "Choose Base Slots", additionalSlots, data.charNames);
+	BaseSelection dlg(this, wxID_ANY, "Choose Base Slots", data, settings.readBase);
 
 	if (dlg.ShowModal() == wxID_OK)
 	{
-		data.baseSlots = dlg.getBaseSlots(additionalSlots);
+		data.baseSlots = dlg.getBaseSlots();
 
 		// Update Buttons
 		buttons.base->Hide();
@@ -601,7 +639,7 @@ void MainFrame::onInkPressed(wxCommandEvent& evt)
 	}
 
 	map<int, InklingColor> inklingColors;
-	
+
 	// Read XML
 	if (fs::exists(data.rootPath + "/fighter/common/param/effect.prcxml"))
 	{
@@ -622,10 +660,10 @@ void MainFrame::onInkPressed(wxCommandEvent& evt)
 				action = 'A';
 			}
 
-			if(action != 'F')
+			if (action != 'F')
 			{
 				while (line.find("</list>") == string::npos)
-				{ 
+				{
 					if (line.find("<struct") != string::npos)
 					{
 						auto start = line.find("\"");
@@ -660,11 +698,11 @@ void MainFrame::onInkPressed(wxCommandEvent& evt)
 			}
 		}
 	}
-	
+
 	// Read XML to get current colors
 	if (true)
 	{
-		InklingDialog dlg(this, wxID_ANY, "Choose Inkling Colors", slotsMap, inklingColors, data.charNames);
+		InkSelection dlg(this, wxID_ANY, "Choose Inkling Colors", data);
 
 		if (dlg.ShowModal() == wxID_OK)
 		{
@@ -755,7 +793,7 @@ void MainFrame::onPrcPressed(wxCommandEvent& evt)
 			}
 		}
 
-		prcxDialog dlg(this, wxID_ANY, "Make Selection", allSlots, data.charNames, hasAddSlots, true);
+		PrcSelection dlg(this, wxID_ANY, "Make Selection", data, settings.readNames);
 		if (dlg.ShowModal() == wxID_OK)
 		{
 			map<string, int> finalSlots = dlg.getMaxSlots(allSlots);
@@ -838,7 +876,7 @@ void MainFrame::onPrcPressed(wxCommandEvent& evt)
 					if (exeLog.size() == 1 && exeLog[0].substr(0, 9) == "Completed")
 					{
 						log->LogText("> Success! ui_chara_db.prcx was created!");
-						
+
 						if (!finalNames.empty())
 						{
 							log->LogText("> Success! msg_name.xmsbt was created!");
@@ -867,7 +905,7 @@ void MainFrame::onPrcPressed(wxCommandEvent& evt)
 			}
 		}
 	}
-	else if(data.mod.empty())
+	else if (data.mod.empty())
 	{
 		log->LogText("> N/A: Mod is empty, cannot create a prcx!");
 	}

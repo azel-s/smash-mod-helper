@@ -11,6 +11,7 @@ struct Settings
 	bool showLogWindow = false;
 
 	bool readNames = true;
+	bool readBase = true;
 };
 
 struct wxBrowse

@@ -1,4 +1,4 @@
-﻿#include "SmashData.h"
+#include "SmashData.h"
 #include <string>
 #include <filesystem>
 #include <fstream>
@@ -238,7 +238,7 @@ void SmashData::addData(string charcode, string fileType, string slot, string fi
 void SmashData::readData(string wxPath)
 {
 	rootPath = wxPath;
-	std::replace(rootPath.begin(), rootPath.end(), '\\',  '/');
+	std::replace(rootPath.begin(), rootPath.end(), '\\', '/');
 
 	for (const auto& i : fs::directory_iterator(rootPath))
 	{
@@ -309,7 +309,7 @@ void SmashData::readData(string wxPath)
 										continue;
 									}
 									// Character specific folder, likely a Trail folder (One-Slotted)
-									else if(effectFile.find("_c") != string::npos)
+									else if (effectFile.find("_c") != string::npos)
 									{
 										// [character_specific_effect]_c[slot]
 										// _c = 2
@@ -492,7 +492,7 @@ void SmashData::readData(string wxPath)
 wxArrayString SmashData::getCharacters() const
 {
 	wxArrayString characters;
-	
+
 	for (auto i = mod.begin(); i != mod.end(); i++)
 	{
 		if (charNames.find(i->first) != charNames.end())
@@ -665,7 +665,7 @@ wxArrayString SmashData::getSlots(string charcode, wxArrayString fileTypes) cons
 	}
 
 	// Get slots for one file type
-	if(!fileTypes.empty() && charIter != mod.end())
+	if (!fileTypes.empty() && charIter != mod.end())
 	{
 		// Priorotize file types besides "effect" (it has "all")
 		if (fileTypes[0] == "effect" && fileTypes.size() > 1)
@@ -772,6 +772,46 @@ string SmashData::getBaseSlot(string charcode, string addSlot)
 	return "-1";
 }
 
+map<string, set<string>> SmashData::getAllSlots(string charcode)
+{
+	map<string, set<string>> allSlots;
+
+	if (charcode == "all")
+	{
+		for (auto i = mod.begin(); i != mod.end(); i++)
+		{
+			wxArrayString slots = getSlots(i->first);
+
+			for (auto j = slots.begin(); j != slots.end(); j++)
+			{
+				if (*j == "all")
+				{
+					continue;
+				}
+
+				allSlots[i->first].insert(j->ToStdString());
+			}
+		}
+	}
+	else
+	{
+		wxArrayString slots = getSlots("charcode");
+
+		for (auto j = slots.begin(); j != slots.end(); j++)
+		{
+			if (*j == "all")
+			{
+				continue;
+			}
+
+			allSlots[charcode].insert(j->ToStdString());
+		}
+	}
+
+
+	return allSlots;
+}
+
 // Mod Verifiers
 bool SmashData::hasFileType(string fileType) const
 {
@@ -828,7 +868,7 @@ bool SmashData::hasAdditionalSlot() const
 						return true;
 					}
 				}
-				catch(...)
+				catch (...)
 				{
 					// Likely "all" slot from effect. Ignore it.
 				}
@@ -1034,7 +1074,7 @@ void SmashData::adjustFiles(string action, string charcode, wxArrayString fileTy
 							// vc_[charcode]_cheer_c[slot].[filetype]
 							string fileName = finalPath.filename().string();
 							size_t dotPos = fileName.find(".");
-							
+
 							if (isdigit(fileName[dotPos - 1]))
 							{
 								fileName = fileName.substr(0, fileName.rfind("_c") + 2) + finalSlot;
@@ -1205,7 +1245,7 @@ void SmashData::adjustFiles(string action, string charcode, wxArrayString fileTy
 }
 
 // Config Getters
-map<string, set<string>> SmashData::getAdditionalSlots()
+map<string, set<string>> SmashData::getAddSlots()
 {
 	map<string, set<string>> additionalSlots;
 
@@ -1295,7 +1335,7 @@ void SmashData::getNewDirSlots
 		}
 	}
 
-	while(i != mod.end())
+	while (i != mod.end())
 	{
 		if (i->first == "ice_climber")
 		{
@@ -1308,7 +1348,7 @@ void SmashData::getNewDirSlots
 				charcode = "nana";
 			}
 		}
-		else if(hasElement || (charcode != "element" || i->first != "eflame"))
+		else if (hasElement || (charcode != "element" || i->first != "eflame"))
 		{
 			if (charcode == "koopag")
 			{
@@ -1671,7 +1711,7 @@ void SmashData::getNewDirSlots
 						shareToVanilla[i->first][baseSlot]["\"sound/bank/fighter_voice/vc_" + charcode + "_c" + baseSlot + ".nus3audio\""].insert("\"sound/bank/fighter_voice/vc_" + charcode + "_c" + j->ToStdString() + ".nus3audio\"");
 						shareToVanilla[i->first][baseSlot]["\"sound/bank/fighter_voice/vc_" + charcode + "_c" + baseSlot + ".nus3bank\""].insert("\"sound/bank/fighter_voice/vc_" + charcode + "_c" + j->ToStdString() + ".nus3bank\"");
 						shareToVanilla[i->first][baseSlot]["\"sound/bank/fighter_voice/vc_" + charcode + "_c" + baseSlot + ".tonelabel\""].insert("\"sound/bank/fighter_voice/vc_" + charcode + "_c" + j->ToStdString() + ".tonelabel\"");
-						
+
 						if (charcode != "nana")
 						{
 							shareToVanilla[i->first][baseSlot]["\"sound/bank/fighter_voice/vc_" + charcode + "_cheer_c" + baseSlot + ".nus3audio\""].insert("\"sound/bank/fighter_voice/vc_" + charcode + "_cheer_c" + j->ToStdString() + ".nus3audio\"");
@@ -2079,7 +2119,7 @@ void SmashData::getNewDirSlots
 					}
 				}
 			}
-			
+
 			// Add NEW fighter files to newDirFiles
 			if (slotHasFighter)
 			{
@@ -2197,7 +2237,7 @@ void SmashData::getNewDirSlots
 		{
 			charcode = "element";
 		}
-		else if(charcode != "popo")
+		else if (charcode != "popo")
 		{
 			i++;
 		}
@@ -2373,7 +2413,7 @@ void SmashData::patchXMLSlots(map<string, int>& maxSlots)
 		ifstream input("ui_chara_db.xml");
 		ofstream output("ui_chara_db_EDIT.xml");
 
-		auto additionalSlots = getAdditionalSlots();
+		auto additionalSlots = getAddSlots();
 		vector<int> defaultCs;
 
 		if (input.is_open() && output.is_open())
@@ -3202,40 +3242,40 @@ void SmashData::outputUTF(wofstream& file, string str, bool parse)
 		{
 			switch (*i)
 			{
-				case '"':
-				{
-					result += "&quot;";
-					break;
-				}
-				case '\'':
-				{
-					result += "&apos;";
-					break;
-				}
-				case '&':
-				{
-					result += "&amp;";
-					break;
-				}
-				case '<':
-				{
-					result += "&lt;";
-					break;
-				}
-				case '>':
-				{
-					result += "&gt;";
-					break;
-				}
-				case '|':
-				{
-					result += '\n';
-					break;
-				}
-				default:
-				{
-					result += *i;
-				}
+			case '"':
+			{
+				result += "&quot;";
+				break;
+			}
+			case '\'':
+			{
+				result += "&apos;";
+				break;
+			}
+			case '&':
+			{
+				result += "&amp;";
+				break;
+			}
+			case '<':
+			{
+				result += "&lt;";
+				break;
+			}
+			case '>':
+			{
+				result += "&gt;";
+				break;
+			}
+			case '|':
+			{
+				result += '\n';
+				break;
+			}
+			default:
+			{
+				result += *i;
+			}
 			}
 		}
 
@@ -3247,9 +3287,75 @@ void SmashData::outputUTF(wofstream& file, string str, bool parse)
 	}
 }
 
-map<string, map<string, string>> SmashData::readBaseSlots()
+map<int, InklingColor> SmashData::readInk()
 {
-	map<string, map<string, string>> baseSlots;
+	map<int, InklingColor> inkColors;
+
+	// Read XML
+	if (fs::exists(rootPath + "/fighter/common/param/effect.prcxml"))
+	{
+		ifstream inFile(rootPath + "/fighter/common/param/effect.prcxml");
+		char action = 'F';
+		string line;
+
+		// Go through effect.prcxml line by line
+		while (getline(inFile, line))
+		{
+			// If Inkling related data is found, make a copy of the data.
+			if (line.find("ink_effect_color") != string::npos)
+			{
+				action = 'E';
+			}
+			else if (line.find("ink_arrow_color") != string::npos)
+			{
+				action = 'A';
+			}
+
+			if (action != 'F')
+			{
+				while (line.find("</list>") == string::npos)
+				{
+					if (line.find("<struct") != string::npos)
+					{
+						auto start = line.find("\"");
+						auto end = line.rfind("\"");
+
+						int slot = stoi(line.substr(start + 1, end - start - 1));
+
+						getline(inFile, line);
+						double red = stod(line.substr(line.find(">") + 1, line.rfind("<") - line.find(">") - 1));
+
+						getline(inFile, line);
+						double green = stod(line.substr(line.find(">") + 1, line.rfind("<") - line.find(">") - 1));
+
+						getline(inFile, line);
+						double blue = stod(line.substr(line.find(">") + 1, line.rfind("<") - line.find(">") - 1));
+
+						// Red
+						if (action == 'E')
+						{
+							inkColors[slot].effect.Set(red * 255, green * 255, blue * 255);
+						}
+						else
+						{
+							inkColors[slot].arrow.Set(red * 255, green * 255, blue * 255);
+						}
+					}
+
+					getline(inFile, line);
+				}
+
+				action = 'F';
+			}
+		}
+	}
+
+	return inkColors;
+}
+
+map<string, map<string, int>> SmashData::readBaseSlots()
+{
+	map<string, map<string, int>> baseSlots;
 
 	if (fs::exists(rootPath + "/config.json"))
 	{
@@ -3283,11 +3389,9 @@ map<string, map<string, string>> SmashData::readBaseSlots()
 
 						end = line.find("/camera", camPos + 7) - 1;
 						beg = line.find(charcode + "/c", camPos + 7) + 2 + charcode.size();
-						string oldSlot = line.substr(beg, end - beg + 1);
+						int baseSlot = stoi(line.substr(beg, end - beg + 1));
 
-						log->LogText(charcode + " " + newSlot + " " + oldSlot);
-
-						baseSlots[charcode][newSlot] = oldSlot;
+						baseSlots[charcode][newSlot] = baseSlot;
 					}
 				}
 			}
@@ -3349,17 +3453,17 @@ map<string, map<string, Name>> SmashData::readNames()
 				// CSS/CSP/VS
 				if (lines[i].find("nam_chr") != string::npos)
 				{
-					beg = lines[i].find("nam_chr") + 10;
+					beg = lines[i].find("nam_chr") + 9;
 					end = lines[i].find("_", beg);
-					type = lines[i][beg - 3];
+					type = lines[i][beg - 2];
 
 					action = true;
 				}
 				// Stage_Name
 				else if (lines[i].find("nam_stage") != string::npos)
 				{
-					beg = lines[i].find("nam_stage") + 16;
-					end = lines[i].find("_", beg);
+					beg = lines[i].find("nam_stage") + 15;
+					end = lines[i].find("_", beg + 1);
 					type = 's';
 
 					action = true;
@@ -3394,10 +3498,8 @@ map<string, map<string, Name>> SmashData::readNames()
 					}
 					else
 					{
-						// TODO: ERROR
+						log->LogText("> ERROR: Unable to correctly read names from msg_name.xmsbt!");
 					}
-
-					log->LogText(name);
 
 					action = false;
 					i += 2;
