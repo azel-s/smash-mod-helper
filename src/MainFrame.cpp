@@ -732,7 +732,7 @@ void MainFrame::onInkPressed(wxCommandEvent& evt)
 					{
 						fs::remove(data.rootPath + "/fighter/common/param/effect.prcxml");
 					}
-					//fs::remove(fs::current_path() / "effect.xml");
+					fs::remove(fs::current_path() / "effect.xml");
 				}
 
 				// Restore working directory
@@ -748,6 +748,11 @@ void MainFrame::onInkPressed(wxCommandEvent& evt)
 
 				fs::create_directories(data.rootPath + "/fighter/common/param/");
 				fs::rename(fs::current_path() / "effect_Edit.prcxml", data.rootPath + "/fighter/common/param/effect.prcxml");
+
+				if (fs::exists(data.rootPath + "/fighter/common/param/effect.prcx"))
+				{
+					fs::remove(data.rootPath + "/fighter/common/param/effect.prcx");
+				}
 
 				// Restore working directory
 				wxSetWorkingDirectory("../../");
@@ -836,7 +841,12 @@ void MainFrame::onPrcPressed(wxCommandEvent& evt)
 						fs::rename(fs::current_path() / "ui_chara_db.prcx", data.rootPath + "/ui/param/database/ui_chara_db.prcx");
 
 						fs::remove(fs::current_path() / "modif.prc");
-						//fs::remove(fs::current_path() / "ui_chara_db.xml");
+						fs::remove(fs::current_path() / "ui_chara_db.xml");
+
+						if (fs::exists(data.rootPath + "/ui/param/database/ui_chara_db.prcxml"))
+						{
+							fs::remove(data.rootPath + "/ui/param/database/ui_chara_db.prcxml");
+						}
 					}
 					else
 					{
@@ -874,6 +884,12 @@ void MainFrame::onPrcPressed(wxCommandEvent& evt)
 
 						fs::create_directories(data.rootPath + "/ui/param/database/");
 						fs::rename(fs::current_path() / "ui_chara_db.prcxml", data.rootPath + "/ui/param/database/ui_chara_db.prcxml");
+
+
+						if (fs::exists(data.rootPath + "/ui/param/database/ui_chara_db.prcx"))
+						{
+							fs::remove(data.rootPath + "/ui/param/database/ui_chara_db.prcx");
+						}
 					}
 					else
 					{
