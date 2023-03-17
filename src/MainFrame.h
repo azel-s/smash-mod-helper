@@ -45,8 +45,10 @@ class MainFrame : public wxFrame
 		wxArrayString getSelectedFileTypes();
 		bool isFileTypeSelected();
 
-		// Readers
-		void readNames(wxCommandEvent& evt);
+		// Test Function
+		void test(wxCommandEvent& evt);
+		map<string, map<string, Name>> readNames();
+		map<string, map<string, string>> readBaseSlots();
 
 		// Updaters/Modifiers
 		void updateFileTypeBoxes();

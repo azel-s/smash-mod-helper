@@ -28,7 +28,7 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	inkMenu = new wxMenuItem(fileMenu, wxID_ANY, "Edit Inkling Colors");
 	this->Bind(wxEVT_MENU, &MainFrame::onInkPressed, this, toolsMenu->Append(inkMenu)->GetId());
 	inkMenu->Enable(false);
-	this->Bind(wxEVT_MENU, &MainFrame::readNames, this, toolsMenu->Append(wxID_ANY, "TEST")->GetId());
+	this->Bind(wxEVT_MENU, &MainFrame::test, this, toolsMenu->Append(wxID_ANY, "TEST")->GetId());
 
 	wxMenu* optionsMenu = new wxMenu();
 	wxMenu* prcOutput = new wxMenu();
@@ -900,22 +900,177 @@ void MainFrame::onClose(wxCloseEvent& evt)
 	evt.Skip();
 }
 
-void MainFrame::readNames(wxCommandEvent& evt)
+void MainFrame::test(wxCommandEvent& evt)
+{
+	readBaseSlots();
+}
+
+map<string, map<string, string>> MainFrame::readBaseSlots()
+{
+	map<string, map<string, string>> baseSlots;
+
+	if (fs::exists(data.rootPath + "/config.json"))
+	{
+		ifstream inFile(data.rootPath + "/config.json");
+
+		if (inFile.is_open())
+		{
+			string line;
+
+			while (line.find("\"new-dir-infos-base\"") == string::npos && !inFile.eof())
+			{
+				getline(inFile, line);
+			}
+
+			// Found base-slot section
+			if (line.find("\"new-dir-infos-base\"") != string::npos)
+			{
+				while (line.find('}') == string::npos && !inFile.eof())
+				{
+					getline(inFile, line);
+
+					auto camPos = line.find("/camera");
+
+					if (camPos != string::npos)
+					{
+						auto beg = line.find("fighter/") + 8;
+						auto end = line.find("/", beg);
+						string charcode = line.substr(beg, end - beg);
+
+						string newSlot = line.substr(end + 2, camPos - end - 2);
+
+						end = line.find("/camera", camPos + 7) - 1;
+						beg = line.find(charcode + "/c", camPos + 7) + 2 + charcode.size();
+						string oldSlot = line.substr(beg, end - beg + 1);
+
+						log->LogText(charcode + " " + newSlot + " " + oldSlot);
+
+						baseSlots[charcode][newSlot] = oldSlot;
+					}
+				}
+			}
+		}
+		else
+		{
+			log->LogText("> ERROR: " + data.rootPath + "/config.json" + "could not be opened!");
+		}
+	}
+
+	return baseSlots;
+}
+
+map<string, map<string, Name>> MainFrame::readNames()
 {
 	map<string, map<string, Name>> names;
+	int count = 0;
 
 	if (fs::exists(data.rootPath + "/ui/message/msg_name.xmsbt"))
 	{
-		std::wifstream inFile(data.rootPath + "/ui/message/msg_name.xmsbt", ios::binary);
+		wifstream inFile(data.rootPath + "/ui/message/msg_name.xmsbt", ios::binary);
 		inFile.imbue(std::locale(inFile.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::consume_header>));
 
-		for (wchar_t c; inFile.get(c); )
+		if (inFile.is_open())
 		{
-			log->LogText((char) c);
-		}
+			vector<string> lines;
+			int count = -2;
 
-		inFile.close();
+			// Read Header
+			for (wchar_t c; inFile.get(c) && count < 0; )
+			{
+				if ((char(c)) == '>')
+				{
+					count++;
+				}
+			}
+
+			lines.push_back("");
+
+			for (wchar_t c; inFile.get(c); )
+			{
+				lines[count] += (char)c;
+
+				if ((char(c)) == '>')
+				{
+					lines.push_back("");
+					count++;
+				}
+			}
+
+			char type;
+			bool action = false;
+			size_t beg;
+			size_t end;
+
+			// Interpret Data
+			for (int i = 0; i < lines.size(); i++)
+			{
+				// CSS/CSP/VS
+				if (lines[i].find("nam_chr") != string::npos)
+				{
+					beg = lines[i].find("nam_chr") + 10;
+					end = lines[i].find("_", beg);
+					type = lines[i][beg - 3];
+
+					action = true;
+				}
+				// Stage_Name
+				else if (lines[i].find("nam_stage") != string::npos)
+				{
+					beg = lines[i].find("nam_stage") + 16;
+					end = lines[i].find("_", beg);
+					type = 's';
+
+					action = true;
+				}
+
+				if (action)
+				{
+					string slot = to_string(stoi(lines[i].substr(beg, end - beg)) - 8);
+					string charcode = lines[i].substr(end + 1, lines[i].find("\"", end + 1) - end - 1);
+
+					if (slot.size() == 1)
+					{
+						slot = "0" + slot;
+					}
+					string name = lines[i + 2].substr(0, lines[i + 2].find("<"));
+
+					if (type == '1')
+					{
+						names[charcode][slot].cspName = name;
+					}
+					else if (type == '2')
+					{
+						names[charcode][slot].vsName = name;
+					}
+					else if (type == '3')
+					{
+						names[charcode][slot].cssName = name;
+					}
+					else if (type == 's')
+					{
+						names[charcode][slot].stageName = name;
+					}
+					else
+					{
+						// TODO: ERROR
+					}
+
+					log->LogText(name);
+
+					action = false;
+					i += 2;
+				}
+			}
+
+			inFile.close();
+		}
+		else
+		{
+			log->LogText("> ERROR: " + data.rootPath + "/ui/message/msg_name.xmsbt" + "could not be opened!");
+		}
 	}
+
+	return names;
 }
 
 MainFrame::~MainFrame()
