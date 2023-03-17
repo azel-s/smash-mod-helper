@@ -4,8 +4,10 @@
 #include <fstream>
 #include <thread>
 #include <codecvt>
+#include <queue>
 namespace fs = std::filesystem;
 using std::string, std::ifstream, std::ofstream;
+using std::queue;
 
 wxString getSlotFromInt(int slot)
 {
@@ -1241,6 +1243,57 @@ void SmashData::adjustFiles(string action, string charcode, wxArrayString fileTy
 		{
 			log->LogText("> Success? " + charcode + "'s c" + initSlot + " was " + action + "-ed to c" + finalSlot + "!");
 		}
+	}
+}
+
+void SmashData::removeDesktopINI()
+{
+	int count = 0;
+
+	queue<fs::directory_entry> folders;
+	folders.push(fs::directory_entry(rootPath));
+
+	while (!folders.empty())
+	{
+		for (const auto& i : fs::directory_iterator(folders.front()))
+		{
+			if (i.is_directory())
+			{
+				folders.push(i);
+			}
+			else
+			{
+				string filename = i.path().filename().string();
+
+				for (int i = 0; i < filename.size(); i++)
+				{
+					filename[i] = tolower(filename[i]);
+				}
+
+				if (filename == "desktop.ini")
+				{
+					fs::remove(i);
+					count++;
+
+					string path = i.path().string();
+					std::replace(path.begin(), path.end(), '\\', '/');
+					path = path.substr(rootPath.size());
+
+					log->LogText("> Success: Deleted " + path);
+				}
+			}
+		}
+
+		folders.pop();
+	}
+
+	if (count == 0)
+	{
+		log->LogText("> Success: No desktop.ini files were found.");
+	}
+	else
+	{
+		log->LogText("> Success: " + to_string(count) + " desktop.ini files were deleted.");
 	}
 }
 

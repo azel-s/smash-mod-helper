@@ -91,6 +91,7 @@ struct SmashData
 	// Mod Modifiers
 	void addData(string charcode, string fileType, string slot, string file);
 	void adjustFiles(string action, string charcode, wxArrayString fileTypes, string initSlot, string finalSlot);
+	void removeDesktopINI();
 
 	// Config Getters
 	map<string, set<string>> getAddSlots();

@@ -18,6 +18,7 @@ private:
 	wxPanel* panel;
 	wxMenuBar* menuBar;
 	wxMenuItem* inkMenu;
+	wxMenuItem* deskMenu;
 
 	wxBrowse browse;
 	wxListBox* charsList;
@@ -38,7 +39,6 @@ private:
 	bool isFileTypeSelected();
 
 	// Test Function
-	void test(wxCommandEvent& evt);
 
 	// Updaters/Modifiers
 	void updateFileTypeBoxes();
@@ -62,6 +62,7 @@ private:
 	void onConfigPressed(wxCommandEvent& evt);
 	void onBasePressed(wxCommandEvent& evt);
 	void onInkPressed(wxCommandEvent& evt);
+	void onDeskPressed(wxCommandEvent& evt);
 	void onPrcPressed(wxCommandEvent& evt);
 	void onMenuClose(wxCommandEvent& evt);
 	void onClose(wxCloseEvent& evt);

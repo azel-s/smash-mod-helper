@@ -31,9 +31,11 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 
 	wxMenu* toolsMenu = new wxMenu();
 	inkMenu = new wxMenuItem(fileMenu, wxID_ANY, "Edit Inkling Colors", "Open a directory to enable this feature.");
+	deskMenu = new wxMenuItem(fileMenu, wxID_ANY, "Delete Desktop.ini Files", "Open a directory to enable this feature.");
 	this->Bind(wxEVT_MENU, &MainFrame::onInkPressed, this, toolsMenu->Append(inkMenu)->GetId());
+	this->Bind(wxEVT_MENU, &MainFrame::onDeskPressed, this, toolsMenu->Append(deskMenu)->GetId());
 	inkMenu->Enable(false);
-	//this->Bind(wxEVT_MENU, &MainFrame::test, this, toolsMenu->Append(wxID_ANY, "TEST")->GetId());
+	deskMenu->Enable(false);
 
 	wxMenu* optionsMenu = new wxMenu();
 
@@ -468,6 +470,7 @@ void MainFrame::onBrowse(wxCommandEvent& evt)
 		}
 
 		updateInkMenu();
+		deskMenu->Enable();
 
 		panel->SendSizeEvent();
 	}
@@ -942,8 +945,9 @@ void MainFrame::onClose(wxCloseEvent& evt)
 	evt.Skip();
 }
 
-void MainFrame::test(wxCommandEvent& evt)
+void MainFrame::onDeskPressed(wxCommandEvent& evt)
 {
+	data.removeDesktopINI();
 }
 
 MainFrame::~MainFrame()
