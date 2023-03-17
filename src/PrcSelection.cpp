@@ -114,7 +114,15 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 
 		text = new wxStaticText(this, wxID_ANY, mod.charNames[i->first]);
 
-		gridSizer->Add(text, wxGBPosition(currRow, currCol), wxGBSpan(i->second.size(), 1), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
+		if (i->first != "element")
+		{
+			gridSizer->Add(text, wxGBPosition(currRow, currCol), wxGBSpan(i->second.size(), 1), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
+		}
+		else
+		{
+			gridSizer->Add(text, wxGBPosition(currRow, currCol), wxGBSpan(1, 1), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
+		}
+
 		currCol++;
 
 		if (slots)
@@ -122,13 +130,13 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 			wxSpinCtrl* userSlot = new wxSpinCtrl(this, wxID_ANY, "", wxDefaultPosition, wxSize(50, -1), wxSP_WRAP, 8, 255, stoi((*(i->second.rbegin()))) + 1);
 			maxSlots.push_back(userSlot);
 
-			if (true)
+			if (i->first != "element")
 			{
 				gridSizer->Add(userSlot, wxGBPosition(currRow, currCol), wxGBSpan(i->second.size(), 1), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
 			}
 			else
 			{
-				gridSizer->Add(userSlot, wxGBPosition(currRow, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
+				gridSizer->Add(userSlot, wxGBPosition(currRow, currCol), wxGBSpan(1, 1), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
 			}
 		}
 		currCol++;
@@ -160,7 +168,6 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 				if (hasSlot00 && *j == "00")
 				{
 					fieldName = hasSlot ? prevNames[i->first][*j].cssName : "Name";
-
 					textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 					slotNames[charcode][*j].cssName = textCtrl;
 					gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
