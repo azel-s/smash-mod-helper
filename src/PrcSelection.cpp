@@ -204,7 +204,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
                 currRow++;
                 currCol = 2;
 
-                hasSlot = true;
+                hasSlot = false;
             }
 
             // Pyra and Mythra both have same slots

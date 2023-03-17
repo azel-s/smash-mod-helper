@@ -14,6 +14,11 @@ using std::string; using std::ofstream;
 
 MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxSYSTEM_MENU | wxCAPTION | wxCLOSE_BOX | wxMINIMIZE_BOX & ~wxRESIZE_BORDER)
 {
+	// Read Settings
+	ifstream settingsFile("settings.ini");
+	// TODO:
+	settingsFile.close();
+
 	// Create main panel
 	panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
 
@@ -362,6 +367,8 @@ void MainFrame::togglePRCOutput(wxCommandEvent& evt)
 		log->LogText("> Set PRC output to PRCXML");
 		buttons.prc->SetLabel("Create PRCXML");
 	}
+
+	// TODO: Update Settings
 }
 
 void MainFrame::toggleBaseReading(wxCommandEvent& evt)
@@ -376,6 +383,8 @@ void MainFrame::toggleBaseReading(wxCommandEvent& evt)
 	{
 		log->LogText("> Base slots will NOT be read from mods.");
 	}
+	
+	// TODO: Update Settings
 }
 
 void MainFrame::toggleNameReading(wxCommandEvent& evt)
@@ -390,6 +399,8 @@ void MainFrame::toggleNameReading(wxCommandEvent& evt)
 	{
 		log->LogText("> Custom names will NOT be read from mods.");
 	}
+
+	// TODO: Update Settings
 }
 
 void MainFrame::onBrowse(wxCommandEvent& evt)
