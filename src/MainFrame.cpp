@@ -30,23 +30,23 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	this->Bind(wxEVT_MENU, &MainFrame::onMenuClose, this, fileMenu->Append(wxID_ANY, "Close\tAlt-F4")->GetId());
 
 	wxMenu* toolsMenu = new wxMenu();
-	inkMenu = new wxMenuItem(fileMenu, wxID_ANY, "Edit Inkling Colors");
+	inkMenu = new wxMenuItem(fileMenu, wxID_ANY, "Edit Inkling Colors", "Open a directory to enable this feature.");
 	this->Bind(wxEVT_MENU, &MainFrame::onInkPressed, this, toolsMenu->Append(inkMenu)->GetId());
 	inkMenu->Enable(false);
-	this->Bind(wxEVT_MENU, &MainFrame::test, this, toolsMenu->Append(wxID_ANY, "TEST")->GetId());
+	//this->Bind(wxEVT_MENU, &MainFrame::test, this, toolsMenu->Append(wxID_ANY, "TEST")->GetId());
 
 	wxMenu* optionsMenu = new wxMenu();
 
 	wxMenu* prcOutput = new wxMenu();
 	optionsMenu->AppendSubMenu(prcOutput, "Set PRC output");
-	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcOutput->AppendRadioItem(wxID_ANY, "PRCXML")->GetId());
-	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcOutput->AppendRadioItem(wxID_ANY, "PRCX")->GetId());
+	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcOutput->AppendRadioItem(wxID_ANY, "PRCXML", "This configuration is readable, but sacrifices load times.")->GetId());
+	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcOutput->AppendRadioItem(wxID_ANY, "PRCX", "This configuration is faster, but sacrifices readability.")->GetId());
 
 	wxMenu* loadFromMod = new wxMenu();
 	optionsMenu->AppendSubMenu(loadFromMod, "Load from mod");
-	auto readBaseID = loadFromMod->AppendCheckItem(wxID_ANY, "Base Slots")->GetId();
-	auto readNameID = loadFromMod->AppendCheckItem(wxID_ANY, "Custom Names")->GetId();
-	auto readInkID = loadFromMod->AppendCheckItem(wxID_ANY, "Inkling Colors")->GetId();
+	auto readBaseID = loadFromMod->AppendCheckItem(wxID_ANY, "Base Slots", "Enables reading information from config.json")->GetId();
+	auto readNameID = loadFromMod->AppendCheckItem(wxID_ANY, "Custom Names", "Enables reading information from msg_name.xmsbt")->GetId();
+	auto readInkID = loadFromMod->AppendCheckItem(wxID_ANY, "Inkling Colors", "Enables reading information from effect.prcxml")->GetId();
 	this->Bind(wxEVT_MENU, &MainFrame::toggleBaseReading, this, readBaseID);
 	this->Bind(wxEVT_MENU, &MainFrame::toggleNameReading, this, readNameID);
 	this->Bind(wxEVT_MENU, &MainFrame::toggleInkReading, this, readInkID);
@@ -63,6 +63,7 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	// Create browse button and text field
 	browse.text = new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize);
 	browse.button = new wxButton(panel, wxID_ANY, "Browse...", wxDefaultPosition, wxDefaultSize);
+	browse.button->SetToolTip("Open folder containing fighter/ui/effect/sound folder(s)");
 	browse.button->Bind(wxEVT_BUTTON, &MainFrame::onBrowse, this);
 	browse.button->Disable();
 
@@ -118,47 +119,56 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	initSlots.text = new wxStaticText(panel, wxID_ANY, "Initial Slot: ", wxDefaultPosition, wxSize(55, -1));
 	initSlots.list = new wxChoice(panel, wxID_ANY, wxDefaultPosition, wxSize(50, -1));
 	initSlots.list->Bind(wxEVT_CHOICE, &MainFrame::onModSlotSelect, this);
+	initSlots.list->SetToolTip("Final Slot's source slot");
 
 	// Create user slot List
 	finalSlots.text = new wxStaticText(panel, wxID_ANY, "Final Slot: ", wxDefaultPosition, wxSize(55, -1));
 	finalSlots.list = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxSize(50, -1), wxSP_WRAP, 0, 255, 0);
 	finalSlots.list->Bind(wxEVT_SPINCTRL, &MainFrame::onUserSlotSelect, this);
+	finalSlots.list->SetToolTip("Initial Slot's target slot");
 
 	// Create Move Button
 	buttons.mov = new wxButton(panel, wxID_ANY, "Move", wxDefaultPosition, wxDefaultSize);
 	buttons.mov->Bind(wxEVT_BUTTON, &MainFrame::onMovePressed, this);
 	buttons.mov->Disable();
+	buttons.mov->SetToolTip("Initial Slot is moved to Final Slot");
 
 	// Create Duplicate Button
 	buttons.dup = new wxButton(panel, wxID_ANY, "Duplicate", wxDefaultPosition, wxDefaultSize);
 	buttons.dup->Bind(wxEVT_BUTTON, &MainFrame::onDuplicatePressed, this);
 	buttons.dup->Disable();
+	buttons.dup->SetToolTip("Initial Slot is duplicated to Final Slot");
 
 	// Create Delete Button
 	buttons.del = new wxButton(panel, wxID_ANY, "Delete", wxDefaultPosition, wxDefaultSize);
 	buttons.del->Bind(wxEVT_BUTTON, &MainFrame::onDeletePressed, this);
 	buttons.del->Disable();
+	buttons.del->SetToolTip("Initial Slot is deleted");
 
 	// Create Log Button
 	buttons.log = new wxButton(panel, wxID_ANY, "Show Log", wxDefaultPosition, wxDefaultSize);
 	buttons.log->Bind(wxEVT_BUTTON, &MainFrame::onLogPressed, this);
+	buttons.log->SetToolTip("Log Window can help debug issues.");
 
 	// Create Base Slots Button
 	buttons.base = new wxButton(panel, wxID_ANY, "Select Base Slots", wxDefaultPosition, wxDefaultSize);
 	buttons.base->Bind(wxEVT_BUTTON, &MainFrame::onBasePressed, this);
 	buttons.base->Hide();
+	buttons.base->SetToolTip("Choose source slot(s) for each additional slot");
 
 	// Create Config Button
 	buttons.config = new wxButton(panel, wxID_ANY, "Create Config", wxDefaultPosition, wxDefaultSize);
 	buttons.config->Bind(wxEVT_BUTTON, &MainFrame::onConfigPressed, this);
 	buttons.config->Disable();
 	buttons.config->Hide();
+	buttons.config->SetToolTip("Creata a config for any additionals costumes, extra textures, and/or effects");
 
 	// Create prcx Buttons
 	buttons.prc = new wxButton(panel, wxID_ANY, "Create PRCXML", wxDefaultPosition, wxDefaultSize);
 	buttons.prc->Bind(wxEVT_BUTTON, &MainFrame::onPrcPressed, this);
 	buttons.prc->Disable();
 	buttons.prc->Hide();
+	buttons.prc->SetToolTip("Edit slot names or modify max slots for each character");
 
 	// Set Close Window Bind
 	this->Bind(wxEVT_CLOSE_WINDOW, &MainFrame::onClose, this);
@@ -349,6 +359,7 @@ void MainFrame::updateInkMenu()
 	if (data.mod.find("inkling") != data.mod.end() && data.hasAdditionalSlot("inkling"))
 	{
 		inkMenu->Enable(false);
+		inkMenu->SetHelp("Select base slots to enable this feature.");
 	}
 	else
 	{
@@ -642,7 +653,7 @@ void MainFrame::onBasePressed(wxCommandEvent& evt)
 		buttons.config->Show();
 		buttons.prc->Show();
 
-		inkMenu->Enable(true);
+		inkMenu->Enable();
 
 		panel->SendSizeEvent();
 	}
