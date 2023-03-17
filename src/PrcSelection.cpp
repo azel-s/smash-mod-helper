@@ -53,65 +53,57 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 		gridSizer->Add(text, wxGBPosition(0, 1), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
 	}
 
-	if (true)
+	int currCol = 2;
+
+	text = new wxStaticText(this, wxID_ANY, "Slot");
+	text->SetFont(*boldFont);
+	gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
+	currCol++;
+
+	if (hasSlot00)
 	{
-		int currCol = 2;
-
-		text = new wxStaticText(this, wxID_ANY, "Slot");
+		text = new wxStaticText(this, wxID_ANY, "CSS Name");
 		text->SetFont(*boldFont);
 		gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
 		currCol++;
+	}
 
-		if (hasSlot00)
-		{
-			text = new wxStaticText(this, wxID_ANY, "CSS Name");
-			text->SetFont(*boldFont);
-			gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
-			currCol++;
-		}
+	text = new wxStaticText(this, wxID_ANY, "CSP Name");
+	text->SetFont(*boldFont);
+	gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
+	currCol++;
 
-		text = new wxStaticText(this, wxID_ANY, "CSP Name");
-		text->SetFont(*boldFont);
-		gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
-		currCol++;
+	text = new wxStaticText(this, wxID_ANY, "VS/Results Name");
+	text->SetFont(*boldFont);
+	gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
+	currCol++;
 
-		text = new wxStaticText(this, wxID_ANY, "VS/Results Name");
-		text->SetFont(*boldFont);
-		gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
-		currCol++;
+	text = new wxStaticText(this, wxID_ANY, "Boxing Ring Name");
+	text->SetFont(*boldFont);
+	gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
+	currCol++;
 
-		text = new wxStaticText(this, wxID_ANY, "Boxing Ring Name");
-		text->SetFont(*boldFont);
-		gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
-		currCol++;
+	text = new wxStaticText(this, wxID_ANY, "Custom Announcer");
+	text->SetFont(*boldFont);
+	gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
+	currCol++;
 
-		text = new wxStaticText(this, wxID_ANY, "Custom Announcer");
-		text->SetFont(*boldFont);
-		gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
-		currCol++;
+	gridSizer->AddGrowableCol(3);
+	gridSizer->AddGrowableCol(4);
+	gridSizer->AddGrowableCol(5);
+	gridSizer->AddGrowableCol(6);
 
-		gridSizer->AddGrowableCol(3);
-		gridSizer->AddGrowableCol(4);
-		gridSizer->AddGrowableCol(5);
-		gridSizer->AddGrowableCol(6);
-
-		if (hasSlot00)
-		{
-			gridSizer->AddGrowableCol(7);
-		}
+	if (hasSlot00)
+	{
+		gridSizer->AddGrowableCol(7);
 	}
 
 	int currRow = 1;
-	int currCol = 0;
+	currCol = 0;
 
 	// Create fields
 	for (auto i = allSlots.begin(); i != allSlots.end(); i++)
 	{
-		if (readPrevNames && prevNames.find(i->first) != prevNames.end())
-		{
-			hasChar = true;
-		}
-
 		text = new wxStaticText(this, wxID_ANY, mod.charNames[i->first]);
 
 		if (i->first != "element")
@@ -143,9 +135,25 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 
 		if (i->first != "element")
 		{
+			string charcode = i->first;
+
+			if (i->first == "eflame")
+			{
+				charcode = "eflame_only";
+			}
+			else if (i->first == "elight")
+			{
+				charcode = "elight_only";
+			}
+
+			if (readPrevNames && prevNames.find(charcode) != prevNames.end())
+			{
+				hasChar = true;
+			}
+
 			for (auto j = i->second.begin(); j != i->second.end(); j++)
 			{
-				if (hasChar && prevNames[i->first].find(*j) != prevNames[i->first].end())
+				if (hasChar && prevNames[charcode].find(*j) != prevNames[charcode].end())
 				{
 					hasSlot = true;
 				}
@@ -154,20 +162,9 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 				gridSizer->Add(text, wxGBPosition(currRow, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
 				currCol++;
 
-				string charcode = i->first;
-
-				if (i->first == "eflame")
-				{
-					charcode = "eflame_only";
-				}
-				else if (i->first == "elight")
-				{
-					charcode = "elight_only";
-				}
-
 				if (hasSlot00 && *j == "00")
 				{
-					fieldName = hasSlot ? prevNames[i->first][*j].cssName : "Name";
+					fieldName = hasSlot ? prevNames[charcode][*j].cssName : "Name";
 					textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 					slotNames[charcode][*j].cssName = textCtrl;
 					gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
@@ -178,19 +175,19 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 					currCol++;
 				}
 
-				fieldName = hasSlot ? prevNames[i->first][*j].cspName : "Name";
+				fieldName = hasSlot ? prevNames[charcode][*j].cspName : "Name";
 				textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 				slotNames[charcode][*j].cspName = textCtrl;
 				gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 				currCol++;
 
-				fieldName = hasSlot ? prevNames[i->first][*j].vsName : "NAME";
+				fieldName = hasSlot ? prevNames[charcode][*j].vsName : "NAME";
 				textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 				slotNames[charcode][*j].vsName = textCtrl;
 				gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 				currCol++;
 
-				fieldName = hasSlot ? prevNames[i->first][*j].stageName : "Stage Name";
+				fieldName = hasSlot ? prevNames[charcode][*j].stageName : "Stage Name";
 				textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 				slotNames[charcode][*j].stageName = textCtrl;
 				gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
@@ -261,7 +258,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 
 						if (hasSlot00 && *j == "00")
 						{
-							fieldName = hasFlameSlot ? prevNames[i->first][*j].cssName : "Name";
+							fieldName = hasFlameSlot ? prevNames["eflame_first"][*j].cssName : "Name";
 							textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 							slotNames["eflame_first"][*j].cssName = textCtrl;
 							gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
@@ -272,13 +269,13 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 							currCol++;
 						}
 
-						fieldName = hasFlameSlot ? prevNames[i->first][*j].cspName : "Name";
+						fieldName = hasFlameSlot ? prevNames["eflame_first"][*j].cspName : "Name";
 						textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 						slotNames["eflame_first"][*j].cspName = textCtrl;
 						gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 						currCol++;
 
-						fieldName = hasFlameSlot ? prevNames[i->first][*j].vsName : "NAME";
+						fieldName = hasFlameSlot ? prevNames["eflame_first"][*j].vsName : "NAME";
 						textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 						slotNames["eflame_first"][*j].vsName = textCtrl;
 						gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
@@ -304,7 +301,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 
 						if (hasSlot00 && *j == "00")
 						{
-							fieldName = hasLightSlot ? prevNames[i->first][*j].cssName : "Name";
+							fieldName = hasLightSlot ? prevNames["elight_first"][*j].cssName : "Name";
 							textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 							slotNames["elight_first"][*j].cssName = textCtrl;
 							gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
@@ -315,13 +312,13 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 							currCol++;
 						}
 
-						fieldName = hasLightSlot ? prevNames[i->first][*j].cspName : "Name";
+						fieldName = hasLightSlot ? prevNames["elight_first"][*j].cspName : "Name";
 						textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 						slotNames["elight_first"][*j].cspName = textCtrl;
 						gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 						currCol++;
 
-						fieldName = hasLightSlot ? prevNames[i->first][*j].vsName : "NAME";
+						fieldName = hasLightSlot ? prevNames["elight_first"][*j].vsName : "NAME";
 						textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 						slotNames["elight_first"][*j].vsName = textCtrl;
 						gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);

@@ -3501,6 +3501,9 @@ map<string, map<string, Name>> SmashData::readNames()
 						log->LogText("> ERROR: Unable to correctly read names from msg_name.xmsbt!");
 					}
 
+
+					log->LogText(charcode + ' ' + slot + ' ' + name);
+
 					action = false;
 					i += 2;
 				}
