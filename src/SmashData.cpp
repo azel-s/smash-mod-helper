@@ -3247,6 +3247,174 @@ void SmashData::outputUTF(wofstream& file, string str, bool parse)
 	}
 }
 
+map<string, map<string, string>> SmashData::readBaseSlots()
+{
+	map<string, map<string, string>> baseSlots;
+
+	if (fs::exists(rootPath + "/config.json"))
+	{
+		ifstream inFile(rootPath + "/config.json");
+
+		if (inFile.is_open())
+		{
+			string line;
+
+			while (line.find("\"new-dir-infos-base\"") == string::npos && !inFile.eof())
+			{
+				getline(inFile, line);
+			}
+
+			// Found base-slot section
+			if (line.find("\"new-dir-infos-base\"") != string::npos)
+			{
+				while (line.find('}') == string::npos && !inFile.eof())
+				{
+					getline(inFile, line);
+
+					auto camPos = line.find("/camera");
+
+					if (camPos != string::npos)
+					{
+						auto beg = line.find("fighter/") + 8;
+						auto end = line.find("/", beg);
+						string charcode = line.substr(beg, end - beg);
+
+						string newSlot = line.substr(end + 2, camPos - end - 2);
+
+						end = line.find("/camera", camPos + 7) - 1;
+						beg = line.find(charcode + "/c", camPos + 7) + 2 + charcode.size();
+						string oldSlot = line.substr(beg, end - beg + 1);
+
+						log->LogText(charcode + " " + newSlot + " " + oldSlot);
+
+						baseSlots[charcode][newSlot] = oldSlot;
+					}
+				}
+			}
+		}
+		else
+		{
+			log->LogText("> ERROR: " + rootPath + "/config.json" + "could not be opened!");
+		}
+	}
+
+	return baseSlots;
+}
+
+map<string, map<string, Name>> SmashData::readNames()
+{
+	map<string, map<string, Name>> names;
+	int count = 0;
+
+	if (fs::exists(rootPath + "/ui/message/msg_name.xmsbt"))
+	{
+		wifstream inFile(rootPath + "/ui/message/msg_name.xmsbt", ios::binary);
+		inFile.imbue(std::locale(inFile.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::consume_header>));
+
+		if (inFile.is_open())
+		{
+			vector<string> lines;
+			int count = -2;
+
+			// Read Header
+			for (wchar_t c; inFile.get(c) && count < 0; )
+			{
+				if ((char(c)) == '>')
+				{
+					count++;
+				}
+			}
+
+			lines.push_back("");
+
+			for (wchar_t c; inFile.get(c); )
+			{
+				lines[count] += (char)c;
+
+				if ((char(c)) == '>')
+				{
+					lines.push_back("");
+					count++;
+				}
+			}
+
+			char type;
+			bool action = false;
+			size_t beg;
+			size_t end;
+
+			// Interpret Data
+			for (int i = 0; i < lines.size(); i++)
+			{
+				// CSS/CSP/VS
+				if (lines[i].find("nam_chr") != string::npos)
+				{
+					beg = lines[i].find("nam_chr") + 10;
+					end = lines[i].find("_", beg);
+					type = lines[i][beg - 3];
+
+					action = true;
+				}
+				// Stage_Name
+				else if (lines[i].find("nam_stage") != string::npos)
+				{
+					beg = lines[i].find("nam_stage") + 16;
+					end = lines[i].find("_", beg);
+					type = 's';
+
+					action = true;
+				}
+
+				if (action)
+				{
+					string slot = to_string(stoi(lines[i].substr(beg, end - beg)) - 8);
+					string charcode = lines[i].substr(end + 1, lines[i].find("\"", end + 1) - end - 1);
+
+					if (slot.size() == 1)
+					{
+						slot = "0" + slot;
+					}
+					string name = lines[i + 2].substr(0, lines[i + 2].find("<"));
+
+					if (type == '1')
+					{
+						names[charcode][slot].cspName = name;
+					}
+					else if (type == '2')
+					{
+						names[charcode][slot].vsName = name;
+					}
+					else if (type == '3')
+					{
+						names[charcode][slot].cssName = name;
+					}
+					else if (type == 's')
+					{
+						names[charcode][slot].stageName = name;
+					}
+					else
+					{
+						// TODO: ERROR
+					}
+
+					log->LogText(name);
+
+					action = false;
+					i += 2;
+				}
+			}
+
+			inFile.close();
+		}
+		else
+		{
+			log->LogText("> ERROR: " + rootPath + "/ui/message/msg_name.xmsbt" + "could not be opened!");
+		}
+	}
+
+	return names;
+}
+
 void SmashData::clear()
 {
 	for (auto i = mod.begin(); i != mod.end(); i++)

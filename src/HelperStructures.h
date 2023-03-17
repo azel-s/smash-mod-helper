@@ -5,6 +5,14 @@
 #include <locale>
 using namespace std;
 
+struct Settings
+{
+	bool prcxOutput = false;
+	bool showLogWindow = false;
+
+	bool readNames = true;
+};
+
 struct wxBrowse
 {
 	wxButton* button;

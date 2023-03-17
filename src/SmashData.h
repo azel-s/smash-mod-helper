@@ -111,6 +111,10 @@ struct SmashData
 	void createPRCXML(map<string, map<int, Name>>& names, map<string, map<int, string>>& announcers, map<string, int>& maxSlots);
 	void outputUTF(wofstream& file, string str, bool parse = false);
 
+	// Readers
+	map<string, map<string, string>> readBaseSlots();
+	map<string, map<string, Name>> readNames();
+
 	// Clear Mod Data
 	void clear();
 };

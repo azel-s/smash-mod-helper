@@ -5,14 +5,6 @@
 #include <wx/spinctrl.h>
 using std::vector;
 
-struct Settings
-{
-	bool prcxOutput = false;
-	bool showLogWindow = false;
-
-	bool readNames = true;
-};
-
 class MainFrame : public wxFrame
 {
 	private:
