@@ -10,8 +10,8 @@ struct Settings
 	bool prcxOutput = false;
 	bool showLogWindow = false;
 
-	bool readNames = true;
 	bool readBase = true;
+	bool readNames = true;
 	bool readInk = true;
 };
 

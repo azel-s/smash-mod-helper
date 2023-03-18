@@ -30,6 +30,8 @@ private:
 	wxTextCtrl* logWindow;
 	wxStatusBar* statusBar;
 
+	string initPath;
+
 	// Reset Helpers
 	void resetFileTypeBoxes();
 	void resetButtons();
@@ -37,6 +39,10 @@ private:
 	// Getters
 	wxArrayString getSelectedFileTypes();
 	bool isFileTypeSelected();
+
+	// Settings
+	void readSettings();
+	void updateSettings();
 
 	// Test Function
 	void onTestPressed(wxCommandEvent& evt);

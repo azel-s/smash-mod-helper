@@ -396,7 +396,8 @@ map<string, map<int, Name>> PrcSelection::getNames()
 	{
 		for (auto j = i->second.begin(); j != i->second.end(); j++)
 		{
-			if (j->second.cspName->GetValue() != "Name" || j->second.vsName->GetValue() != "NAME" || (i->first != "elight_first" && i->first != "eflame_first" && j->second.stageName->GetValue() != "Stage Name"))
+			// TODO: Clean up big statement
+			if ((stoi(j->first) == 0 && j->second.cssName->GetValue() != "Name") || j->second.cspName->GetValue() != "Name" || j->second.vsName->GetValue() != "NAME" || (i->first != "elight_first" && i->first != "eflame_first" && j->second.stageName->GetValue() != "Stage Name"))
 			{
 				result[i->first][stoi(j->first)].cspName = j->second.cspName->GetValue();
 				result[i->first][stoi(j->first)].vsName = j->second.vsName->GetValue();

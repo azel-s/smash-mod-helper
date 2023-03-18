@@ -14,13 +14,23 @@ using std::string; using std::ofstream;
 
 MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxSYSTEM_MENU | wxCAPTION | wxCLOSE_BOX | wxMINIMIZE_BOX & ~wxRESIZE_BORDER)
 {
-	// Read Settings
-	ifstream settingsFile("settings.ini");
-	// TODO:
-	settingsFile.close();
+	// Set Initial Path
+	initPath = fs::current_path().string();
+	std::replace(initPath.begin(), initPath.end(), '\\', '/');
 
 	// Create main panel
 	panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+
+	// Create log window
+	logWindow = new wxTextCtrl(panel, wxID_ANY, "Log Window:\n", wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
+	logWindow->SetEditable(false);
+	log = new wxLogTextCtrl(logWindow);
+	data.log = log;
+
+	readSettings();
+
+	// Window's status is updated after setting creation.
+	logWindow->Show(settings.showLogWindow);
 
 	// Setup Menu
 	menuBar = new wxMenuBar();
@@ -42,8 +52,19 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 
 	wxMenu* prcOutput = new wxMenu();
 	optionsMenu->AppendSubMenu(prcOutput, "Set PRC output");
-	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcOutput->AppendRadioItem(wxID_ANY, "PRCXML", "This configuration is readable, but sacrifices load times.")->GetId());
-	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcOutput->AppendRadioItem(wxID_ANY, "PRCX", "This configuration is faster, but sacrifices readability.")->GetId());
+	auto prcxmlID = prcOutput->AppendRadioItem(wxID_ANY, "PRCXML", "This configuration is readable, but sacrifices load times.")->GetId();
+	auto prcxID = prcOutput->AppendRadioItem(wxID_ANY, "PRCX", "This configuration is faster, but sacrifices readability.")->GetId();
+	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcxmlID);
+	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcxID);
+	
+	if (settings.prcxOutput)
+	{
+		prcOutput->Check(prcxID, true);
+	}
+	else
+	{
+		prcOutput->Check(prcxmlID, true);
+	}
 
 	wxMenu* loadFromMod = new wxMenu();
 	optionsMenu->AppendSubMenu(loadFromMod, "Load from mod");
@@ -53,9 +74,10 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	this->Bind(wxEVT_MENU, &MainFrame::toggleBaseReading, this, readBaseID);
 	this->Bind(wxEVT_MENU, &MainFrame::toggleNameReading, this, readNameID);
 	this->Bind(wxEVT_MENU, &MainFrame::toggleInkReading, this, readInkID);
-	loadFromMod->Check(readBaseID, true);
-	loadFromMod->Check(readNameID, true);
-	loadFromMod->Check(readInkID, true);
+
+	loadFromMod->Check(readBaseID, settings.readBase);
+	loadFromMod->Check(readNameID, settings.readNames);
+	loadFromMod->Check(readInkID, settings.readInk);
 
 	menuBar->Append(fileMenu, "&File");
 	menuBar->Append(toolsMenu, "&Tools");
@@ -69,13 +91,6 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	browse.button->SetToolTip("Open folder containing fighter/ui/effect/sound folder(s)");
 	browse.button->Bind(wxEVT_BUTTON, &MainFrame::onBrowse, this);
 	browse.button->Disable();
-
-	// Create log window
-	logWindow = new wxTextCtrl(panel, wxID_ANY, "Log Window:\n", wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
-	logWindow->SetEditable(false);
-	logWindow->Show(settings.showLogWindow);
-	log = new wxLogTextCtrl(logWindow);
-	data.log = log;
 
 	// TODO: Look into having less polling for the thread
 	// Setup actions for background thread
@@ -292,6 +307,55 @@ bool MainFrame::isFileTypeSelected()
 	return false;
 }
 
+void MainFrame::readSettings()
+{
+	ifstream settingsFile(initPath + "/Files/settings.data");
+
+	if (settingsFile.is_open())
+	{
+		int bit;
+
+		settingsFile >> bit;
+		settings.prcxOutput = (bit == 1) ? true : false;
+		settingsFile >> bit;
+		//settings.showLogWindow = (bit == 1) ? true : false;
+		settingsFile >> bit;
+		settings.readBase = (bit == 1) ? true : false;
+		settingsFile >> bit;
+		settings.readNames = (bit == 1) ? true : false;
+		settingsFile >> bit;
+		settings.readInk = (bit == 1) ? true : false;
+
+		settingsFile.close();
+	}
+	else
+	{
+		log->LogText("Files/settings.data could not be loaded, using default values.");
+	}
+}
+
+void MainFrame::updateSettings()
+{
+	ofstream settingsFile(initPath + "/Files/settings.data");
+
+	if (settingsFile.is_open())
+	{
+		int bit;
+
+		settingsFile << settings.prcxOutput << ' ';
+		settingsFile << settings.showLogWindow << ' ';
+		settingsFile << settings.readBase << ' ';
+		settingsFile << settings.readNames << ' ';
+		settingsFile << settings.readInk;
+
+		settingsFile.close();
+	}
+	else
+	{
+		log->LogText("Files/settings.data could not be loaded, settings will not be saved.");
+	}
+}
+
 void MainFrame::updateFileTypeBoxes()
 {
 	if (charsList->GetSelection() != wxNOT_FOUND)
@@ -385,7 +449,7 @@ void MainFrame::togglePRCOutput(wxCommandEvent& evt)
 		buttons.prc->SetLabel("Create PRCXML");
 	}
 
-	// TODO: Update Settings
+	updateSettings();
 }
 
 void MainFrame::toggleBaseReading(wxCommandEvent& evt)
@@ -401,7 +465,7 @@ void MainFrame::toggleBaseReading(wxCommandEvent& evt)
 		log->LogText("> Base slots will NOT be read from mods.");
 	}
 
-	// TODO: Update Settings
+	updateSettings();
 }
 
 void MainFrame::toggleNameReading(wxCommandEvent& evt)
@@ -417,7 +481,7 @@ void MainFrame::toggleNameReading(wxCommandEvent& evt)
 		log->LogText("> Custom names will NOT be read from mods.");
 	}
 
-	// TODO: Update Settings
+	updateSettings();
 }
 
 void MainFrame::toggleInkReading(wxCommandEvent& evt)
@@ -433,7 +497,7 @@ void MainFrame::toggleInkReading(wxCommandEvent& evt)
 		log->LogText("> Inkling colors will NOT be read from mods.");
 	}
 
-	// TODO: Update Settings
+	updateSettings();
 }
 
 void MainFrame::onBrowse(wxCommandEvent& evt)
