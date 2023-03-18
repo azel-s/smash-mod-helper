@@ -345,7 +345,12 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 		currCol = 0;
 	}
 
-	sizerM->Add(gridSizer, 1, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, 20);
+	sizerM->Add(gridSizer, 1, wxEXPAND | wxALL, 20);
+
+	text = new wxStaticText(this, wxID_ANY, "Note: A slot's name can be left default if CSS/CSP/VS/Stage are not modified.");
+	text->SetFont(*boldFont);
+	sizerM->Add(text, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, 20);
+
 	sizerM->Add(CreateButtonSizer(wxOK | wxCANCEL), 0, wxALIGN_RIGHT | wxALL, 20);
 
 	this->SetSizerAndFit(sizerM);

@@ -340,8 +340,6 @@ void MainFrame::updateSettings()
 
 	if (settingsFile.is_open())
 	{
-		int bit;
-
 		settingsFile << settings.prcxOutput << ' ';
 		settingsFile << settings.showLogWindow << ' ';
 		settingsFile << settings.readBase << ' ';

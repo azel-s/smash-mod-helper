@@ -2837,7 +2837,7 @@ void SmashData::patchXMLAnnouncer(map<string, map<int, string>>& announcers)
 									}
 									else
 									{
-										line = "      <hash40 hash=\"" + label + slot + "\">vc_narration_characall_" + i->second + "</hash40>";
+										line = "      <hash40 hash=\"" + label + slot + "\">" + i->second + "</hash40>";
 									}
 
 									uiEdit << line << "\n";
@@ -3215,7 +3215,7 @@ void SmashData::createPRCXML(map<string, map<int, Name>>& names, map<string, map
 									}
 									else
 									{
-										line = "<hash40 hash=\"" + label + slot + "\">vc_narration_characall_" + i->second + "</hash40>";
+										line = "<hash40 hash=\"" + label + slot + "\">" + i->second + "</hash40>";
 									}
 
 									uiEdit << "\n\t\t\t" << line;
