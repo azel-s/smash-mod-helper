@@ -39,6 +39,7 @@ private:
 	bool isFileTypeSelected();
 
 	// Test Function
+	void onTestPressed(wxCommandEvent& evt);
 
 	// Updaters/Modifiers
 	void updateFileTypeBoxes();

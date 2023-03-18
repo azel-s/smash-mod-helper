@@ -34,6 +34,7 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	deskMenu = new wxMenuItem(fileMenu, wxID_ANY, "Delete Desktop.ini Files", "Open a directory to enable this feature.");
 	this->Bind(wxEVT_MENU, &MainFrame::onInkPressed, this, toolsMenu->Append(inkMenu)->GetId());
 	this->Bind(wxEVT_MENU, &MainFrame::onDeskPressed, this, toolsMenu->Append(deskMenu)->GetId());
+	//this->Bind(wxEVT_MENU, &MainFrame::onTestPressed, this, toolsMenu->Append(wxID_ANY, "Test Function")->GetId());
 	inkMenu->Enable(false);
 	deskMenu->Enable(false);
 
@@ -471,6 +472,7 @@ void MainFrame::onBrowse(wxCommandEvent& evt)
 
 		updateInkMenu();
 		deskMenu->Enable();
+		deskMenu->SetHelp("desktop.ini files are unnecessary and end up causing file-conflict issues.");
 
 		panel->SendSizeEvent();
 	}
@@ -943,6 +945,11 @@ void MainFrame::onClose(wxCloseEvent& evt)
 	}
 
 	evt.Skip();
+}
+
+void MainFrame::onTestPressed(wxCommandEvent& evt)
+{
+	data.removeDesktopINI();
 }
 
 void MainFrame::onDeskPressed(wxCommandEvent& evt)
