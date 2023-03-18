@@ -365,27 +365,34 @@ map<string, int> PrcSelection::getMaxSlots(map<string, set<string>>& allSlots)
 		int index = 0;
 		for (auto i = allSlots.begin(); i != allSlots.end(); i++)
 		{
-			if (i->first == "eflame")
+			if (maxSlots[index]->GetValue() != 8)
 			{
-				if (allSlots.find("element") == allSlots.end())
+				if (i->first == "eflame")
 				{
-					result["element"] = maxSlots[index]->GetValue();
+					if (allSlots.find("element") == allSlots.end())
+					{
+						result["element"] = maxSlots[index]->GetValue();
+					}
+					result["eflame_first"] = maxSlots[index]->GetValue();
+					result["eflame_only"] = maxSlots[index]->GetValue();
+					index++;
+					continue;
 				}
-				result["eflame_first"] = maxSlots[index]->GetValue();
-				result["eflame_only"] = maxSlots[index]->GetValue();
-				index++;
-				continue;
-			}
-			else if (i->first == "elight")
-			{
-				result["elight_first"] = maxSlots[index]->GetValue();
-				result["elight_only"] = maxSlots[index]->GetValue();
-				index++;
-				continue;
-			}
+				else if (i->first == "elight")
+				{
+					result["elight_first"] = maxSlots[index]->GetValue();
+					result["elight_only"] = maxSlots[index]->GetValue();
+					index++;
+					continue;
+				}
 
-			result[i->first] = maxSlots[index]->GetValue();
-			index++;
+				result[i->first] = maxSlots[index]->GetValue();
+				index++;
+			}
+			else
+			{
+				index++;
+			}
 		}
 	}
 
