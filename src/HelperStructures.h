@@ -47,11 +47,11 @@ struct wxButtons
 
 struct Name
 {
-	string cssName;
-	string cspName;
-	string vsName;
-	string stageName;
-	string announcer;
+	wxString cssName;
+	wxString cspName;
+	wxString vsName;
+	wxString stageName;
+	wxString announcer;
 };
 
 struct wxName

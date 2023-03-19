@@ -113,7 +113,7 @@ struct SmashData
 	void patchXMLInkColors(map<int, InklingColor>& inklingColors);
 	void createPRCXML(map<string, map<int, Name>>& names, map<string, map<int, string>>& announcers, map<string, int>& maxSlots);
 	void createInkPRCXML(map<int, InklingColor>& inklingColors);
-	void outputUTF(wofstream& file, string str, bool parse = false);
+	void outputUTF(wofstream& file, wxString str, bool parse = false);
 
 	// Readers
 	map<int, InklingColor> readInk();

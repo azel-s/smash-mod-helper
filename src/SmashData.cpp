@@ -3397,58 +3397,49 @@ void SmashData::createInkPRCXML(map<int, InklingColor>& inklingColors)
 	}
 }
 
-void SmashData::outputUTF(wofstream& file, string str, bool parse)
+void SmashData::outputUTF(wofstream& file, wxString str, bool parse)
 {
 	if (parse)
 	{
-		string result = "";
+		wxString result = "";
 
 		for (auto i = str.begin(); i != str.end(); i++)
 		{
-			switch (*i)
-			{
-			case '"':
+			if (*i == '"')
 			{
 				result += "&quot;";
-				break;
 			}
-			case '\'':
+			else if (*i == '\'')
 			{
 				result += "&apos;";
-				break;
 			}
-			case '&':
+			else if (*i == '&')
 			{
 				result += "&amp;";
-				break;
 			}
-			case '<':
+			else if (*i == '<')
 			{
 				result += "&lt;";
-				break;
 			}
-			case '>':
+			else if (*i == '>')
 			{
 				result += "&gt;";
-				break;
 			}
-			case '|':
+			else if (*i == '|')
 			{
 				result += '\n';
-				break;
 			}
-			default:
+			else
 			{
 				result += *i;
 			}
-			}
 		}
 
-		file << std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>{}.from_bytes(result);
+		file << result.ToStdWstring();
 	}
 	else
 	{
-		file << std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>{}.from_bytes(str);
+		file << str.ToStdWstring();
 	}
 }
 
