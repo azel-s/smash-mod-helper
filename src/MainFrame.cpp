@@ -429,6 +429,7 @@ void MainFrame::updateInkMenu()
 	else
 	{
 		inkMenu->Enable();
+		inkMenu->SetHelp("Add or modify colors. Required for additional slots.");
 	}
 }
 
@@ -721,6 +722,7 @@ void MainFrame::onBasePressed(wxCommandEvent& evt)
 		buttons.prc->Show();
 
 		inkMenu->Enable();
+		inkMenu->SetHelp("Add or modify colors. Required for additional slots.");
 
 		panel->SendSizeEvent();
 	}
@@ -1011,7 +1013,7 @@ void MainFrame::onClose(wxCloseEvent& evt)
 
 void MainFrame::onTestPressed(wxCommandEvent& evt)
 {
-	data.removeDesktopINI();
+
 }
 
 void MainFrame::onDeskPressed(wxCommandEvent& evt)

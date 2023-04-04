@@ -11,6 +11,9 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 	const wxString& name) :
 	wxDialog(parent, id, title, pos, size, style, name)
 {
+	auto panel = new wxScrolled<wxPanel>(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+	panel->SetScrollRate(0, 10);
+
 	wxBoxSizer* sizerM = new wxBoxSizer(wxVERTICAL);
 	wxGridBagSizer* gridSizer = new wxGridBagSizer(5, 20);
 	wxTextCtrl* textCtrl = new wxTextCtrl();
@@ -31,7 +34,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 	bool hasSlot = false;
 
 	// Create Header
-	text = new wxStaticText(this, wxID_ANY, "Characters");
+	text = new wxStaticText(panel, wxID_ANY, "Characters");
 	text->SetFont(*boldFont);
 	gridSizer->Add(text, wxGBPosition(0, 0));
 
@@ -48,42 +51,42 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 
 	if (slots)
 	{
-		text = new wxStaticText(this, wxID_ANY, "Max Slots");
+		text = new wxStaticText(panel, wxID_ANY, "Max Slots");
 		text->SetFont(*boldFont);
 		gridSizer->Add(text, wxGBPosition(0, 1), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
 	}
 
 	int currCol = 2;
 
-	text = new wxStaticText(this, wxID_ANY, "Slot");
+	text = new wxStaticText(panel, wxID_ANY, "Slot");
 	text->SetFont(*boldFont);
 	gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
 	currCol++;
 
 	if (hasSlot00)
 	{
-		text = new wxStaticText(this, wxID_ANY, "CSS Name");
+		text = new wxStaticText(panel, wxID_ANY, "CSS Name");
 		text->SetFont(*boldFont);
 		gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
 		currCol++;
 	}
 
-	text = new wxStaticText(this, wxID_ANY, "CSP Name");
+	text = new wxStaticText(panel, wxID_ANY, "CSP Name");
 	text->SetFont(*boldFont);
 	gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
 	currCol++;
 
-	text = new wxStaticText(this, wxID_ANY, "VS/Results Name");
+	text = new wxStaticText(panel, wxID_ANY, "VS/Results Name");
 	text->SetFont(*boldFont);
 	gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
 	currCol++;
 
-	text = new wxStaticText(this, wxID_ANY, "Boxing Ring Name");
+	text = new wxStaticText(panel, wxID_ANY, "Boxing Ring Name");
 	text->SetFont(*boldFont);
 	gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
 	currCol++;
 
-	text = new wxStaticText(this, wxID_ANY, "Custom Announcer");
+	text = new wxStaticText(panel, wxID_ANY, "Custom Announcer");
 	text->SetFont(*boldFont);
 	gridSizer->Add(text, wxGBPosition(0, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL);
 	currCol++;
@@ -104,7 +107,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 	// Create fields
 	for (auto i = allSlots.begin(); i != allSlots.end(); i++)
 	{
-		text = new wxStaticText(this, wxID_ANY, mod.charNames[i->first]);
+		text = new wxStaticText(panel, wxID_ANY, mod.charNames[i->first]);
 
 		if (i->first != "element")
 		{
@@ -119,7 +122,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 
 		if (slots)
 		{
-			wxSpinCtrl* userSlot = new wxSpinCtrl(this, wxID_ANY, "", wxDefaultPosition, wxSize(50, -1), wxSP_WRAP, 8, 255, stoi((*(i->second.rbegin()))) + 1);
+			wxSpinCtrl* userSlot = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxSize(50, -1), wxSP_WRAP, 8, 255, stoi((*(i->second.rbegin()))) + 1);
 			maxSlots.push_back(userSlot);
 
 			if (i->first != "element")
@@ -158,7 +161,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 					hasSlot = true;
 				}
 
-				text = new wxStaticText(this, wxID_ANY, "c" + *j);
+				text = new wxStaticText(panel, wxID_ANY, "c" + *j);
 				gridSizer->Add(text, wxGBPosition(currRow, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
 				currCol++;
 
@@ -173,7 +176,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 						fieldName = "Name";
 					}
 
-					textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+					textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 					slotNames[charcode][*j].cssName = textCtrl;
 					gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 					currCol++;
@@ -192,7 +195,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 					fieldName = "Name";
 				}
 
-				textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+				textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 				slotNames[charcode][*j].cspName = textCtrl;
 				gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 				currCol++;
@@ -206,7 +209,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 					fieldName = "NAME";
 				}
 
-				textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+				textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 				slotNames[charcode][*j].vsName = textCtrl;
 				gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 				currCol++;
@@ -220,12 +223,12 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 					fieldName = "Stage Name";
 				}
 
-				textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+				textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 				slotNames[charcode][*j].stageName = textCtrl;
 				gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 				currCol++;
 
-				textCtrl = new wxTextCtrl(this, wxID_ANY, "Default", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+				textCtrl = new wxTextCtrl(panel, wxID_ANY, "Default", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 				slotNames[charcode][*j].announcer = textCtrl;
 				gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 				currCol++;
@@ -267,11 +270,11 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 						hasLight = true;
 					}
 
-					text = new wxStaticText(this, wxID_ANY, "Pyra/Mythra");
+					text = new wxStaticText(panel, wxID_ANY, "Pyra/Mythra");
 					gridSizer->Add(text, wxGBPosition(currRow, currCol), wxGBSpan(slotUnion.size() * 2, 1), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
 					currCol++;
 
-					text = new wxStaticText(this, wxID_ANY, "Unique");
+					text = new wxStaticText(panel, wxID_ANY, "Unique");
 					gridSizer->Add(text, wxGBPosition(currRow, currCol), wxGBSpan(slotUnion.size() * 2, 1), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
 					currCol++;
 
@@ -284,7 +287,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 							hasFlameSlot = true;
 						}
 
-						text = new wxStaticText(this, wxID_ANY, "c" + *j + " P/M");
+						text = new wxStaticText(panel, wxID_ANY, "c" + *j + " P/M");
 						gridSizer->Add(text, wxGBPosition(currRow, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
 						currCol++;
 
@@ -299,7 +302,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 								fieldName = "Name";
 							}
 
-							textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+							textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 							slotNames["eflame_first"][*j].cssName = textCtrl;
 							gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 							currCol++;
@@ -318,7 +321,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 							fieldName = "Name";
 						}
 
-						textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+						textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 						slotNames["eflame_first"][*j].cspName = textCtrl;
 						gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 						currCol++;
@@ -332,19 +335,19 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 							fieldName = "NAME";
 						}
 
-						textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+						textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 						slotNames["eflame_first"][*j].vsName = textCtrl;
 						gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 						currCol += 2;
 
-						textCtrl = new wxTextCtrl(this, wxID_ANY, "Default", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+						textCtrl = new wxTextCtrl(panel, wxID_ANY, "Default", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 						slotNames["eflame_first"][*j].announcer = textCtrl;
 						gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 
 						currRow++;
 						currCol = 2;
 
-						text = new wxStaticText(this, wxID_ANY, "c" + *j + " M/P");
+						text = new wxStaticText(panel, wxID_ANY, "c" + *j + " M/P");
 						gridSizer->Add(text, wxGBPosition(currRow, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
 						currCol++;
 
@@ -366,7 +369,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 								fieldName = "Name";
 							}
 
-							textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+							textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 							slotNames["elight_first"][*j].cssName = textCtrl;
 							gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 							currCol++;
@@ -385,7 +388,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 							fieldName = "Name";
 						}
 
-						textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+						textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 						slotNames["elight_first"][*j].cspName = textCtrl;
 						gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 						currCol++;
@@ -399,12 +402,12 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 							fieldName = "NAME";
 						}
 
-						textCtrl = new wxTextCtrl(this, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+						textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 						slotNames["elight_first"][*j].vsName = textCtrl;
 						gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 						currCol += 2;
 
-						textCtrl = new wxTextCtrl(this, wxID_ANY, "Default", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+						textCtrl = new wxTextCtrl(panel, wxID_ANY, "Default", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 						slotNames["elight_first"][*j].announcer = textCtrl;
 						gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 
@@ -427,13 +430,22 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 
 	sizerM->Add(gridSizer, 1, wxEXPAND | wxALL, 20);
 
-	text = new wxStaticText(this, wxID_ANY, "Note: A slot's name can be left default if CSS/CSP/VS/Stage are not modified.");
+	text = new wxStaticText(panel, wxID_ANY, "Note: A slot's name can be left default if CSS/CSP/VS/Stage are not modified.");
 	text->SetFont(*boldFont);
 	sizerM->Add(text, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, 20);
 
-	sizerM->Add(CreateButtonSizer(wxOK | wxCANCEL), 0, wxALIGN_RIGHT | wxALL, 20);
+	panel->SetSizerAndFit(sizerM);
+	auto sizer = new wxBoxSizer(wxVERTICAL);
 
-	this->SetSizerAndFit(sizerM);
+	sizer->Add(panel, 1, wxEXPAND);
+	sizer->Add(CreateButtonSizer(wxOK | wxCANCEL), 0, wxALIGN_RIGHT | wxALL, 20);
+
+	this->SetSizerAndFit(sizer);
+
+	if (sizer->GetMinSize().y > 600)
+	{
+		this->SetMinSize(wxSize(sizer->GetMinSize().x, 600));
+	}
 }
 
 map<string, int> PrcSelection::getMaxSlots(map<string, set<string>>& allSlots)
