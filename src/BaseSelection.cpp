@@ -33,6 +33,9 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
         prevBaseSlots = this->mod->readBaseSlots();
     }
 
+    auto panel = new wxScrolled<wxPanel>(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+    panel->SetScrollRate(0, 10);
+
     wxBoxSizer* sizerM = new wxBoxSizer(wxVERTICAL);
 
     // Max number of listboxes for a character
@@ -65,16 +68,16 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
         wxBoxSizer* sizerA2 = new wxBoxSizer(wxVERTICAL);
 
         int proportion = i->second.size() / 5;
-        if (proportion == 0)
+        if (i->second.size() % 5 != 0)
         {
-            proportion = 1;
+            proportion += 1;
         }
 
         sizerM->AddSpacer(20);
 
         sizerM->Add(sizerA, proportion, wxEXPAND | wxLEFT | wxRIGHT, 20);
 
-        wxStaticText* charName = new wxStaticText(this, wxID_ANY, this->mod->charNames[i->first]);
+        wxStaticText* charName = new wxStaticText(panel, wxID_ANY, this->mod->charNames[i->first]);
         sizerA1->Add(charName, proportion, wxALIGN_CENTER_HORIZONTAL);
         sizerA->Add(sizerA1, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 20);
 
@@ -94,10 +97,10 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
                 sizerA2->Add(sizerA2A, 1);
             }
 
-            wxStaticText* slot = new wxStaticText(this, wxID_ANY, "Slot " + *j + ": ", wxDefaultPosition, wxSize(45, -1));
+            wxStaticText* slot = new wxStaticText(panel, wxID_ANY, "Slot " + *j + ": ", wxDefaultPosition, wxSize(45, -1));
             sizerA2A->Add(slot, 0, wxALIGN_CENTER_VERTICAL);
 
-            wxChoice* baseSlotList = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxSize(40, -1), slotList);
+            wxChoice* baseSlotList = new wxChoice(panel, wxID_ANY, wxDefaultPosition, wxSize(40, -1), slotList);
 
             if (hasSlot)
             {
@@ -120,9 +123,19 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
         hasChar = false;
     }
 
-    sizerM->Add(CreateButtonSizer(wxOK | wxCANCEL), 0, wxALIGN_RIGHT | wxTOP | wxRIGHT | wxBOTTOM, 20);
+    panel->SetSizerAndFit(sizerM);
 
-    this->SetSizerAndFit(sizerM);
+    auto sizer = new wxBoxSizer(wxVERTICAL);
+
+    sizer->Add(panel, 1, wxEXPAND);
+    sizer->Add(CreateButtonSizer(wxOK | wxCANCEL), 0, wxALIGN_RIGHT | wxTOP | wxRIGHT | wxBOTTOM, 20);
+
+    this->SetSizerAndFit(sizer);
+
+    if (sizer->GetMinSize().y > 600)
+    {
+        this->SetMinSize(wxSize(sizer->GetMinSize().x, 600));
+    }
 }
 
 map<string, map<string, set<string>>> BaseSelection::getBaseSlots()
