@@ -39,6 +39,7 @@
     <ClInclude Include="src\BaseSelection.h">
       <Filter>Header Files\Dialogs</Filter>
     </ClInclude>
+    <ClInclude Include="VanillaHandler.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\App.cpp">
@@ -59,6 +60,7 @@
     <ClCompile Include="src\PrcSelection.cpp">
       <Filter>Source Files\Dialogs</Filter>
     </ClCompile>
+    <ClCompile Include="VanillaHandler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="res\resource.rc">

@@ -12,7 +12,11 @@ namespace fs = std::filesystem;
 using std::string;
 using std::string; using std::ofstream;
 
-MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxSYSTEM_MENU | wxCAPTION | wxCLOSE_BOX | wxMINIMIZE_BOX & ~wxRESIZE_BORDER)
+MainFrame::MainFrame(const wxString& title) :
+	wxFrame(nullptr, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxSYSTEM_MENU | wxCAPTION | wxCLOSE_BOX | wxMINIMIZE_BOX & ~wxRESIZE_BORDER),
+	logWindow(new wxTextCtrl(panel, wxID_ANY, "Log Window:\n", wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE)),
+	log(new wxLogTextCtrl(logWindow)),
+	data(log)
 {
 	// Set Initial Path
 	initPath = fs::current_path().string();
@@ -21,11 +25,8 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	// Create main panel
 	panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
 
-	// Create log window
-	logWindow = new wxTextCtrl(panel, wxID_ANY, "Log Window:\n", wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
+	// Set log window to be greyed out.
 	logWindow->SetEditable(false);
-	log = new wxLogTextCtrl(logWindow);
-	data.log = log;
 
 	readSettings();
 
@@ -56,7 +57,7 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 	auto prcxID = prcOutput->AppendRadioItem(wxID_ANY, "PRCX", "This configuration is faster, but sacrifices readability.")->GetId();
 	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcxmlID);
 	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcxID);
-	
+
 	if (settings.prcxOutput)
 	{
 		prcOutput->Check(prcxID, true);
@@ -94,31 +95,10 @@ MainFrame::MainFrame(const wxString& title) : wxFrame(nullptr, wxID_ANY, title, 
 
 	// TODO: Look into having less polling for the thread
 	// Setup actions for background thread
-	const auto readVanillaFiles = [this]()
-	{
-		data.readVanillaFiles("names");
-		if (!data.stopVanillaThread)
-		{
-			browse.button->Enable();
-		}
-
-		data.readVanillaFiles("effect");
-		data.readVanillaFiles("fighter");
-		data.readVanillaFiles("camera");
-		data.readVanillaFiles("result");
-		data.vanillaThreadActive = false;
-
-		if (!data.stopVanillaThread)
-		{
-			buttons.config->Enable();
-			buttons.prc->Enable();
-		}
-	};
-
-	// Start background thread
-	data.vanillaThread = thread{ readVanillaFiles };
-	data.vanillaThread.detach();
-	data.vanillaThreadActive = true;
+	data.readVanillaInfo();
+	browse.button->Enable();
+	//buttons.config->Enable();
+	//buttons.prc->Enable();
 
 	// Create characters List
 	charsList = new wxListBox(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
@@ -516,7 +496,7 @@ void MainFrame::onBrowse(wxCommandEvent& evt)
 		browse.text->SetValue(dialog.GetPath());
 
 		// Update data
-		data.readData(dialog.GetPath().ToStdString());
+		data.readModInfo(dialog.GetPath().ToStdString());
 		charsList->Set(data.getCharacters());
 
 		// Update buttons
@@ -997,16 +977,6 @@ void MainFrame::onMenuClose(wxCommandEvent& evt)
 
 void MainFrame::onClose(wxCloseEvent& evt)
 {
-	// Stops background thread if it is still active
-	if (data.vanillaThreadActive)
-	{
-		data.stopVanillaThread = true;
-
-		while (data.vanillaThreadActive)
-		{
-			// Wait
-		}
-	}
 
 	evt.Skip();
 }
