@@ -5,8 +5,9 @@
 #include <unordered_map>
 #include <vector>
 #include <string>
+#include <set>
 using json = nlohmann::json;
-using std::string, std::vector, std::unordered_map;
+using std::string, std::vector, std::unordered_map, std::set;
 
 class VanillaHandler
 {
@@ -23,21 +24,32 @@ private:
 	// Index: slot, Value: { wxColour effect, wxColour arrow }
 	vector<InklingColor> inklingColors;
 
+	// Helper Functions
+	void insertFiles(const json& tJson, map<string, set<Path>>& files, string type) const;
+
 public:
-	// Constructor/Destructor
+	/* --- Constructor/Destructor --- */
 	// INFO: Path must end with '/'
 	VanillaHandler(string filePath = "Files/");
+	// INFO: Deletes dynamic strings for code/name.
 	~VanillaHandler();
 
-	// Setters
+	// Setters/Modifiers
 	void insertCodeName(string code, string name);
 
-	// Getters
-	string getName(string code) const;
-	string getName(int id) const;
-	string getCode(string name) const;
-	string getCode(int id) const;
-	int getID(string code) const;
-	InklingColor getInklingColor(int slot) const;
+	/* --- Getters --- */
+	// Character code/name
+	string getCharName(string code) const;
+	string getCharCode(string name) const;
+	
+	// JSON Info
+	int getFiles(string code, Slot slot, map<string, set<Path>>& files) const;
+	int getFiles(string code, int slot, map<string, set<Path>>& files) const;
+
+	// Inkling
+	InklingColor getInklingColor(Slot slot) const;
 	vector<InklingColor> getInklingColors() const;
+
+	/* --- Verifiers --- */
+	bool isOkay() const;
 };

@@ -16,66 +16,73 @@ private:
 	string path; // Mod Path
 	vector<string> fileTypes; // Supported file types
 
-	// Access Order: charcode, filetype, slot, files
-	unordered_map<string, unordered_map<string, map<int, set<string>>>> files;
-	// Access Order: charcode, base-slot, final-slot
-	map<string, map<int, set<int>>> slots;
+	// Access Order: code, filetype, slot, files
+	unordered_map<string, unordered_map<string, map<Slot, set<Path>>>> files;
+	// Access Order: code, final-slot, base-slot,
+	unordered_map<string, map<Slot, Slot>> slots;
 
 	VanillaHandler vHandler;
 	wxLogTextCtrl* log;
 
-	// Helpers
-	string convertPath(string input);
-	void addFile(string charcode, string fileType, int slot, string file);
+	/* --- HELPERS (UNIVERSAL) --- */
+	void addFile(string code, string fileType, int slot, string file);
+
+	/* --- HELPERS (WX) --- */
+	void wxLog(string message);
 
 public:
-	// Constructor(s)
-	ModHandler(wxLogTextCtrl* log);
+	/* --- TEST FUNCTIONS (WIP/DEBUG) --- */
+	void test();
 
-	// Read Data
+	/* --- CONSTRUCTORS --- */
+	ModHandler(wxLogTextCtrl* log = nullptr);
+
+	/* --- SETTERS (UNIVERSAL) --- */
+
+	/* --- SETTERS (WX) --- */
+	void wxSetLog(wxLogTextCtrl* log);
+
+	/* --- GETTERS (UNIVERSAL) --- */
+	string getName(string code);
+	string getCode(string name);
+	int getNumCharacters();
+	set<Slot> getAddSlots(string code)  const;
+	map<string, set<Slot>> getAddSlots() const;
+	Slot getBaseSlot(string code, Slot slot) const;
+
+	/* --- GETTERS (WX) --- */
+	wxArrayString wxGetCharacterNames(string fileType = "") const;
+	wxArrayString wxGetFileTypes(string code = "") const;
+	wxArrayString wxGetSlots(string code, wxArrayString fileTypes = {}, bool findInAll = false) const;
+
+	/* --- VERIFIERS (UNIVERSAL) ---*/
+	bool hasChar(string code = "") const;
+	bool hasFileType(string fileType = "") const;
+	bool hasAddSlot(string code = "") const;
+
+	/* --- VERIFIERS (WX) --- */
+	bool wxHasSlot(string code, Slot slot, wxArrayString fileTypes = {}, bool findInAll = false) const;
+
+	/* --- FUNCTIONS (UNIVERSAL) --- */
 	void readFiles(string path);
-
-	// Mod Getters (wx)
-	wxArrayString getCharacters() const;
-	wxArrayString getFileTypes(string charcode) const;
-	wxArrayString getSlots(string charcode) const;
-	wxArrayString getSlots(string charcode, string fileType) const;
-	wxArrayString getSlots(string charcode, wxArrayString fileTypes) const;
-
-	string getBaseSlot(string charcode, string addSlot);
-	// Make character-slots map
-	map<string, set<string>> getAllSlots(string charcode = "all");
-
-	// Mod Verifiers
-	// Returns true if the fileType exists in any character
-	bool hasFileType(string fileType) const;
-	// Returns true if additional exists in any character
-	bool hasAdditionalSlot() const;
-	// Returns true if additional exists in specified character
-	bool hasAdditionalSlot(string charcode) const;
-	// Returns true if any of the fileTypes have the slot
-	bool hasSlot(string charcode, string slot) const;
-	// Returns true if any of the given fileTypes have the slot
-	bool hasSlot(string charcode, wxArrayString fileTypes, string slot) const;
-
-	// Mod Modifiers
-	void adjustFiles(string action, string charcode, wxArrayString fileTypes, string initSlot, string finalSlot);
 	void removeDesktopINI();
 
-	// Config Getters
-	map<string, set<string>> getAddSlots();
+	/* --- FUNCTIONS (WX) --- */
+	void adjustFiles(string action, string code, wxArrayString fileTypes, Slot iSlot, Slot fSlot);
+	void adjustFiles(string action, wxArrayString codes, wxArrayString fileTypes, Slot iSlot, Slot fSlot);
+
+	/* --- FUNCTIONS (CONFIG/PRC) --- */
 	void getNewDirSlots
 	(
-		const map<string, map<string, set<string>>>& baseSlots,
 		vector<string>& newDirInfos,
 		vector<string>& newDirInfosBase,
-		map<string, map<string, map<string, set<string>>>>& shareToVanilla,
-		map<string, map<string, map<string, set<string>>>>& shareToAdded,
-		map<string, map<string, map<string, set<string>>>>& newDirFiles
+		map<string, map<Slot, map<string, set<string>>>>& shareToVanilla,
+		map<string, map<Slot, map<string, set<string>>>>& shareToAdded,
+		map<string, map<Slot, map<string, set<string>>>>& newDirFiles
 	);
+	bool createConfig();
 
 	// Config & PRCX
-	void createConfig(map<string, map<string, set<string>>>& baseSlots);
 	void patchXMLSlots(map<string, int>& maxSlots);
 	void patchXMLNames(map<string, map<int, Name>>& names);
 	void patchXMLAnnouncer(map<string, map<int, string>>& announcers);

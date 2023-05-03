@@ -31,6 +31,7 @@ VanillaHandler::VanillaHandler(string filePath)
 		getline(nFile, code, ',');
 
 		// Name
+		getline(nFile, name, ' ');
 		getline(nFile, name);
 
 		this->insertCodeName(code, name);
@@ -52,7 +53,7 @@ VanillaHandler::~VanillaHandler()
 {
 	for (auto i = code_name.begin(); i != code_name.end(); i++)
 	{
-		delete i->second;
+delete i->second;
 	}
 
 	for (auto i = name_code.begin(); i != name_code.end(); i++)
@@ -70,7 +71,7 @@ void VanillaHandler::insertCodeName(string code, string name)
 	name_code[name] = codePtr;
 }
 
-string VanillaHandler::getName(string code) const
+string VanillaHandler::getCharName(string code) const
 {
 	auto iter = code_name.find(code);
 
@@ -84,24 +85,9 @@ string VanillaHandler::getName(string code) const
 	}
 }
 
-string VanillaHandler::getName(int id) const
-{
-	auto iter = id_code.find(id);
-
-	if (iter != id_code.end())
-	{
-		auto jter = code_name.find(*iter->second);
-
-		if (jter != code_name.end())
-		{
-			return *jter->second;
-		}
-	}
-
-	return "";
-}
-
-string VanillaHandler::getCode(string name) const
+// @INPUT: Character's codename.
+// @RETURN: Character's actual name (or empty if not found).
+string VanillaHandler::getCharCode(string name) const
 {
 	auto iter = name_code.find(name);
 
@@ -115,39 +101,164 @@ string VanillaHandler::getCode(string name) const
 	}
 }
 
-string VanillaHandler::getCode(int id) const
+void VanillaHandler::insertFiles(const json& tJson, map<string, set<Path>>& files, string type) const
 {
-	auto iter = id_code.find(id);
+	auto iterFiles = tJson.find("files");
 
-	if (iter != id_code.end())
+	if (iterFiles != tJson.end())
 	{
-		return *iter->second;
+		for (int i = 0; i < iterFiles->size(); i++)
+		{
+			Path file = Path(vJson["file_array"][(int)iterFiles->at(i)]);
+
+			if (file.getSlot().getInt() != -1)
+			{
+				files[type].insert(file);
+			}
+			else
+			{
+				files[type].insert(file);
+			}
+		}
 	}
-	else
+
+	for (auto i = tJson.begin(); i != tJson.end(); i++)
 	{
-		return "";
+		if (i.key() != "files")
+		{
+			insertFiles(*i, files, type);
+		}
 	}
 }
-
-int VanillaHandler::getID(string code) const
+// @INPUT:	Character code, slot, and map to write data to.
+// @RETURN:	 0: Successfully wrote information
+//			-1: Failed to find required folder/files
+//			-2: Unknown error
+int VanillaHandler::getFiles(string code, Slot slot, map<string, set<Path>>& files) const
 {
-	auto iter = code_id.find(code);
+	int result = 0;
 
-	if (iter != code_id.end())
+	try
 	{
-		return *iter->second;
+		auto charIter = vJson["dirs"]["directories"]["fighter"]["directories"].find(code);
+		if (charIter != vJson["dirs"]["directories"]["fighter"]["directories"].end())
+		{
+			auto iter = charIter->find("directories");
+			if (iter != charIter->end())
+			{
+				auto slotIter = iter->find("c" + slot.getString());
+
+				// Fighter (aka Vanilla or Added) & Camera & CMN Files
+				if (slotIter != iter->end())
+				{
+					// Fighter files.
+					auto filesIter = slotIter->find("files");
+					if (filesIter != slotIter->end())
+					{
+						for (int i = 0; i < (*filesIter).size(); i++)
+						{
+							string file = vJson["file_array"][(int)filesIter->at(i)];
+
+							if (file.find("/motion/") != string::npos)
+							{
+								files["added"].insert(Path(file));
+							}
+							else
+							{
+								files["vanilla"].insert(Path(file));
+							}
+						}
+					}
+
+					// Camera and CMN Files
+					auto dirsIter = slotIter->find("directories");
+					if (dirsIter != slotIter->end())
+					{
+						auto tempIter = dirsIter->find("camera");
+						if (tempIter != dirsIter->end())
+						{
+							insertFiles(*tempIter, files, "camera");
+						}
+
+						tempIter = dirsIter->find("cmn");
+						if (tempIter != dirsIter->end())
+						{
+							insertFiles(*tempIter, files, "cmn");
+						}
+					}
+				}
+				else
+				{
+					result = -1;
+				}
+
+				vector<string> types = { "append", "kirbycopy", "movie", "result" };
+				for (auto& type : types)
+				{
+					auto tempIter = iter->find(type);
+					if (tempIter != iter->end())
+					{
+						auto tempIter2 = tempIter->find("directories");
+						if (tempIter2 != tempIter->end())
+						{
+							auto tempIter3 = tempIter2->find(slot.getString());
+							if (tempIter3 != tempIter2->end())
+							{
+								insertFiles(*tempIter3, files, type);
+							}
+						}
+					}
+					else
+					{
+						return -1;
+					}
+				}
+
+				// FinalSmash files.
+				auto fsIter = iter->find("finalsmash");
+				if (fsIter != iter->end())
+				{
+					insertFiles(*fsIter, files, "finalsmash");
+				}
+				else
+				{
+					result = -1;
+				}
+			}
+			else
+			{
+				result = -1;
+			}
+		}
+		else
+		{
+			result = -1;
+		}
 	}
-	else
+	catch (...)
 	{
-		return -1;
+		result = -2;
 	}
+
+	return result;
 }
 
-InklingColor VanillaHandler::getInklingColor(int slot) const
+// @INPUT:	Character code, slot, and map to write data to.
+// @RETURN:	 0: Successfully wrote information
+//			-1: Failed to find required folder/files
+//			-2: Unknown error
+int VanillaHandler::getFiles(string code, int slot, map<string, set<Path>>& files) const
 {
-	if (slot >= 0 && slot < 8)
+	return getFiles(code, Slot(slot), files);
+}
+
+InklingColor VanillaHandler::getInklingColor(Slot slot) const
+{
+	int iSlot = slot.getInt();
+
+	if (iSlot >= 0 && iSlot < 8)
 	{
-		return inklingColors[slot];
+		return inklingColors[iSlot];
 	}
 	else
 	{
@@ -158,4 +269,9 @@ InklingColor VanillaHandler::getInklingColor(int slot) const
 vector<InklingColor> VanillaHandler::getInklingColors() const
 {
 	return inklingColors;
+}
+
+bool VanillaHandler::isOkay() const
+{
+	return okay;
 }

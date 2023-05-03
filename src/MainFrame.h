@@ -1,5 +1,5 @@
 #pragma once
-#include "SmashData.h"
+#include "ModHandler.h"
 #include "HelperStructures.h"
 #include <wx/wx.h>
 #include <wx/spinctrl.h>
@@ -8,44 +8,35 @@ using std::vector;
 class MainFrame : public wxFrame
 {
 private:
-	// Data Variables
-	SmashData data;
-
-	// Settings
-	Settings settings;
-
-	// GUI Parts
+	/* --- GUI Parts --- */
 	wxPanel* panel;
 	wxMenuBar* menuBar;
 	wxMenuItem* inkMenu;
 	wxMenuItem* deskMenu;
-
 	wxBrowse browse;
 	wxListBox* charsList;
-	wxCheckBox** fileTypeBoxes;
+	vector<wxCheckBox*> fileTypeBoxes;
 	wxInitSlots initSlots;
 	wxFinalSlots finalSlots;
 	wxButtons buttons;
-	wxLogTextCtrl* log;
 	wxTextCtrl* logWindow;
+	wxLogTextCtrl* log;
 	wxStatusBar* statusBar;
 
-	string initPath;
+	/* --- Data Variables --- */
+	ModHandler mHandler;
+	VanillaHandler vHandler;
+	Settings settings;
+	string iPath;	// Initial Path
 
-	// Reset Helpers
+	/* --- Helpers ---	*/
+	// ...
 	void resetFileTypeBoxes();
 	void resetButtons();
-
-	// Getters
-	wxArrayString getSelectedFileTypes();
-	bool isFileTypeSelected();
 
 	// Settings
 	void readSettings();
 	void updateSettings();
-
-	// Test Function
-	void onTestPressed(wxCommandEvent& evt);
 
 	// Updaters/Modifiers
 	void updateFileTypeBoxes();
@@ -73,6 +64,12 @@ private:
 	void onPrcPressed(wxCommandEvent& evt);
 	void onMenuClose(wxCommandEvent& evt);
 	void onClose(wxCloseEvent& evt);
+	void onTestPressed(wxCommandEvent& evt);// Test Bound Function
+
+public:
+	/* --- Getters ---	*/
+	wxArrayString getSelectedFileTypes();
+	bool isFileTypeSelected();
 
 	// Destructor
 	~MainFrame();

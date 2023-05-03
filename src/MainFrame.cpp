@@ -1,7 +1,7 @@
 #include "MainFrame.h"
-#include "BaseSelection.h"
-#include "PrcSelection.h"
-#include "InkSelection.h"
+#include "Dialogs/BaseSelection.h"
+#include "Dialogs/PrcSelection.h"
+#include "Dialogs/InkSelection.h"
 #include <wx/wx.h>
 #include <wx/spinctrl.h>
 #include <wx/dirdlg.h>
@@ -13,17 +13,23 @@ using std::string;
 using std::string; using std::ofstream;
 
 MainFrame::MainFrame(const wxString& title) :
-	wxFrame(nullptr, wxID_ANY, title, wxDefaultPosition, wxDefaultSize, wxSYSTEM_MENU | wxCAPTION | wxCLOSE_BOX | wxMINIMIZE_BOX & ~wxRESIZE_BORDER),
+	wxFrame
+	(
+		nullptr,
+		wxID_ANY,
+		title,
+		wxDefaultPosition,
+		wxDefaultSize,
+		wxSYSTEM_MENU | wxCAPTION | wxCLOSE_BOX | wxMINIMIZE_BOX & ~wxRESIZE_BORDER
+	),
+	panel(new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize)),
 	logWindow(new wxTextCtrl(panel, wxID_ANY, "Log Window:\n", wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE)),
 	log(new wxLogTextCtrl(logWindow)),
-	data(log)
+	mHandler(log)
 {
 	// Set Initial Path
-	initPath = fs::current_path().string();
-	std::replace(initPath.begin(), initPath.end(), '\\', '/');
-
-	// Create main panel
-	panel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+	iPath = fs::current_path().string();
+	std::replace(iPath.begin(), iPath.end(), '\\', '/');
 
 	// Set log window to be greyed out.
 	logWindow->SetEditable(false);
@@ -45,7 +51,7 @@ MainFrame::MainFrame(const wxString& title) :
 	deskMenu = new wxMenuItem(fileMenu, wxID_ANY, "Delete Desktop.ini Files", "Open a directory to enable this feature.");
 	this->Bind(wxEVT_MENU, &MainFrame::onInkPressed, this, toolsMenu->Append(inkMenu)->GetId());
 	this->Bind(wxEVT_MENU, &MainFrame::onDeskPressed, this, toolsMenu->Append(deskMenu)->GetId());
-	//this->Bind(wxEVT_MENU, &MainFrame::onTestPressed, this, toolsMenu->Append(wxID_ANY, "Test Function")->GetId());
+	this->Bind(wxEVT_MENU, &MainFrame::onTestPressed, this, toolsMenu->Append(wxID_ANY, "Test Function")->GetId());
 	inkMenu->Enable(false);
 	deskMenu->Enable(false);
 
@@ -91,24 +97,16 @@ MainFrame::MainFrame(const wxString& title) :
 	browse.button = new wxButton(panel, wxID_ANY, "Browse...", wxDefaultPosition, wxDefaultSize);
 	browse.button->SetToolTip("Open folder containing fighter/ui/effect/sound folder(s)");
 	browse.button->Bind(wxEVT_BUTTON, &MainFrame::onBrowse, this);
-	browse.button->Disable();
-
-	// TODO: Look into having less polling for the thread
-	// Setup actions for background thread
-	data.readVanillaInfo();
-	browse.button->Enable();
-	//buttons.config->Enable();
-	//buttons.prc->Enable();
 
 	// Create characters List
 	charsList = new wxListBox(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
 	charsList->Bind(wxEVT_LISTBOX, &MainFrame::onCharSelect, this);
 
 	// Create file type checkboxes
-	fileTypeBoxes = new wxCheckBox * [data.fileTypes.size()];
-	for (int i = 0; i < data.fileTypes.size(); i++)
+	auto fTypes = mHandler.wxGetFileTypes();
+	for (int i = 0; i < fTypes.size(); i++)
 	{
-		fileTypeBoxes[i] = new wxCheckBox(panel, wxID_ANY, data.fileTypes[i], wxDefaultPosition, wxDefaultSize);
+		fileTypeBoxes.push_back(new wxCheckBox(panel, wxID_ANY, fTypes[i], wxDefaultPosition, wxDefaultSize));
 		fileTypeBoxes[i]->Bind(wxEVT_CHECKBOX, &MainFrame::onFileTypeSelect, this);
 		fileTypeBoxes[i]->Disable();
 	}
@@ -157,14 +155,12 @@ MainFrame::MainFrame(const wxString& title) :
 	// Create Config Button
 	buttons.config = new wxButton(panel, wxID_ANY, "Create Config", wxDefaultPosition, wxDefaultSize);
 	buttons.config->Bind(wxEVT_BUTTON, &MainFrame::onConfigPressed, this);
-	buttons.config->Disable();
 	buttons.config->Hide();
 	buttons.config->SetToolTip("Creata a config for any additionals costumes, extra textures, and/or effects");
 
 	// Create prcx Buttons
 	buttons.prc = new wxButton(panel, wxID_ANY, "Create PRCXML", wxDefaultPosition, wxDefaultSize);
 	buttons.prc->Bind(wxEVT_BUTTON, &MainFrame::onPrcPressed, this);
-	buttons.prc->Disable();
 	buttons.prc->Hide();
 	buttons.prc->SetToolTip("Edit slot names or modify max slots for each character");
 
@@ -202,12 +198,12 @@ MainFrame::MainFrame(const wxString& title) :
 
 	// B2
 	sizerB->Add(sizerB2, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 20);
-	for (int i = 0; i < data.fileTypes.size() - 1; i++)
+	for (int i = 0; i < fileTypeBoxes.size() - 1; i++)
 	{
 		sizerB2->Add(fileTypeBoxes[i], 1);
 		sizerB2->AddSpacer(20);
 	}
-	sizerB2->Add(fileTypeBoxes[data.fileTypes.size() - 1], 1);
+	sizerB2->Add(fileTypeBoxes[fTypes.size() - 1], 1);
 
 	// B3
 	sizerB->Add(sizerB3, 1, wxALIGN_CENTER_VERTICAL);
@@ -245,10 +241,10 @@ MainFrame::MainFrame(const wxString& title) :
 
 void MainFrame::resetFileTypeBoxes()
 {
-	for (int i = 0; i < data.fileTypes.size(); i++)
+	for (auto& box : fileTypeBoxes)
 	{
-		fileTypeBoxes[i]->Disable();
-		fileTypeBoxes[i]->SetValue(false);
+		box->Disable();
+		box->SetValue(false);
 	}
 }
 
@@ -263,11 +259,11 @@ wxArrayString MainFrame::getSelectedFileTypes()
 {
 	wxArrayString result;
 
-	for (int i = 0; i < data.fileTypes.size(); i++)
+	for (auto& box : fileTypeBoxes)
 	{
-		if (fileTypeBoxes[i]->IsChecked())
+		if (box->IsChecked())
 		{
-			result.Add(data.fileTypes[i]);
+			result.Add(box->GetLabel());
 		}
 	}
 
@@ -276,9 +272,9 @@ wxArrayString MainFrame::getSelectedFileTypes()
 
 bool MainFrame::isFileTypeSelected()
 {
-	for (int i = 0; i < data.fileTypes.size(); i++)
+	for (auto& box : fileTypeBoxes)
 	{
-		if (fileTypeBoxes[i]->IsChecked())
+		if (box->IsChecked())
 		{
 			return true;
 		}
@@ -289,7 +285,7 @@ bool MainFrame::isFileTypeSelected()
 
 void MainFrame::readSettings()
 {
-	ifstream settingsFile(initPath + "/Files/settings.data");
+	ifstream settingsFile(iPath + "/Files/settings.data");
 
 	if (settingsFile.is_open())
 	{
@@ -316,7 +312,7 @@ void MainFrame::readSettings()
 
 void MainFrame::updateSettings()
 {
-	ofstream settingsFile(initPath + "/Files/settings.data");
+	ofstream settingsFile(iPath + "/Files/settings.data");
 
 	if (settingsFile.is_open())
 	{
@@ -338,12 +334,13 @@ void MainFrame::updateFileTypeBoxes()
 {
 	if (charsList->GetSelection() != wxNOT_FOUND)
 	{
-		wxArrayString fileTypes = data.getFileTypes(data.charCodes[charsList->GetStringSelection().ToStdString()]);
+		wxArrayString fileTypes = mHandler.wxGetFileTypes(vHandler.getCharCode(charsList->GetStringSelection().ToStdString()));
 
 		// Enable or disable file type checkbox based on whether or not it exists in character's map
-		for (int i = 0, j = 0; i < data.fileTypes.size(); i++)
+		auto fTypes = mHandler.wxGetFileTypes();
+		for (int i = 0, j = 0; i < fTypes.size(); i++)
 		{
-			if (j < fileTypes.size() && fileTypes[j] == data.fileTypes[i])
+			if (j < fileTypes.size() && fileTypes[j] == fTypes[i])
 			{
 				fileTypeBoxes[i]->Enable();
 				j++;
@@ -361,33 +358,20 @@ void MainFrame::updateButtons()
 {
 	if (initSlots.list->GetSelection() != wxNOT_FOUND)
 	{
-		try
+		Slot finalSlot = Slot(finalSlots.list->GetValue());
+		wxArrayString fileTypes = this->getSelectedFileTypes();
+
+		if (mHandler.wxHasSlot(mHandler.getCode(charsList->GetStringSelection().ToStdString()), finalSlot, fileTypes))
 		{
-			string finalSlot = std::to_string(finalSlots.list->GetValue());
-			wxArrayString fileTypes = this->getSelectedFileTypes();
-
-			// Append 0 to final slot if it is one digit
-			if (finalSlot.size() == 1)
-			{
-				finalSlot = '0' + finalSlot;
-			}
-
-			if (data.hasSlot(data.charCodes[charsList->GetStringSelection().ToStdString()], fileTypes, finalSlot))
-			{
-				buttons.mov->Disable();
-				buttons.dup->Disable();
-				buttons.del->Enable();
-			}
-			else
-			{
-				buttons.mov->Enable();
-				buttons.dup->Enable();
-				buttons.del->Enable();
-			}
+			buttons.mov->Disable();
+			buttons.dup->Disable();
+			buttons.del->Enable();
 		}
-		catch (...)
+		else
 		{
-			resetButtons();
+			buttons.mov->Enable();
+			buttons.dup->Enable();
+			buttons.del->Enable();
 		}
 	}
 	else
@@ -401,7 +385,7 @@ void MainFrame::updateButtons()
 void MainFrame::updateInkMenu()
 {
 	// Update Inkling Menu
-	if (data.mod.find("inkling") != data.mod.end() && data.hasAdditionalSlot("inkling"))
+	if (mHandler.hasAddSlot("inkling"))
 	{
 		inkMenu->Enable(false);
 		inkMenu->SetHelp("Select base slots to enable this feature.");
@@ -486,7 +470,7 @@ void MainFrame::onBrowse(wxCommandEvent& evt)
 	if (dialog.ShowModal() != wxID_CANCEL)
 	{
 		// Reset previous information
-		data.clear();
+		mHandler.clear();
 		charsList->Clear();
 		initSlots.list->Clear();
 		this->resetFileTypeBoxes();
@@ -496,11 +480,11 @@ void MainFrame::onBrowse(wxCommandEvent& evt)
 		browse.text->SetValue(dialog.GetPath());
 
 		// Update data
-		data.readModInfo(dialog.GetPath().ToStdString());
-		charsList->Set(data.getCharacters());
+		mHandler.readFiles(dialog.GetPath().ToStdString());
+		charsList->Set(mHandler.wxGetCharacterNames());
 
 		// Update buttons
-		if (data.hasAdditionalSlot())
+		if (mHandler.hasAddSlot())
 		{
 			buttons.base->Show();
 			buttons.config->Hide();
@@ -525,7 +509,7 @@ void MainFrame::onCharSelect(wxCommandEvent& evt)
 {
 	this->updateFileTypeBoxes();
 
-	initSlots.list->Set(data.getSlots(data.charCodes[charsList->GetStringSelection().ToStdString()], getSelectedFileTypes()));
+	initSlots.list->Set(mHandler.wxGetSlots(mHandler.getCode(charsList->GetStringSelection().ToStdString()), getSelectedFileTypes()));
 
 	if (!initSlots.list->IsEmpty())
 	{
@@ -539,7 +523,7 @@ void MainFrame::onFileTypeSelect(wxCommandEvent& evt)
 {
 	wxArrayString fileTypes = getSelectedFileTypes();
 
-	initSlots.list->Set(data.getSlots(data.charCodes[charsList->GetStringSelection().ToStdString()], fileTypes));
+	initSlots.list->Set(mHandler.wxGetSlots(mHandler.getCode(charsList->GetStringSelection().ToStdString()), fileTypes));
 
 	if (!initSlots.list->IsEmpty())
 	{
@@ -563,23 +547,17 @@ void MainFrame::onMovePressed(wxCommandEvent& evt)
 {
 	wxArrayString fileTypes = getSelectedFileTypes();
 
-	string initSlot = initSlots.list->GetStringSelection().ToStdString();
-	string finalSlot = std::to_string(finalSlots.list->GetValue());
+	Slot initSlot = Slot(initSlots.list->GetStringSelection().ToStdString());
+	Slot finalSlot = Slot(finalSlots.list->GetValue());
 
-	// Append 0 to final slot if it is one digit
-	if (finalSlot.size() == 1)
-	{
-		finalSlot = '0' + finalSlot;
-	}
-
-	data.adjustFiles("move", data.charCodes[charsList->GetStringSelection().ToStdString()], fileTypes, initSlot, finalSlot);
-	initSlots.list->Set(data.getSlots(data.charCodes[charsList->GetStringSelection().ToStdString()], getSelectedFileTypes()));
-	initSlots.list->SetStringSelection(finalSlot);
+	mHandler.adjustFiles("move", vHandler.getCharCode(charsList->GetStringSelection().ToStdString()), fileTypes, initSlot, finalSlot);
+	initSlots.list->Set(mHandler.wxGetSlots(mHandler.getCode(charsList->GetStringSelection().ToStdString()), getSelectedFileTypes()));
+	initSlots.list->SetStringSelection(finalSlot.getString());
 
 	this->updateButtons();
 
 	// Update buttons
-	if (data.hasAdditionalSlot())
+	if (mHandler.hasAddSlot())
 	{
 		buttons.base->Show();
 		buttons.config->Hide();
@@ -601,23 +579,17 @@ void MainFrame::onDuplicatePressed(wxCommandEvent& evt)
 {
 	wxArrayString fileTypes = getSelectedFileTypes();
 
-	string initSlot = initSlots.list->GetStringSelection().ToStdString();
-	string finalSlot = std::to_string(finalSlots.list->GetValue());
+	int initSlot = stoi(initSlots.list->GetStringSelection().ToStdString());
+	int finalSlot = finalSlots.list->GetValue();
 
-	// Append 0 to final slot if it is one digit
-	if (finalSlot.size() == 1)
-	{
-		finalSlot = '0' + finalSlot;
-	}
-
-	data.adjustFiles("duplicate", data.charCodes[charsList->GetStringSelection().ToStdString()], fileTypes, initSlot, finalSlot);
-	initSlots.list->Set(data.getSlots(data.charCodes[charsList->GetStringSelection().ToStdString()], getSelectedFileTypes()));
-	initSlots.list->SetStringSelection(initSlot);
+	mHandler.adjustFiles("duplicate", vHandler.getCharCode(charsList->GetStringSelection().ToStdString()), fileTypes, initSlot, finalSlot);
+	initSlots.list->Set(mHandler.wxGetSlots(vHandler.getCharCode(charsList->GetStringSelection().ToStdString()), getSelectedFileTypes()));
+	initSlots.list->SetStringSelection(to_string(initSlot));
 
 	this->updateButtons();
 
 	// Update buttons
-	if (data.hasAdditionalSlot())
+	if (mHandler.hasAddSlot())
 	{
 		buttons.base->Show();
 		buttons.config->Hide();
@@ -631,13 +603,13 @@ void MainFrame::onDuplicatePressed(wxCommandEvent& evt)
 
 void MainFrame::onDeletePressed(wxCommandEvent& evt)
 {
-	int numChar = data.mod.size();
+	int numChar = mHandler.getNumCharacters();
 
-	data.adjustFiles("delete", data.charCodes[charsList->GetStringSelection().ToStdString()], getSelectedFileTypes(), initSlots.list->GetStringSelection().ToStdString(), "-1");
+	mHandler.adjustFiles("delete", mHandler.getCode(charsList->GetStringSelection().ToStdString()), getSelectedFileTypes(), Slot(initSlots.list->GetStringSelection().ToStdString()), Slot(-1));
 
-	if (data.mod.size() != numChar)
+	if (mHandler.getNumCharacters() != numChar)
 	{
-		charsList->Set(data.getCharacters());
+		charsList->Set(mHandler.wxGetCharacterNames());
 		this->resetFileTypeBoxes();
 		initSlots.list->Set(wxArrayString());
 		this->resetButtons();
@@ -645,7 +617,7 @@ void MainFrame::onDeletePressed(wxCommandEvent& evt)
 	else
 	{
 		this->updateFileTypeBoxes();
-		initSlots.list->Set(data.getSlots(data.charCodes[charsList->GetStringSelection().ToStdString()], getSelectedFileTypes()));
+		initSlots.list->Set(mHandler.wxGetSlots(mHandler.getCode(charsList->GetStringSelection().ToStdString()), getSelectedFileTypes()));
 
 		if (!initSlots.list->IsEmpty())
 		{
@@ -656,7 +628,7 @@ void MainFrame::onDeletePressed(wxCommandEvent& evt)
 	}
 
 	// Update buttons
-	if (!data.hasAdditionalSlot())
+	if (!mHandler.hasAddSlot())
 	{
 		buttons.base->Hide();
 		buttons.config->Show();
@@ -690,27 +662,29 @@ void MainFrame::onLogPressed(wxCommandEvent& evt)
 
 void MainFrame::onBasePressed(wxCommandEvent& evt)
 {
-	BaseSelection dlg(this, wxID_ANY, "Choose Base Slots", data, settings.readBase);
+	//BaseSelection dlg(this, wxID_ANY, "Choose Base Slots", data, settings.readBase);
 
-	if (dlg.ShowModal() == wxID_OK)
-	{
-		data.baseSlots = dlg.getBaseSlots();
+	//if (dlg.ShowModal() == wxID_OK)
+	//{
+	//	data.baseSlots = dlg.getBaseSlots();
 
-		// Update Buttons
-		buttons.base->Hide();
-		buttons.config->Show();
-		buttons.prc->Show();
+	//	// Update Buttons
+	//	buttons.base->Hide();
+	//	buttons.config->Show();
+	//	buttons.prc->Show();
 
-		inkMenu->Enable();
-		inkMenu->SetHelp("Add or modify colors. Required for additional slots.");
+	//	inkMenu->Enable();
+	//	inkMenu->SetHelp("Add or modify colors. Required for additional slots.");
 
-		panel->SendSizeEvent();
-	}
+	//	panel->SendSizeEvent();
+	//}
+
+	mHandler.createConfig();
 }
 
 void MainFrame::onConfigPressed(wxCommandEvent& evt)
 {
-	if (data.hasAdditionalSlot())
+	/*if (data.hasAdditionalSlot())
 	{
 		data.createConfig(data.baseSlots);
 	}
@@ -718,256 +692,257 @@ void MainFrame::onConfigPressed(wxCommandEvent& evt)
 	{
 		map<string, map<string, set<string>>> temp;
 		data.createConfig(temp);
-	}
+	}*/
+	mHandler.createConfig();
 }
 
 void MainFrame::onInkPressed(wxCommandEvent& evt)
 {
-	auto inklingColors = data.readInk();
+	//auto inklingColors = data.readInk();
 
-	InkSelection dlg(this, wxID_ANY, "Choose Inkling Colors", data, settings.readInk);
+	//InkSelection dlg(this, wxID_ANY, "Choose Inkling Colors", data, settings.readInk);
 
-	if (dlg.ShowModal() == wxID_OK)
-	{
-		auto finalColors = dlg.getFinalColors();
+	//if (dlg.ShowModal() == wxID_OK)
+	//{
+	//	auto finalColors = dlg.getFinalColors();
 
-		if (!finalColors.empty())
-		{
-			if (settings.prcxOutput)
-			{
-				wxArrayString exeLog;
+	//	if (!finalColors.empty())
+	//	{
+	//		if (settings.prcxOutput)
+	//		{
+	//			wxArrayString exeLog;
 
-				// Change directory to parcel and param-xml's location
-				// INFO: parcel requires current working directory to be the same,
-				wxSetWorkingDirectory("Files/prc/");
+	//			// Change directory to parcel and param-xml's location
+	//			// INFO: parcel requires current working directory to be the same,
+	//			wxSetWorkingDirectory("Files/prc/");
 
-				// Create XML
-				wxExecute("param-xml disasm effect.prc -o effect.xml -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
+	//			// Create XML
+	//			wxExecute("param-xml disasm effect.prc -o effect.xml -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
 
-				// Patch Colors
-				data.patchXMLInkColors(finalColors);
+	//			// Patch Colors
+	//			data.patchXMLInkColors(finalColors);
 
-				// Create Modif PRC
-				wxExecute("param-xml asm effect.xml -o modif_effect.prc -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
+	//			// Create Modif PRC
+	//			wxExecute("param-xml asm effect.xml -o modif_effect.prc -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
 
-				// Create Modif PRCX
-				wxExecute("parcel diff effect.prc modif_effect.prc effect.prcx", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
+	//			// Create Modif PRCX
+	//			wxExecute("parcel diff effect.prc modif_effect.prc effect.prcx", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
 
-				bool error = true;
+	//			bool error = true;
 
-				if (exeLog.size() == 2 && exeLog[0].substr(0, 9) == "Completed")
-				{
-					log->LogText("> Success! effect.prcx was created!");
-					error = false;
-				}
+	//			if (exeLog.size() == 2 && exeLog[0].substr(0, 9) == "Completed")
+	//			{
+	//				log->LogText("> Success! effect.prcx was created!");
+	//				error = false;
+	//			}
 
-				if (error)
-				{
-					log->LogText("> Error: Something went wrong, possible issue below:");
+	//			if (error)
+	//			{
+	//				log->LogText("> Error: Something went wrong, possible issue below:");
 
-					for (int i = 0; i < exeLog.size(); i++)
-					{
-						log->LogText(">" + exeLog[i]);
-					}
-				}
-				else
-				{
-					fs::create_directories(data.rootPath + "/fighter/common/param/");
-					fs::rename(fs::current_path() / "effect.prcx", data.rootPath + "/fighter/common/param/effect.prcx");
+	//				for (int i = 0; i < exeLog.size(); i++)
+	//				{
+	//					log->LogText(">" + exeLog[i]);
+	//				}
+	//			}
+	//			else
+	//			{
+	//				fs::create_directories(data.rootPath + "/fighter/common/param/");
+	//				fs::rename(fs::current_path() / "effect.prcx", data.rootPath + "/fighter/common/param/effect.prcx");
 
-					fs::remove(fs::current_path() / "modif_effect.prc");
+	//				fs::remove(fs::current_path() / "modif_effect.prc");
 
-					if (fs::exists(data.rootPath + "/fighter/common/param/effect.prcxml"))
-					{
-						fs::remove(data.rootPath + "/fighter/common/param/effect.prcxml");
-					}
-					fs::remove(fs::current_path() / "effect.xml");
-				}
+	//				if (fs::exists(data.rootPath + "/fighter/common/param/effect.prcxml"))
+	//				{
+	//					fs::remove(data.rootPath + "/fighter/common/param/effect.prcxml");
+	//				}
+	//				fs::remove(fs::current_path() / "effect.xml");
+	//			}
 
-				// Restore working directory
-				wxSetWorkingDirectory("../../");
-			}
-			else
-			{
-				// Change directory to parcel and param-xml's location
-				// TODO: Make function not rely on directory change
-				wxSetWorkingDirectory("Files/prc/");
+	//			// Restore working directory
+	//			wxSetWorkingDirectory("../../");
+	//		}
+	//		else
+	//		{
+	//			// Change directory to parcel and param-xml's location
+	//			// TODO: Make function not rely on directory change
+	//			wxSetWorkingDirectory("Files/prc/");
 
-				data.createInkPRCXML(finalColors);
+	//			data.createInkPRCXML(finalColors);
 
-				fs::create_directories(data.rootPath + "/fighter/common/param/");
-				fs::rename(fs::current_path() / "effect_Edit.prcxml", data.rootPath + "/fighter/common/param/effect.prcxml");
+	//			fs::create_directories(data.rootPath + "/fighter/common/param/");
+	//			fs::rename(fs::current_path() / "effect_Edit.prcxml", data.rootPath + "/fighter/common/param/effect.prcxml");
 
-				if (fs::exists(data.rootPath + "/fighter/common/param/effect.prcx"))
-				{
-					fs::remove(data.rootPath + "/fighter/common/param/effect.prcx");
-				}
+	//			if (fs::exists(data.rootPath + "/fighter/common/param/effect.prcx"))
+	//			{
+	//				fs::remove(data.rootPath + "/fighter/common/param/effect.prcx");
+	//			}
 
-				// Restore working directory
-				wxSetWorkingDirectory("../../");
-			}
-		}
-		else
-		{
-			log->LogText("> N/A: No changes were made.");
-		}
-	}
+	//			// Restore working directory
+	//			wxSetWorkingDirectory("../../");
+	//		}
+	//	}
+	//	else
+	//	{
+	//		log->LogText("> N/A: No changes were made.");
+	//	}
+	//}
 }
 
 void MainFrame::onPrcPressed(wxCommandEvent& evt)
 {
-	bool hasAddSlots = data.hasAdditionalSlot();
+	//bool hasAddSlots = data.hasAdditionalSlot();
 
-	if (hasAddSlots || !data.mod.empty())
-	{
-		// Make character-slots map
-		map<string, set<string>> allSlots;
-		for (auto i = data.mod.begin(); i != data.mod.end(); i++)
-		{
-			wxArrayString slots = data.getSlots(i->first);
+	//if (hasAddSlots || !data.mod.empty())
+	//{
+	//	// Make character-slots map
+	//	map<string, set<string>> allSlots;
+	//	for (auto i = data.mod.begin(); i != data.mod.end(); i++)
+	//	{
+	//		wxArrayString slots = data.getSlots(i->first);
 
-			for (auto j = slots.begin(); j != slots.end(); j++)
-			{
-				if (*j == "all")
-				{
-					continue;
-				}
+	//		for (auto j = slots.begin(); j != slots.end(); j++)
+	//		{
+	//			if (*j == "all")
+	//			{
+	//				continue;
+	//			}
 
-				allSlots[i->first].insert(j->ToStdString());
-			}
-		}
+	//			allSlots[i->first].insert(j->ToStdString());
+	//		}
+	//	}
 
-		PrcSelection dlg(this, wxID_ANY, "Make Selection", data, settings.readNames);
-		if (dlg.ShowModal() == wxID_OK)
-		{
-			map<string, int> finalSlots = dlg.getMaxSlots(allSlots);
-			map<string, map<int, Name>> finalNames = dlg.getNames();
-			map<string, map<int, string>> finalAnnouncers = dlg.getAnnouncers();
+	//	PrcSelection dlg(this, wxID_ANY, "Make Selection", data, settings.readNames);
+	//	if (dlg.ShowModal() == wxID_OK)
+	//	{
+	//		map<string, int> finalSlots = dlg.getMaxSlots(allSlots);
+	//		map<string, map<int, Name>> finalNames = dlg.getNames();
+	//		map<string, map<int, string>> finalAnnouncers = dlg.getAnnouncers();
 
-			wxArrayString exeLog;
+	//		wxArrayString exeLog;
 
-			if (hasAddSlots || !finalNames.empty() || !finalAnnouncers.empty())
-			{
-				if (settings.prcxOutput)
-				{
-					// Change directory to parcel and param-xml's location
-					// INFO: parcel requires current working directory to be the same,
-					wxSetWorkingDirectory("Files/prc/");
+	//		if (hasAddSlots || !finalNames.empty() || !finalAnnouncers.empty())
+	//		{
+	//			if (settings.prcxOutput)
+	//			{
+	//				// Change directory to parcel and param-xml's location
+	//				// INFO: parcel requires current working directory to be the same,
+	//				wxSetWorkingDirectory("Files/prc/");
 
-					// Create XML
-					wxExecute("param-xml disasm vanilla.prc -o ui_chara_db.xml -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
+	//				// Create XML
+	//				wxExecute("param-xml disasm vanilla.prc -o ui_chara_db.xml -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
 
-					// Edit Vanilla XML
-					if (hasAddSlots)
-					{
-						data.patchXMLSlots(finalSlots);
-					}
-					if (!finalNames.empty())
-					{
-						data.patchXMLNames(finalNames);
-					}
-					if (!finalAnnouncers.empty())
-					{
-						data.patchXMLAnnouncer(finalAnnouncers);
-					}
+	//				// Edit Vanilla XML
+	//				if (hasAddSlots)
+	//				{
+	//					data.patchXMLSlots(finalSlots);
+	//				}
+	//				if (!finalNames.empty())
+	//				{
+	//					data.patchXMLNames(finalNames);
+	//				}
+	//				if (!finalAnnouncers.empty())
+	//				{
+	//					data.patchXMLAnnouncer(finalAnnouncers);
+	//				}
 
-					// Create Modif PRC
-					wxExecute("param-xml asm ui_chara_db.xml -o modif.prc -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
+	//				// Create Modif PRC
+	//				wxExecute("param-xml asm ui_chara_db.xml -o modif.prc -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
 
-					// Create Modif PRCX
-					wxExecute("parcel diff vanilla.prc modif.prc ui_chara_db.prcx", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
+	//				// Create Modif PRCX
+	//				wxExecute("parcel diff vanilla.prc modif.prc ui_chara_db.prcx", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
 
-					if (exeLog.size() == 2 && exeLog[0].substr(0, 9) == "Completed")
-					{
-						log->LogText("> Success! ui_chara_db.prcx was created!");
+	//				if (exeLog.size() == 2 && exeLog[0].substr(0, 9) == "Completed")
+	//				{
+	//					log->LogText("> Success! ui_chara_db.prcx was created!");
 
-						if (!finalNames.empty())
-						{
-							log->LogText("> Success! msg_name.xmsbt was created!");
-						}
+	//					if (!finalNames.empty())
+	//					{
+	//						log->LogText("> Success! msg_name.xmsbt was created!");
+	//					}
 
-						fs::create_directories(data.rootPath + "/ui/param/database/");
-						fs::rename(fs::current_path() / "ui_chara_db.prcx", data.rootPath + "/ui/param/database/ui_chara_db.prcx");
+	//					fs::create_directories(data.rootPath + "/ui/param/database/");
+	//					fs::rename(fs::current_path() / "ui_chara_db.prcx", data.rootPath + "/ui/param/database/ui_chara_db.prcx");
 
-						fs::remove(fs::current_path() / "modif.prc");
-						fs::remove(fs::current_path() / "ui_chara_db.xml");
+	//					fs::remove(fs::current_path() / "modif.prc");
+	//					fs::remove(fs::current_path() / "ui_chara_db.xml");
 
-						if (fs::exists(data.rootPath + "/ui/param/database/ui_chara_db.prcxml"))
-						{
-							fs::remove(data.rootPath + "/ui/param/database/ui_chara_db.prcxml");
-						}
-					}
-					else
-					{
-						log->LogText("> Error: Something went wrong, possible issue below:");
+	//					if (fs::exists(data.rootPath + "/ui/param/database/ui_chara_db.prcxml"))
+	//					{
+	//						fs::remove(data.rootPath + "/ui/param/database/ui_chara_db.prcxml");
+	//					}
+	//				}
+	//				else
+	//				{
+	//					log->LogText("> Error: Something went wrong, possible issue below:");
 
-						for (int i = 0; i < exeLog.size(); i++)
-						{
-							log->LogText(">" + exeLog[i]);
-						}
-					}
+	//					for (int i = 0; i < exeLog.size(); i++)
+	//					{
+	//						log->LogText(">" + exeLog[i]);
+	//					}
+	//				}
 
-					// Restore working directory
-					wxSetWorkingDirectory("../../");
-				}
-				else
-				{
-					// Change directory to parcel and param-xml's location
-					// INFO: parcel requires current working directory to be the same,
-					wxSetWorkingDirectory("Files/prc/");
+	//				// Restore working directory
+	//				wxSetWorkingDirectory("../../");
+	//			}
+	//			else
+	//			{
+	//				// Change directory to parcel and param-xml's location
+	//				// INFO: parcel requires current working directory to be the same,
+	//				wxSetWorkingDirectory("Files/prc/");
 
-					// Create XML
-					wxExecute("param-xml disasm vanilla.prc -o ui_chara_db.xml -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
+	//				// Create XML
+	//				wxExecute("param-xml disasm vanilla.prc -o ui_chara_db.xml -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
 
-					// Create PRCXML
-					data.createPRCXML(finalNames, finalAnnouncers, finalSlots);
+	//				// Create PRCXML
+	//				data.createPRCXML(finalNames, finalAnnouncers, finalSlots);
 
-					if (exeLog.size() == 1 && exeLog[0].substr(0, 9) == "Completed")
-					{
-						log->LogText("> Success! ui_chara_db.prcx was created!");
+	//				if (exeLog.size() == 1 && exeLog[0].substr(0, 9) == "Completed")
+	//				{
+	//					log->LogText("> Success! ui_chara_db.prcx was created!");
 
-						if (!finalNames.empty())
-						{
-							log->LogText("> Success! msg_name.xmsbt was created!");
-						}
+	//					if (!finalNames.empty())
+	//					{
+	//						log->LogText("> Success! msg_name.xmsbt was created!");
+	//					}
 
-						fs::create_directories(data.rootPath + "/ui/param/database/");
-						fs::rename(fs::current_path() / "ui_chara_db.prcxml", data.rootPath + "/ui/param/database/ui_chara_db.prcxml");
+	//					fs::create_directories(data.rootPath + "/ui/param/database/");
+	//					fs::rename(fs::current_path() / "ui_chara_db.prcxml", data.rootPath + "/ui/param/database/ui_chara_db.prcxml");
 
 
-						if (fs::exists(data.rootPath + "/ui/param/database/ui_chara_db.prcx"))
-						{
-							fs::remove(data.rootPath + "/ui/param/database/ui_chara_db.prcx");
-						}
-					}
-					else
-					{
-						log->LogText("> Error: Something went wrong, possible issue below:");
+	//					if (fs::exists(data.rootPath + "/ui/param/database/ui_chara_db.prcx"))
+	//					{
+	//						fs::remove(data.rootPath + "/ui/param/database/ui_chara_db.prcx");
+	//					}
+	//				}
+	//				else
+	//				{
+	//					log->LogText("> Error: Something went wrong, possible issue below:");
 
-						for (int i = 0; i < exeLog.size(); i++)
-						{
-							log->LogText(">" + exeLog[i]);
-						}
-					}
+	//					for (int i = 0; i < exeLog.size(); i++)
+	//					{
+	//						log->LogText(">" + exeLog[i]);
+	//					}
+	//				}
 
-					// Restore working directory
-					wxSetWorkingDirectory("../../");
-				}
-			}
-			else
-			{
-				log->LogText("> N/A: No changes were made.");
-			}
-		}
-	}
-	else if (data.mod.empty())
-	{
-		log->LogText("> N/A: Mod is empty, cannot create a prcx!");
-	}
-	else
-	{
-		log->LogText("> N/A: No additional slots detected.");
-	}
+	//				// Restore working directory
+	//				wxSetWorkingDirectory("../../");
+	//			}
+	//		}
+	//		else
+	//		{
+	//			log->LogText("> N/A: No changes were made.");
+	//		}
+	//	}
+	//}
+	//else if (data.mod.empty())
+	//{
+	//	log->LogText("> N/A: Mod is empty, cannot create a prcx!");
+	//}
+	//else
+	//{
+	//	log->LogText("> N/A: No additional slots detected.");
+	//}
 }
 
 void MainFrame::onMenuClose(wxCommandEvent& evt)
@@ -983,15 +958,15 @@ void MainFrame::onClose(wxCloseEvent& evt)
 
 void MainFrame::onTestPressed(wxCommandEvent& evt)
 {
-
+	mHandler.createConfig();
 }
 
 void MainFrame::onDeskPressed(wxCommandEvent& evt)
 {
-	data.removeDesktopINI();
+	mHandler.removeDesktopINI();
 }
 
 MainFrame::~MainFrame()
 {
-	delete[] fileTypeBoxes;
+	// Remove?
 }

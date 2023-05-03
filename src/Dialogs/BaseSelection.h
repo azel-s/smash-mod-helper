@@ -1,5 +1,5 @@
 #pragma once
-#include "SmashData.h"
+#include "ModHandler.h"
 #include <wx/wx.h>
 #include <wx/spinctrl.h>
 #include <wx/clrpicker.h>
@@ -9,12 +9,12 @@ class BaseSelection : public wxDialog
 private:
     map<string, map<string, set<string>>> slots;
     vector<wxChoice*> baseSlots;
-    SmashData* mod;
+    ModHandler* mHandler;
 
 public:
     BaseSelection(wxWindow* parent, wxWindowID id,
         const wxString& title,
-        SmashData& mod,
+        ModHandler& mHandler,
         bool readPrevBase,
         const wxPoint& pos = wxDefaultPosition,
         const wxSize& size = wxDefaultSize,

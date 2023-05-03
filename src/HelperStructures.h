@@ -5,6 +5,46 @@
 #include <locale>
 using namespace std;
 
+class Slot
+{
+private:
+	int slot;
+
+public:
+	Slot();
+	Slot(int slot);
+	Slot(string slot);
+
+	int getInt() const;
+	string getString() const;
+
+	void set(Slot slot);
+	void set(int slot);
+	void set(string slot);
+
+	bool operator <(const Slot& rhs) const;
+};
+
+class Path
+{
+private:
+	string path;
+	string type;
+	Slot slot;
+public:
+	Path(string path = "");
+
+	string getPath() const;
+	string getType() const;
+	Slot getSlot() const;
+
+	void setSlot(Slot slot);
+	void setSlot(int slot);
+	void setSlot(string slot);
+
+	bool operator <(const Path& rhs) const;
+};
+
 struct Settings
 {
 	bool prcxOutput = false;
