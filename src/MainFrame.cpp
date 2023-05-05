@@ -662,37 +662,26 @@ void MainFrame::onLogPressed(wxCommandEvent& evt)
 
 void MainFrame::onBasePressed(wxCommandEvent& evt)
 {
-	//BaseSelection dlg(this, wxID_ANY, "Choose Base Slots", data, settings.readBase);
+	BaseSelection dlg(this, wxID_ANY, "Choose Base Slots", mHandler, settings.readBase);
 
-	//if (dlg.ShowModal() == wxID_OK)
-	//{
-	//	data.baseSlots = dlg.getBaseSlots();
+	if (dlg.ShowModal() == wxID_OK)
+	{
+		mHandler.setSlots(dlg.getBaseSlots());
 
-	//	// Update Buttons
-	//	buttons.base->Hide();
-	//	buttons.config->Show();
-	//	buttons.prc->Show();
+		// Update Buttons
+		buttons.base->Hide();
+		buttons.config->Show();
+		buttons.prc->Show();
 
-	//	inkMenu->Enable();
-	//	inkMenu->SetHelp("Add or modify colors. Required for additional slots.");
+		inkMenu->Enable();
+		inkMenu->SetHelp("Add or modify colors. Required for additional slots.");
 
-	//	panel->SendSizeEvent();
-	//}
-
-	mHandler.createConfig();
+		panel->SendSizeEvent();
+	}
 }
 
 void MainFrame::onConfigPressed(wxCommandEvent& evt)
 {
-	/*if (data.hasAdditionalSlot())
-	{
-		data.createConfig(data.baseSlots);
-	}
-	else
-	{
-		map<string, map<string, set<string>>> temp;
-		data.createConfig(temp);
-	}*/
 	mHandler.createConfig();
 }
 

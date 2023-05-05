@@ -92,9 +92,9 @@ void ModHandler::removeDesktopINI()
 }
 
 /* --- HELPERS (WX) --- */
-void ModHandler::wxLog(string message)
+void ModHandler::wxLog(string message, bool debug)
 {
-	if (log)
+	if (log && debug)
 	{
 		log->LogText(message);
 	}
@@ -109,6 +109,8 @@ void ModHandler::test()
 /* --- CONSTRUCTORS (UNIVERSAL) --- */
 ModHandler::ModHandler(wxLogTextCtrl* log) : log(log)
 {
+	debug = false;
+
 	fileTypes.push_back("effect");
 	fileTypes.push_back("fighter");
 	fileTypes.push_back("sound");
@@ -116,6 +118,24 @@ ModHandler::ModHandler(wxLogTextCtrl* log) : log(log)
 }
 
 /* --- SETTERS (UNIVERSAL) --- */
+void ModHandler::setSlots(map<string, map<Slot, set<Slot>>> slots)
+{
+	for (auto i = slots.begin(); i != slots.end(); i++)
+	{
+		for (auto j = i->second.begin(); j != i->second.end(); j++)
+		{
+			for (auto k = j->second.begin(); k != j->second.end(); k++)
+			{
+				this->slots[i->first][*k] = j->first;
+			}
+		}
+	}
+}
+
+void ModHandler::setDebug(bool debug)
+{
+	this->debug = debug;
+}
 
 /* --- SETTERS (WX) --- */
 void ModHandler::wxSetLog(wxLogTextCtrl* log)
@@ -150,7 +170,7 @@ set<Slot> ModHandler::getAddSlots(string code) const
 		// Go through all slots
 		for (auto i = charIter->second.begin(); i != charIter->second.end(); i++)
 		{
-			if (i->first.getInt() > 7)
+			if (i->first.getInt() > 7 && i->first.getInt() != 999)
 			{
 				// Ignore kirby slots that only contain copy files.
 				if (charIter->first == "kirby")
@@ -509,7 +529,7 @@ bool ModHandler::wxHasSlot(string code, Slot slot, wxArrayString fileTypes, bool
 
 				return slotInAll;
 			}
-			else if (ice_climbers)
+			else
 			{
 				wxArrayString temp;
 				for (auto& fileType : fileTypes)
@@ -523,10 +543,6 @@ bool ModHandler::wxHasSlot(string code, Slot slot, wxArrayString fileTypes, bool
 				}
 
 				return false;
-			}
-			else
-			{
-				return true;
 			}
 		}
 	}
@@ -1170,24 +1186,18 @@ void ModHandler::getNewDirSlots
 					wxLog("> Error: Unknown error encountered while gathering files from vanilla JSON.");
 				}
 
-				// Add newDirInfos
+				// Add newDirInfos and newDirInfosBase
 				if (jFiles.find("append") != jFiles.end())
 				{
 					newDirInfos.push_back("\"fighter/" + charcode + "/append/c" + j->first.getString() + "\"");
 				}
-				if (jFiles.find("vanilla") != jFiles.end() || jFiles.find("added") != jFiles.end())
-				{
-					newDirInfos.push_back("\"fighter/" + charcode + "/c" + j->first.getString() + "\"");
-				}
-				if (jFiles.find("camera") != jFiles.end())
-				{
-					newDirInfos.push_back("\"fighter/" + charcode + "/camera/c" + j->first.getString() + "\"");
-					newDirInfosBase.push_back
-					(
-						"\"fighter/" + charcode + "/c" + j->first.getString() + "/camera\": \"fighter/" +
-						charcode + "/c" + j->second.getString() + "/camera\""
-					);
-				}
+				newDirInfos.push_back("\"fighter/" + charcode + "/c" + j->first.getString() + "\"");
+				newDirInfos.push_back("\"fighter/" + charcode + "/camera/c" + j->first.getString() + "\"");
+				newDirInfosBase.push_back
+				(
+					"\"fighter/" + charcode + "/c" + j->first.getString() + "/camera\": \"fighter/" +
+					charcode + "/c" + j->second.getString() + "/camera\""
+				);
 				// TODO: Not sure why I added nana and kirby as a check here, possible issue?
 				if (charcode != "nana" && charcode != "kirby" && jFiles.find("kirbycopy") != jFiles.end())
 				{
@@ -1208,24 +1218,12 @@ void ModHandler::getNewDirSlots
 						charcode + "/kirbycopy/c" + j->second.getString() + "/sound\""
 					);
 				}
-				if (jFiles.find("movie") != jFiles.end())
-				{
-					newDirInfos.push_back("\"fighter/" + charcode + "/movie/c" + j->first.getString() + "\"");
-				}
-				if (jFiles.find("result") != jFiles.end())
-				{
-					newDirInfos.push_back("\"fighter/" + charcode + "/result/c" + j->first.getString() + "\"");
-				}
-
-				// Add newDirInfosBase
-				if (jFiles.find("cmn") != jFiles.end())
-				{
-					newDirInfosBase.push_back
-					(
-						"\"fighter/" + charcode + "/c" + j->first.getString() + "/cmn\": \"fighter/" +
-						charcode + "/c" + j->second.getString() + "/cmn\""
-					);
-				}
+				newDirInfos.push_back("\"fighter/" + charcode + "/movie/c" + j->first.getString() + "\"");
+				newDirInfos.push_back("\"fighter/" + charcode + "/result/c" + j->first.getString() + "\""); newDirInfosBase.push_back
+				(
+					"\"fighter/" + charcode + "/c" + j->first.getString() + "/cmn\": \"fighter/" +
+					charcode + "/c" + j->second.getString() + "/cmn\""
+				);
 
 				for (auto k = jFiles.begin(); k != jFiles.end(); k++)
 				{
@@ -1321,11 +1319,13 @@ void ModHandler::getNewDirSlots
 						}
 						else
 						{
-							wxLog("> " + l->getPath() + "'s slot could not be determined");
-							// return;
+							wxLog("> WARN: Ignored " + l->getPath(), true);
 						}
 					}
 				}
+
+				// Add empty movie
+				newDirFiles[i->first][j->first]["\"fighter/mariod/movie/c" + j->first.getString() + "\""];
 
 				/* Adds NEW kirby copy files
 				// Special Case for kirby
@@ -2742,9 +2742,9 @@ map<int, InklingColor> ModHandler::readInk()
 	return inkColors;
 }
 
-map<string, map<string, int>> ModHandler::readBaseSlots()
+map<string, map<Slot, Slot>> ModHandler::readBaseSlots()
 {
-	map<string, map<string, int>> baseSlots;
+	map<string, map<Slot, Slot>> baseSlots;
 
 	if (fs::exists(path + "/config.json"))
 	{
@@ -2774,11 +2774,11 @@ map<string, map<string, int>> ModHandler::readBaseSlots()
 						auto end = line.find("/", beg);
 						string code = line.substr(beg, end - beg);
 
-						string newSlot = line.substr(end + 2, camPos - end - 2);
+						Slot newSlot = Slot(line.substr(end + 2, camPos - end - 2));
 
 						end = line.find("/camera", camPos + 7) - 1;
 						beg = line.find(code + "/c", camPos + 7) + 2 + code.size();
-						int baseSlot = stoi(line.substr(beg, end - beg + 1));
+						Slot baseSlot = Slot(line.substr(beg, end - beg + 1));
 
 						baseSlots[code][newSlot] = baseSlot;
 					}

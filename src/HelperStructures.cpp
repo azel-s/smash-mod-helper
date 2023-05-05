@@ -22,6 +22,16 @@ Slot::Slot(string slot)
 {
 	try
 	{
+		if (slot == "All")
+		{
+			this->slot = 999;
+			return;
+		}
+		else if (slot.size() > 1 && slot[0] == 'c')
+		{
+			slot = slot.substr(1);
+		}
+
 		this->slot = stoi(slot);
 
 		if (this->slot < 0)
@@ -75,26 +85,26 @@ void Slot::set(string slot)
 // Priority: -1, 999, # in ascending order
 bool Slot::operator<(const Slot& rhs) const
 {
-	if (this->slot == -1)
+	if (this->slot != rhs.slot)
 	{
-		return true;
+		if (this->slot == -1)
+		{
+			return true;
+		}
+		else if (rhs.slot == -1)
+		{
+			return false;
+		}
+		else if (this->slot == 999)
+		{
+			return true;
+		}
+		else if (rhs.slot == 999)
+		{
+			return false;
+		}
 	}
-	else if (rhs.slot == -1)
-	{
-		return false;
-	}
-	else if (this->slot == 999)
-	{
-		return true;
-	}
-	else if (rhs.slot == 999)
-	{
-		return false;
-	}
-	else
-	{
-		return this->slot < rhs.slot;
-	}
+	return this->slot < rhs.slot;	
 }
 
 /* --- {Path} ---*/
@@ -142,17 +152,26 @@ Path::Path(string path)
 			else
 			{
 				auto modelPos = path.find("/model/");
-				auto slashPos = (modelPos != string::npos) ? path.find('/', modelPos + 7) : path.rfind('/');
-				if (slashPos != string::npos)
+				auto begPos = (modelPos != string::npos) ? path.find('/', modelPos + 7) : path.rfind('/');
+
+				if (modelPos == string::npos || begPos != string::npos)
 				{
-					auto underscorePos = path.rfind("_c", slashPos);
-					if (underscorePos != string::npos && underscorePos < slashPos)
+					auto underscorePos = (modelPos != string::npos) ? path.rfind("_c", begPos) : path.rfind("_c");
+					if (underscorePos != string::npos && (modelPos != string::npos) ? (underscorePos < begPos) : (underscorePos > begPos))
 					{
 						try
 						{
 							size_t* temp = new size_t;
-							this->slot = Slot(stoi(path.substr(underscorePos + 2, slashPos - underscorePos - 2), temp));
-							if (*temp != slashPos - underscorePos - 2)
+							if (modelPos != string::npos)
+							{
+								this->slot = Slot(stoi(path.substr(underscorePos + 2, begPos - underscorePos - 2), temp));
+							}
+							else
+							{
+								this->slot = Slot(stoi(path.substr(underscorePos + 2), temp));
+								begPos = path.size();
+							}
+							if (*temp != begPos - underscorePos - 2)
 							{
 								this->slot = Slot(999);
 							}
@@ -193,8 +212,13 @@ Path::Path(string path)
 						{
 							this->slot = Slot();
 						}
-						delete temp;
+						else
+						{
+							delete temp;
+							break;
+						}
 
+						delete temp;
 					}
 					catch (...)
 					{
@@ -352,7 +376,14 @@ void Path::setSlot(Slot slot)
 					}
 					else
 					{
-						path.replace(path.rfind('/'), 1, "_c" + slot.getString() + "/");
+						if (path.find(".") != string::npos)
+						{
+							path.replace(path.rfind('/'), 1, "_c" + slot.getString() + "/");
+						}
+						else
+						{
+							path += "_c" + slot.getString();
+						}
 					}
 				}
 			}
@@ -369,7 +400,7 @@ void Path::setSlot(Slot slot)
 				}
 			}
 		}
-		else if (this->type == "fighter")
+		else if (this->type == "fighter" || this->type == "camera")
 		{
 			string toReplace = "/c" + this->slot.getString();
 			path.replace(path.find(toReplace), toReplace.size(), "/c" + slot.getString());
@@ -396,7 +427,7 @@ void Path::setSlot(Slot slot)
 		else if (this->type == "ui")
 		{
 			string toReplace = "_" + this->slot.getString() + ".";
-			path.replace(path.find(toReplace), toReplace.size(), "c" + slot.getString() + ".");
+			path.replace(path.find(toReplace), toReplace.size(), "_" + slot.getString() + ".");
 		}
 
 		this->slot.set(slot);

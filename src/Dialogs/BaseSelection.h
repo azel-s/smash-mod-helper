@@ -1,5 +1,5 @@
 #pragma once
-#include "ModHandler.h"
+#include "../ModHandler.h"
 #include <wx/wx.h>
 #include <wx/spinctrl.h>
 #include <wx/clrpicker.h>
@@ -7,7 +7,6 @@
 class BaseSelection : public wxDialog
 {
 private:
-    map<string, map<string, set<string>>> slots;
     vector<wxChoice*> baseSlots;
     ModHandler* mHandler;
 
@@ -22,5 +21,5 @@ public:
         const wxString& name = wxASCII_STR(wxDialogNameStr));
 
     // Getters
-    map<string, map<string, set<string>>> getBaseSlots();
+    map<string, map<Slot, set<Slot>>> getBaseSlots();
 };

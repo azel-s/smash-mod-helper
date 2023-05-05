@@ -24,11 +24,13 @@ private:
 	VanillaHandler vHandler;
 	wxLogTextCtrl* log;
 
+	bool debug;
+
 	/* --- HELPERS (UNIVERSAL) --- */
 	void addFile(string code, string fileType, int slot, string file);
 
 	/* --- HELPERS (WX) --- */
-	void wxLog(string message);
+	void wxLog(string message, bool debug = true);
 
 public:
 	/* --- TEST FUNCTIONS (WIP/DEBUG) --- */
@@ -38,6 +40,8 @@ public:
 	ModHandler(wxLogTextCtrl* log = nullptr);
 
 	/* --- SETTERS (UNIVERSAL) --- */
+	void setSlots(map<string, map<Slot, set<Slot>>> slots);
+	void setDebug(bool debug);
 
 	/* --- SETTERS (WX) --- */
 	void wxSetLog(wxLogTextCtrl* log);
@@ -93,7 +97,7 @@ public:
 
 	// Readers
 	map<int, InklingColor> readInk();
-	map<string, map<string, int>> readBaseSlots();
+	map<string, map<Slot, Slot>> readBaseSlots();
 	map<string, map<string, Name>> readNames();
 
 	// Clear Mod Data

@@ -109,15 +109,11 @@ void VanillaHandler::insertFiles(const json& tJson, map<string, set<Path>>& file
 	{
 		for (int i = 0; i < iterFiles->size(); i++)
 		{
-			Path file = Path(vJson["file_array"][(int)iterFiles->at(i)]);
+			Path path = Path(vJson["file_array"][(int)iterFiles->at(i)]);
 
-			if (file.getSlot().getInt() != -1)
+			if (type != "kirbycopy" || path.getPath().find("/copy_") != string::npos)
 			{
-				files[type].insert(file);
-			}
-			else
-			{
-				files[type].insert(file);
+				files[type].insert(path);
 			}
 		}
 	}
@@ -201,7 +197,7 @@ int VanillaHandler::getFiles(string code, Slot slot, map<string, set<Path>>& fil
 						auto tempIter2 = tempIter->find("directories");
 						if (tempIter2 != tempIter->end())
 						{
-							auto tempIter3 = tempIter2->find(slot.getString());
+							auto tempIter3 = tempIter2->find("c" + slot.getString());
 							if (tempIter3 != tempIter2->end())
 							{
 								insertFiles(*tempIter3, files, type);
