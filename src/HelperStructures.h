@@ -45,6 +45,20 @@ public:
 	bool operator <(const Path& rhs) const;
 };
 
+struct DBData
+{
+	int nIndex;
+	int cIndex;
+	int cGroup;
+
+	string label;
+	string article;
+
+	// Constructors
+	DBData();
+	DBData(string code);
+};
+
 struct Settings
 {
 	bool prcxOutput = false;

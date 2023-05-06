@@ -30,7 +30,7 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
 
     if (readPrevBase)
     {
-        prevBaseSlots = mHandler.readBaseSlots();
+        prevBaseSlots = mHandler.read_config_slots();
     }
 
     auto panel = new wxScrolled<wxPanel>(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
@@ -97,10 +97,10 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
                 sizerA2->Add(sizerA2A, 1);
             }
 
-            wxStaticText* slot = new wxStaticText(panel, wxID_ANY, "Slot c" + j->getString() + ": ", wxDefaultPosition, wxSize(45, -1));
+            wxStaticText* slot = new wxStaticText(panel, wxID_ANY, "Slot c" + j->getString() + ": ", wxDefaultPosition, wxSize(50, -1));
             sizerA2A->Add(slot, 0, wxALIGN_CENTER_VERTICAL);
 
-            wxChoice* baseSlotList = new wxChoice(panel, wxID_ANY, wxDefaultPosition, wxSize(40, -1), slotList);
+            wxChoice* baseSlotList = new wxChoice(panel, wxID_ANY, wxDefaultPosition, wxSize(50, -1), slotList);
 
             if (hasSlot)
             {

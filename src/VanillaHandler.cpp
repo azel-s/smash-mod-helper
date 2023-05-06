@@ -8,6 +8,11 @@ using std::string, std::queue, std::ifstream;
 
 VanillaHandler::VanillaHandler(string filePath)
 {
+	if (!filePath.empty() && filePath[filePath.size() - 1] != '/')
+	{
+		filePath += "/";
+	}
+
 	// Read Vanilla JSON
 	ifstream jFile(filePath + "vanilla.json");
 	if (jFile.is_open())
@@ -23,20 +28,87 @@ VanillaHandler::VanillaHandler(string filePath)
 
 	// Read names
 	ifstream nFile(filePath + "names.data");
-	string code;
-	string name;
-	while (!nFile.eof())
+	if (nFile.is_open())
 	{
-		// Code
-		getline(nFile, code, ',');
+		string code;
+		string name;
+		while (!nFile.eof())
+		{
+			// Code
+			getline(nFile, code, ',');
 
-		// Name
-		getline(nFile, name, ' ');
-		getline(nFile, name);
+			// Name
+			getline(nFile, name, ' ');
+			getline(nFile, name);
 
-		this->insertCodeName(code, name);
+			insertCodeName(code, name);
+
+			// Create DBData for each name
+			for (int i = 0; i < 8; i++)
+			{
+				XML[code][Slot(i)] = DBData(code);
+			}
+		}
 	}
 	nFile.close();
+
+	// Read DB
+	ifstream dFile(filePath + "db.data");
+	if (dFile.is_open())
+	{
+		string line;
+		while (!dFile.eof())
+		{
+			string code;
+			getline(dFile, code, ' ');
+
+			getline(dFile, line, ' ');
+			int slot = stoi(line);
+
+			string type;
+			getline(dFile, type, ' ');
+
+			getline(dFile, line);
+
+			if (type == "cIndex")
+			{
+				XML[code][Slot(slot)].cIndex = stoi(line);
+			}
+			else if (type == "cGroup")
+			{
+				XML[code][Slot(slot)].cGroup = stoi(line);
+			}
+			else if (type == "nIndex")
+			{
+				XML[code][Slot(slot)].nIndex = stoi(line);
+			}
+			else if (type == "label")
+			{
+				XML[code][Slot(slot)].label = line;
+			}
+			else if (type == "article")
+			{
+				XML[code][Slot(slot)].article = line;
+			}
+		}
+	}
+	dFile.close();
+
+	// Read effect
+	ifstream eFile(filePath + "effect.data");
+	if (eFile.is_open())
+	{
+		string line;
+		while (!eFile.eof())
+		{
+			getline(eFile, line);
+
+			// effect/fighter/[charcode]/...
+			// effect/fighter/ = 15
+			effectFiles[line.substr(15, line.substr(15).find('/'))].insert(line);
+		}
+	}
+	eFile.close();
 
 	// Initialize inkling colors
 	inklingColors.push_back(InklingColor(wxColour(0.758027 * 255, 0.115859 * 255, 0.04 * 255), wxColour(0.92 * 255, 1 * 255, 0.1 * 255)));
@@ -230,6 +302,19 @@ int VanillaHandler::getFiles(string code, Slot slot, map<string, set<Path>>& fil
 		{
 			result = -1;
 		}
+
+		auto charJter = effectFiles.find(code);
+		if (charJter != effectFiles.end())
+		{
+			for (auto i = charJter->second.begin(); i != charJter->second.end(); i++)
+			{
+				files["effect"].insert(Path(*i));
+			}
+		}
+		else
+		{
+			return -1;
+		}
 	}
 	catch (...)
 	{
@@ -239,13 +324,19 @@ int VanillaHandler::getFiles(string code, Slot slot, map<string, set<Path>>& fil
 	return result;
 }
 
-// @INPUT:	Character code, slot, and map to write data to.
-// @RETURN:	 0: Successfully wrote information
-//			-1: Failed to find required folder/files
-//			-2: Unknown error
-int VanillaHandler::getFiles(string code, int slot, map<string, set<Path>>& files) const
+DBData VanillaHandler::getXMLData(string code, Slot slot) const
 {
-	return getFiles(code, Slot(slot), files);
+	auto charIter = XML.find(code);
+	if (charIter != XML.end())
+	{
+		auto slotIter = charIter->second.find(slot);
+		if (slotIter != charIter->second.end())
+		{
+			return slotIter->second;
+		}
+	}
+
+	return DBData();
 }
 
 InklingColor VanillaHandler::getInklingColor(Slot slot) const

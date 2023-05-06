@@ -44,7 +44,6 @@ private:
 	void updateInkMenu();
 
 	// Bind Functions
-	void togglePRCOutput(wxCommandEvent& evt);
 	void toggleBaseReading(wxCommandEvent& evt);
 	void toggleNameReading(wxCommandEvent& evt);
 	void toggleInkReading(wxCommandEvent& evt);
@@ -68,6 +67,7 @@ private:
 
 public:
 	/* --- Getters ---	*/
+	wxArrayString getSelectedCharCodes();
 	wxArrayString getSelectedFileTypes();
 	bool isFileTypeSelected();
 

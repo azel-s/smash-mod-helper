@@ -21,6 +21,12 @@ private:
 	// Key: Character name, Value: Character code
 	unordered_map<string, string*> name_code;
 
+	// Key: Character code, Value: Set(Path)
+	unordered_map<string, set<Path>> effectFiles;
+
+	// Key: Character code, Value: (Key: Slot, Value: (First: Announcer, Second: Announcer Article)
+	unordered_map <string, map<Slot, DBData>> XML;
+
 	// Index: slot, Value: { wxColour effect, wxColour arrow }
 	vector<InklingColor> inklingColors;
 
@@ -29,7 +35,6 @@ private:
 
 public:
 	/* --- Constructor/Destructor --- */
-	// INFO: Path must end with '/'
 	VanillaHandler(string filePath = "Files/");
 	// INFO: Deletes dynamic strings for code/name.
 	~VanillaHandler();
@@ -42,9 +47,11 @@ public:
 	string getCharName(string code) const;
 	string getCharCode(string name) const;
 	
-	// JSON Info
+	// JSON (and effect.data) Info
 	int getFiles(string code, Slot slot, map<string, set<Path>>& files) const;
-	int getFiles(string code, int slot, map<string, set<Path>>& files) const;
+
+	// ui_chara_db Info
+	DBData getXMLData(string code, Slot slot) const;
 
 	// Inkling
 	InklingColor getInklingColor(Slot slot) const;

@@ -40,7 +40,53 @@ void ModHandler::addFile(string code, string fileType, int slot, string file)
 	}
 }
 
-void ModHandler::removeDesktopINI()
+void ModHandler::outputUTF(wofstream& file, wxString str, bool parse)
+{
+	if (parse)
+	{
+		wxString result = "";
+
+		for (auto i = str.begin(); i != str.end(); i++)
+		{
+			if (*i == '"')
+			{
+				result += "&quot;";
+			}
+			else if (*i == '\'')
+			{
+				result += "&apos;";
+			}
+			else if (*i == '&')
+			{
+				result += "&amp;";
+			}
+			else if (*i == '<')
+			{
+				result += "&lt;";
+			}
+			else if (*i == '>')
+			{
+				result += "&gt;";
+			}
+			else if (*i == '|')
+			{
+				result += '\n';
+			}
+			else
+			{
+				result += *i;
+			}
+		}
+
+		file << result.ToStdWstring();
+	}
+	else
+	{
+		file << str.ToStdWstring();
+	}
+}
+
+void ModHandler::remove_desktop_ini()
 {
 	int count = 0;
 
@@ -103,7 +149,12 @@ void ModHandler::wxLog(string message, bool debug)
 /* --- TEST FUNCTIONS (WIP/DEBUG) --- */
 void ModHandler::test()
 {
+	string code = "pickel";
+	auto db = vHandler.getXMLData(code, Slot(6));
 
+	wxLog("> " + code + ": (" + to_string(db.cIndex) + " " + to_string(db.cGroup) + " " + to_string(db.nIndex) + ")");
+	wxLog("> " + code + ": " + db.label);
+	wxLog("> " + code + ": " + db.article);
 }
 
 /* --- CONSTRUCTORS (UNIVERSAL) --- */
@@ -141,6 +192,11 @@ void ModHandler::setDebug(bool debug)
 void ModHandler::wxSetLog(wxLogTextCtrl* log)
 {
 	this->log = log;
+}
+
+string ModHandler::getPath()
+{
+	return path;
 }
 
 /* --- GETTERS (UNIVERSAL) --- */
@@ -216,6 +272,21 @@ set<Slot> ModHandler::getAddSlots(string code) const
 	return addSlots;
 }
 
+map<string, set<Slot>> ModHandler::getAllSlots() const
+{
+	map<string, set<Slot>> slots;
+
+	for (auto i = this->slots.begin(); i != this->slots.end(); i++)
+	{
+		for (auto j = i->second.begin(); j != i->second.end(); j++)
+		{
+			slots[i->first].insert(j->first);
+		}
+	}
+
+	return slots;
+}
+
 map<string, set<Slot>> ModHandler::getAddSlots() const
 {
 	map<string, set<Slot>> addSlots;
@@ -278,6 +349,68 @@ wxArrayString ModHandler::wxGetFileTypes(string code) const
 	return fileTypes;
 }
 
+wxArrayString ModHandler::wxGetFileTypes(wxArrayString codes, bool findInAll) const
+{
+	set<string> fileTypesSet;
+
+	if (findInAll)
+	{
+		wxArrayString fileTypes;
+		if (!codes.empty())
+		{
+			fileTypes = wxGetFileTypes(codes[0].ToStdString());
+
+			for (int i = 0; i < fileTypes.size(); i++)
+			{
+				bool foundInAll = true;
+
+				for (int j = 1; j < codes.size(); j++)
+				{
+					auto charIter = files.find(codes[j].ToStdString());
+					if (charIter != files.end())
+					{
+						auto fileTypeIter = charIter->second.find(fileTypes[i].ToStdString());
+						if (fileTypeIter == charIter->second.end())
+						{
+							foundInAll = false;
+							break;
+						}
+					}
+					else
+					{
+						foundInAll = false;
+						break;
+					}
+				}
+
+				if (foundInAll)
+				{
+					fileTypesSet.insert(fileTypes[i].ToStdString());
+				}
+			}
+		}
+	}
+	else
+	{
+		for (auto& code : codes)
+		{
+			auto fileTypes = wxGetFileTypes(code.ToStdString());
+
+			for (auto& fileType : fileTypes)
+			{
+				fileTypesSet.insert(fileType.ToStdString());
+			}
+		}
+	}
+
+	wxArrayString fileTypes;
+	for (auto& fileType : fileTypesSet)
+	{
+		fileTypes.Add(fileType);
+	}
+	return fileTypes;
+}
+
 wxArrayString ModHandler::wxGetSlots(string code, wxArrayString fileTypes, bool findInAll) const
 {
 	// First put slots in set so duplicates are accounted for.
@@ -295,14 +428,20 @@ wxArrayString ModHandler::wxGetSlots(string code, wxArrayString fileTypes, bool 
 	// Character has files.
 	if (charIter != files.end())
 	{
-		// INFO: When finding in all, make a loop should be for one file type
+		// INFO: When finding in all, make a loop for one file type
 		//       so a secondary loop can go through the rest.
 		wxArrayString* fileTypesPtr = findInAll ? new wxArrayString : &fileTypes;
 		if (findInAll)
 		{
 			if (fileTypes.empty())
 			{
-				fileTypesPtr->Add(this->fileTypes[0]);
+				fileTypes = this->wxGetFileTypes();
+			}
+			
+			// Priorotize non-effect fileType
+			if (fileTypes.size() > 1 && fileTypes[0] == "effect")
+			{
+				fileTypesPtr->Add(fileTypes[1]);
 			}
 			else
 			{
@@ -312,10 +451,7 @@ wxArrayString ModHandler::wxGetSlots(string code, wxArrayString fileTypes, bool 
 		else if (fileTypes.empty())
 		{
 			// An empty list means to search through all file types.
-			for (auto fileType : this->fileTypes)
-			{
-				fileTypes.Add(fileType);
-			}
+			fileTypes = this->wxGetFileTypes();
 		}
 
 		for (auto& fileType : *fileTypesPtr)
@@ -359,15 +495,18 @@ wxArrayString ModHandler::wxGetSlots(string code, wxArrayString fileTypes, bool 
 							bool slotInAll = true;
 
 							// Verify exsistence in each file type
-							for (auto j = 1; j < fileTypes.size(); j++)
+							for (auto j = 0; j < fileTypes.size(); j++)
 							{
 								// Character has file Type
-								auto fileTypeJter = charIter->second.find(this->fileTypes[j]);
+								auto fileTypeJter = charIter->second.find(fileTypes[j].ToStdString());
 								if (fileTypeJter != charIter->second.end())
 								{
 									if (fileTypeJter->second.find(i->first) == fileTypeJter->second.end())
 									{
-										slotInAll = false;
+										if (fileTypeJter->first != "effect" || fileTypeJter->second.find(Slot(999)) == fileTypeJter->second.end())
+										{
+											slotInAll = false;
+										}
 									}
 								}
 							}
@@ -392,9 +531,71 @@ wxArrayString ModHandler::wxGetSlots(string code, wxArrayString fileTypes, bool 
 	wxArrayString slotsArray;
 	for (auto& slot : slotsSet)
 	{
-		slotsArray.Add(slot.getString());
+		slotsArray.Add((slot.getInt() != 999 ? "c" : "") + slot.getString());
 	}
 	return slotsArray;
+}
+
+wxArrayString ModHandler::wxGetSlots(wxArrayString codes, wxArrayString fileTypes, bool findInAll) const
+{
+	set<string> slotsSet;
+
+	if (findInAll)
+	{
+		wxArrayString slots;
+		if (!codes.empty())
+		{
+			slots = wxGetSlots(codes[0].ToStdString(), fileTypes, findInAll);
+
+			for (int i = 0; i < slots.size(); i++)
+			{
+				bool foundInAll = true;
+
+				for (int j = 1; j < codes.size(); j++)
+				{
+					auto charIter = this->slots.find(codes[j].ToStdString());
+					if (charIter != this->slots.end())
+					{
+						auto fileTypeIter = charIter->second.find(slots[i].ToStdString());
+						if (fileTypeIter == charIter->second.end())
+						{
+							foundInAll = false;
+							break;
+						}
+					}
+					else
+					{
+						foundInAll = false;
+						break;
+					}
+				}
+
+				if (foundInAll)
+				{
+					slotsSet.insert(slots[i].ToStdString());
+				}
+			}
+		}
+	}
+	else
+	{
+		for (auto& code : codes)
+		{
+			auto slots = wxGetSlots(code.ToStdString());
+
+			for (auto& slot : slots)
+			{
+				slotsSet.insert(slot.ToStdString());
+			}
+		}
+	}
+
+	wxArrayString slots;
+	for (auto& slot : slotsSet)
+	{
+		slots.Add(slot);
+	}
+	return slots;
 }
 
 /* --- VERIFIERS (UNIVERSAL) ---*/
@@ -548,6 +749,24 @@ bool ModHandler::wxHasSlot(string code, Slot slot, wxArrayString fileTypes, bool
 	}
 
 	return false;
+}
+
+bool ModHandler::wxHasSlot(wxArrayString codes, Slot slot, wxArrayString fileTypes, bool findInAll) const
+{
+	for (int i = 0; i < codes.size(); i++)
+	{
+		bool slotFound = wxHasSlot(codes[i].ToStdString(), slot, fileTypes, findInAll);
+		if (findInAll && !slotFound)
+		{
+			return false;
+		}
+		else if (!findInAll && slotFound)
+		{
+			return true;
+		}
+	}
+
+	return findInAll;
 }
 
 /* --- FUNCTIONS (UNIVERSAL) --- */
@@ -820,6 +1039,11 @@ void ModHandler::adjustFiles(string action, string code, wxArrayString fileTypes
 				if (fileTypeIter != charIter->second.end())
 				{
 					auto slotIter = fileTypeIter->second.find(iSlot);
+					if (slotIter == fileTypeIter->second.end() && fileTypes[i] == "effect")
+					{
+						auto slotIter = fileTypeIter->second.find(Slot(999));
+					}
+
 					if (slotIter != fileTypeIter->second.end())
 					{
 						for (auto j = slotIter->second.begin(); j != slotIter->second.end(); j++)
@@ -877,43 +1101,43 @@ void ModHandler::adjustFiles(string action, string code, wxArrayString fileTypes
 							}
 						}
 					}
+
+					if (action == "move")
+					{
+						files[code][fileTypes[i].ToStdString()].extract(slotIter->first);
+					}
+					else if (action == "delete")
+					{
+						files[code][fileTypes[i].ToStdString()].extract(slotIter->first);
+
+						if (files[code][fileTypes[i].ToStdString()].empty())
+						{
+							files[code].extract(fileTypes[i].ToStdString());
+
+							if (fileTypes[i] == "fighter")
+							{
+								std::filesystem::remove_all((path + "/fighter/" + code));
+							}
+
+							// Delete empty folders
+							// TODO: Check folder before deletion
+							/*
+							if (!hasFileType(fileTypes[i]))
+							{
+								std::filesystem::remove_all((this->path + "/" + fileTypes[i]).ToStdString());
+							}
+							*/
+						}
+
+						if (files[code].empty())
+						{
+							files.extract(code);
+						}
+					}
 				}
 				else
 				{
 					continue;
-				}
-
-				if (action == "move")
-				{
-					files[code][fileTypes[i].ToStdString()].extract(iSlot);
-				}
-				else if (action == "delete")
-				{
-					files[code][fileTypes[i].ToStdString()].extract(iSlot);
-
-					if (files[code][fileTypes[i].ToStdString()].empty())
-					{
-						files[code].extract(fileTypes[i].ToStdString());
-
-						if (fileTypes[i] == "fighter")
-						{
-							std::filesystem::remove_all((path + "/fighter/" + code));
-						}
-
-						// Delete empty folders
-						// TODO: Check folder before deletion
-						/*
-						if (!hasFileType(fileTypes[i]))
-						{
-							std::filesystem::remove_all((this->path + "/" + fileTypes[i]).ToStdString());
-						}
-						*/
-					}
-
-					if (files[code].empty())
-					{
-						files.extract(code);
-					}
 				}
 			}
 		}
@@ -922,38 +1146,13 @@ void ModHandler::adjustFiles(string action, string code, wxArrayString fileTypes
 			wxLog("> Error! " + code + " does not exist!");
 		}
 
-		if (action == "move")
+		if (iSlot.getInt() == 999)
 		{
-			if (fSlot.getInt() == 999)
-			{
-				wxLog("> Success! " + code + "'s default effect was moved to c" + fSlot.getString() + "!");
-			}
-			else
-			{
-				wxLog("> Success! " + code + "'s c" + iSlot.getString() + " was moved to c" + fSlot.getString() + "!");
-			}
+			wxLog("> Success! " + getName(code) + "'s default slot was moved to c" + fSlot.getString() + "!");
 		}
-		else if (action == "duplicate")
+		else
 		{
-			if (fSlot.getInt() == 999)
-			{
-				wxLog("> Success! " + code + "'s default effect was duplicated to c" + fSlot.getString() + "!");
-			}
-			else
-			{
-				wxLog("> Success! " + code + "'s c" + iSlot.getString() + " was duplicated to c" + fSlot.getString() + "!");
-			}
-		}
-		else if (action == "delete")
-		{
-			if (fSlot.getInt() == 999)
-			{
-				wxLog("> Success! " + code + "'s default effect was deleted!");
-			}
-			else
-			{
-				wxLog("> Success! " + code + "'s c" + iSlot.getString() + " was deleted!");
-			}
+			wxLog("> Success! " + getName(code) + "'s c" + iSlot.getString() + " was moved to c" + fSlot.getString() + "!");
 		}
 	}
 }
@@ -973,9 +1172,9 @@ void ModHandler::getNewDirSlots
 	vector<string>& newDirInfos,
 	// files
 	vector<string>& newDirInfosBase,
-	// code, slot, file, files
+	// code, slot, base-file, files
 	map<string, map<Slot, map<string, set<string>>>>& shareToVanilla,
-	// code, slot, file, files
+	// code, slot, base-file, files
 	map<string, map<Slot, map<string, set<string>>>>& shareToAdded,
 	// code, slot, section-label, files
 	map<string, map<Slot, map<string, set<string>>>>& newDirFiles
@@ -1181,7 +1380,7 @@ void ModHandler::getNewDirSlots
 			// newDirInfos, newDirInfosBase, shareToVanilla, shareToAdded, and newDirFiles
 			if (additionalSlot)
 			{
-				if (vHandler.getFiles(i->first, j->second, jFiles) != 0)
+				if (vHandler.getFiles(charcode, j->second, jFiles) != 0)
 				{
 					wxLog("> Error: Unknown error encountered while gathering files from vanilla JSON.");
 				}
@@ -1227,6 +1426,11 @@ void ModHandler::getNewDirSlots
 
 				for (auto k = jFiles.begin(); k != jFiles.end(); k++)
 				{
+					if (k->first == "effect")
+					{
+						continue;
+					}
+
 					for (auto l = k->second.begin(); l != k->second.end(); l++)
 					{
 						Path path = *l;
@@ -1324,8 +1528,29 @@ void ModHandler::getNewDirSlots
 					}
 				}
 
-				// Add empty movie
-				newDirFiles[i->first][j->first]["\"fighter/mariod/movie/c" + j->first.getString() + "\""];
+				// Add empty sections if non-existent
+				auto temp = &newDirFiles[i->first][j->first];
+
+				if (temp->find("\"fighter/" + charcode + "/c" + j->first.getString() + "\"") == temp->end())
+				{
+					(*temp)["\"fighter/" + charcode + "/c" + j->first.getString() + "\""];
+				}
+				if (temp->find("\"fighter/" + charcode + "/camera/c" + j->first.getString() + "\"") == temp->end())
+				{
+					(*temp)["\"fighter/" + charcode + "/camera/c" + j->first.getString() + "\""];
+				}
+				if (temp->find("\"fighter/" + charcode + "/kirbycopy/c" + j->first.getString() + "\"") == temp->end())
+				{
+					(*temp)["\"fighter/" + charcode + "/kirbycopy/c" + j->first.getString() + "\""];
+				}
+				if (temp->find("\"fighter/" + charcode + "/movie/c" + j->first.getString() + "\"") == temp->end())
+				{
+					(*temp)["\"fighter/" + charcode + "/movie/c" + j->first.getString() + "\""];
+				}
+				if (temp->find("\"fighter/" + charcode + "/result/c" + j->first.getString() + "\"") == temp->end())
+				{
+					(*temp)["\"fighter/" + charcode + "/result/c" + j->first.getString() + "\""];
+				}
 
 				/* Adds NEW kirby copy files
 				// Special Case for kirby
@@ -1474,57 +1699,35 @@ void ModHandler::getNewDirSlots
 				}
 			}
 
-			// TODO:
-		//	// One Slot Files detected
-		//	if (slotHasEffect)
-		//	{
-		//		// Add MISSING effect files to shareToVanilla & newDirFiles
-		//		for (auto k = vanillaEffectFiles[charcode].begin(); k != vanillaEffectFiles[charcode].end(); k++)
-		//		{
-		//			string path = *k;
+			// Add One-Slot effect files
+			if (slotHasEffect)
+			{
+				auto effIter = jFiles.find("effect");
+				if (effIter != jFiles.end())
+				{
+					// Add MISSING effect files to shareToVanilla & newDirFiles
+					for (auto k = effIter->second.begin(); k != effIter->second.end(); k++)
+					{
+						Path path = *k;
+						path.setSlot(j->first);
 
-		//			// eff file
-		//			// [...].eff = 4
-		//			if (path.substr(path.size() - 4, 4) == ".eff")
-		//			{
-		//				path = path.substr(0, path.size() - 4) + "_c" + *j + ".eff";
-		//			}
-		//			else
-		//			{
-		//				// model folder
-		//				if (path.find("/model/") != string::npos)
-		//				{
-		//					// /model/ = 7
-		//					std::size_t slashPos = path.find('/', path.find("/model/") + 7);
-		//					path = path.substr(0, slashPos) + "_c" + *j + path.substr(slashPos);
-		//				}
-		//				else
-		//				{
-		//					// effect/fighter/[charcode]/[folder type]/...
-		//					// [charcode]/[folder type]"/"...
-		//					// slashPos = slash after charcode's slash
-		//					std::size_t slashPos = path.find('/', path.find(charcode) + charcode.size() + 1);
-		//					path = path.substr(0, slashPos) + "_c" + *j + path.substr(slashPos);
-		//				}
-		//			}
+						if (effectFiles.find(path) == effectFiles.end())
+						{
+							shareToVanilla[i->first][Slot(999)]["\"" + k->getPath() + "\""].insert("\"" + path.getPath() + "\"");
+							newDirFiles[i->first][j->first]["\"fighter/" + charcode + "/c" + j->first.getString() + "\""].insert("\"" + path.getPath() + "\"");
+						}
+					}
 
-		//			if (effectFiles.find(path) == effectFiles.end())
-		//			{
-		//				shareToVanilla[i->first]["all"]["\"" + *k + "\""].insert("\"" + path + "\"");
-		//				newDirFiles[i->first][j->ToStdString()]["\"fighter/" + charcode + "/c" + j->ToStdString() + "\""].insert("\"" + path + "\"");
-		//			}
-		//		}
-
-		//		// Add NEW effect files to newDirFiles
-		//		for (auto k = effectFiles.begin(); k != effectFiles.end(); k++)
-		//		{
-		//			if (vanillaEffectFiles[charcode].find(*k) == vanillaEffectFiles[charcode].end())
-		//			{
-		//				newDirFiles[i->first][j->ToStdString()]["\"fighter/" + charcode + "/c" + j->ToStdString() + "\""].insert("\"" + *k + "\"");
-		//			}
-		//		}
-		//	}
-		//}
+					// Add NEW effect files to newDirFiles
+					for (auto k = effectFiles.begin(); k != effectFiles.end(); k++)
+					{
+						if (effIter->second.find(*k) == effIter->second.end())
+						{
+							newDirFiles[i->first][j->first]["\"fighter/" + charcode + "/c" + j->first.getString() + "\""].insert("\"" + k->getPath() + "\"");
+						}
+					}
+				}
+			}
 		}
 
 		if (!hasElement && charcode == "eflame")
@@ -1538,7 +1741,8 @@ void ModHandler::getNewDirSlots
 	}
 }
 
-bool ModHandler::createConfig()
+// Creators
+void ModHandler::create_config()
 {
 	vector<string> newDirInfos;
 	vector<string> newDirInfosBase;
@@ -1546,10 +1750,7 @@ bool ModHandler::createConfig()
 	map<string, map<Slot, map<string, set<string>>>> shareToAdded;
 	map<string, map<Slot, map<string, set<string>>>> newDirFiles;
 
-	slots["mariod"][Slot(8)] = Slot(0);
-	slots["mariod"][Slot(9)] = Slot(0);
-
-	this->getNewDirSlots(newDirInfos, newDirInfosBase, shareToVanilla, shareToAdded, newDirFiles);
+	getNewDirSlots(newDirInfos, newDirInfosBase, shareToVanilla, shareToAdded, newDirFiles);
 
 	if (!newDirInfos.empty() || !newDirInfosBase.empty() || !shareToVanilla.empty() || !shareToAdded.empty() || !newDirFiles.empty())
 	{
@@ -1688,1078 +1889,386 @@ bool ModHandler::createConfig()
 			wxLog("> Error: " + (path + "/" + "config.json") + " could not be opened!");
 		}
 	}
-
-	return true;
-}
-
-void ModHandler::patchXMLSlots(map<string, int>& maxSlots)
-{
-	//if (!maxSlots.empty())
-	//{
-	//	ifstream input("ui_chara_db.xml");
-	//	ofstream output("ui_chara_db_EDIT.xml");
-
-	//	auto additionalSlots = getAddSlots();
-	//	vector<int> defaultCs;
-
-	//	if (input.is_open() && output.is_open())
-	//	{
-	//		string code;
-	//		string line;
-
-	//		bool changeActive = false;
-
-	//		while (!input.eof())
-	//		{
-	//			getline(input, line);
-
-	//			if (changeActive)
-	//			{
-	//				if (line.find("\"color_num\"") != string::npos)
-	//				{
-	//					line = "      <byte hash=\"color_num\">" + to_string(maxSlots[code]) + "</byte>";
-	//				}
-	//				else if (line.find("<byte hash=\"c0") != string::npos)
-	//				{
-	//					defaultCs.push_back(line[line.find('>') + 1]);
-
-	//					// Last c reached, start adding new ones
-	//					if (line.find("c07") != string::npos)
-	//					{
-	//						output << line << "\n";
-
-	//						string lineBeg = "      <byte hash=\"c";
-	//						string lineMid;
-	//						if (line.find("c07_group") != string::npos)
-	//						{
-	//							lineMid = "_group\">";
-	//						}
-	//						else
-	//						{
-	//							lineMid = "_index\">";
-	//						}
-	//						string lineEnd = "</byte>";
-
-	//						for (auto i = additionalSlots[code].begin(); i != additionalSlots[code].end(); i++)
-	//						{
-	//							char val;
-
-	//							// Find base slot
-	//							for (auto j = slots[code].begin(); j != slots[code].end(); j++)
-	//							{
-	//								if (j->second.find(*i) != j->second.end())
-	//								{
-	//									val = defaultCs[stoi(j->first)];
-	//									break;
-	//								}
-	//							}
-
-	//							output << lineBeg << *i << lineMid << val << lineEnd << "\n";
-	//						}
-
-	//						defaultCs.clear();
-	//						continue;
-	//					}
-	//				}
-	//				else if (line.find("</struct>") != string::npos)
-	//				{
-	//					changeActive = false;
-	//				}
-	//			}
-	//			else if (line.find("\"name_id\"") != string::npos)
-	//			{
-	//				int begin = line.find(">") + 1;
-	//				int end = line.find("<", begin);
-	//				code = line.substr(begin, end - begin);
-
-	//				if (maxSlots.find(code) != maxSlots.end())
-	//				{
-	//					changeActive = true;
-	//				}
-	//			}
-
-	//			output << line << "\n";
-	//		}
-
-	//		input.close();
-	//		output.close();
-
-	//		fs::remove(fs::current_path() / "ui_chara_db.xml");
-	//		fs::rename(fs::current_path() / "ui_chara_db_EDIT.xml", fs::current_path() / "ui_chara_db.xml");
-	//	}
-	//	else
-	//	{
-	//		if (!input.is_open())
-	//		{
-	//			wxLog("> Error: " + fs::current_path().string() + "/ui_chara_db.xml could not be opened!");
-	//		}
-
-	//		if (!output.is_open())
-	//		{
-	//			wxLog("> Error: " + fs::current_path().string() + "/ui_chara_db_EDIT.xml could not be opened!");
-	//		}
-	//	}
-	//}
-}
-
-void ModHandler::patchXMLNames(map<string, map<int, Name>>& names)
-{
-	//if (!names.empty())
-	//{
-	//	ifstream uiVanilla("ui_chara_db.xml");
-	//	ofstream uiEdit("ui_chara_db_EDIT.xml");
-	//	ofstream msg("msg_name.xmsbt", ios::out | ios::binary);
-
-	//	if (uiVanilla.is_open() && uiEdit.is_open() && msg.is_open())
-	//	{
-	//		// UTF-16 LE BOM
-	//		unsigned char smarker[2];
-	//		smarker[0] = 0xFF;
-	//		smarker[1] = 0xFE;
-
-	//		msg << smarker[0];
-	//		msg << smarker[1];
-
-	//		msg.close();
-
-	//		wofstream msgUTF("msg_name.xmsbt", ios::binary | ios::app);
-	//		msgUTF.imbue(std::locale(msgUTF.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian>));
-
-	//		if (!msgUTF.is_open())
-	//		{
-	//			wxLog("> " + fs::current_path().string() + "/msg_name.xmsbt could not be opened!");
-	//			return;
-	//		}
-
-	//		outputUTF(msgUTF, "<?xml version=\"1.0\" encoding=\"utf-16\"?>");
-	//		outputUTF(msgUTF, "\n<xmsbt>");
-
-	//		string code;
-	//		string line;
-
-	//		while (!uiVanilla.eof())
-	//		{
-	//			getline(uiVanilla, line);
-
-	//			if (line.find("\"name_id\"") != string::npos)
-	//			{
-	//				int begin = line.find(">") + 1;
-	//				int end = line.find("<", begin);
-	//				code = line.substr(begin, end - begin);
-
-	//				auto charIter = names.find(code);
-
-	//				if (charIter != names.end())
-	//				{
-	//					uiEdit << line << "\n";
-
-	//					string tempLine;
-
-	//					auto i = charIter->second.begin();
-	//					while (i != charIter->second.end())
-	//					{
-	//						if (tempLine.find("\"n07_index\"") == string::npos)
-	//						{
-	//							getline(uiVanilla, line);
-	//							tempLine = line;
-
-	//							// Output first n07 if not in change list
-	//							if (tempLine.find("\"n07_index\"") != string::npos && i->first != 7)
-	//							{
-	//								uiEdit << line << "\n";
-	//							}
-	//						}
-
-	//						string label;
-
-	//						if (i->first > 7)
-	//						{
-	//							label = "\"n07_index\"";
-	//						}
-	//						else
-	//						{
-	//							label = "\"n0" + to_string(i->first) + "_index\"";
-	//						}
-
-	//						if (tempLine.find(label) != string::npos)
-	//						{
-	//							string slot;
-	//							string nameSlot = to_string(i->first + 8);
-
-	//							if (nameSlot.size() == 1)
-	//							{
-	//								nameSlot = "0" + nameSlot;
-	//							}
-
-	//							if (i->first > 9)
-	//							{
-	//								slot = to_string(i->first);
-	//							}
-	//							else
-	//							{
-	//								slot = "0" + to_string(i->first);
-	//							}
-
-	//							line = "\t<byte hash=\"n" + slot + "_index\">" + nameSlot + "</byte>";
-
-	//							if (nameSlot == "08")
-	//							{
-	//								outputUTF(msgUTF, "\n\t<entry label=\"nam_chr3_" + nameSlot + "_" + code + "\">");
-	//								outputUTF(msgUTF, "\n\t\t<text>");
-	//								outputUTF(msgUTF, i->second.cssName, true);
-	//								outputUTF(msgUTF, "</text>");
-	//								outputUTF(msgUTF, "\n\t</entry>");
-	//							}
-
-	//							outputUTF(msgUTF, "\n\t<entry label=\"nam_chr1_" + nameSlot + "_" + code + "\">");
-	//							outputUTF(msgUTF, "\n\t\t<text>");
-	//							outputUTF(msgUTF, i->second.cspName, true);
-	//							outputUTF(msgUTF, "</text>");
-	//							outputUTF(msgUTF, "\n\t</entry>");
-
-	//							outputUTF(msgUTF, "\n\t<entry label=\"nam_chr2_" + nameSlot + "_" + code + "\">");
-	//							outputUTF(msgUTF, "\n\t\t<text>");
-	//							outputUTF(msgUTF, i->second.vsName, true);
-	//							outputUTF(msgUTF, "</text>");
-	//							outputUTF(msgUTF, "\n\t</entry>");
-
-	//							if (code != "eflame_first" && code != "elight_first")
-	//							{
-	//								outputUTF(msgUTF, "\n\t<entry label=\"nam_stage_name_" + nameSlot + "_" + code + "\">");
-	//								outputUTF(msgUTF, "\n\t\t<text>");
-	//								outputUTF(msgUTF, i->second.stageName, true);
-	//								outputUTF(msgUTF, "</text>");
-	//								outputUTF(msgUTF, "\n\t</entry>");
-	//							}
-
-	//							i++;
-	//						}
-
-	//						uiEdit << line << "\n";
-	//					}
-	//				}
-	//			}
-	//			else
-	//			{
-	//				uiEdit << line << "\n";
-	//			}
-	//		}
-
-	//		outputUTF(msgUTF, "\n</xmsbt>");
-
-	//		uiVanilla.close();
-	//		uiEdit.close();
-	//		msgUTF.close();
-
-	//		fs::remove(fs::current_path() / "ui_chara_db.xml");
-	//		fs::rename(fs::current_path() / "ui_chara_db_EDIT.xml", fs::current_path() / "ui_chara_db.xml");
-
-	//		fs::create_directories(path + "/ui/message/");
-	//		fs::rename(fs::current_path() / "msg_name.xmsbt", path + "/ui/message/msg_name.xmsbt");
-	//	}
-	//	else
-	//	{
-	//		if (!uiVanilla.is_open())
-	//		{
-	//			wxLog("> Error: " + fs::current_path().string() + "/ui_chara_db.xml could not be opened!");
-	//		}
-
-	//		if (!uiEdit.is_open())
-	//		{
-	//			wxLog("> Error: " + fs::current_path().string() + "/ui_chara_db_EDIT.xml could not be opened!");
-	//		}
-
-	//		if (!msg.is_open())
-	//		{
-	//			wxLog("> Error: " + fs::current_path().string() + "/msg_name.xmsbt could not be opened!");
-	//		}
-	//	}
-	//}
-}
-
-void ModHandler::patchXMLAnnouncer(map<string, map<int, string>>& announcers)
-{
-	//if (!announcers.empty())
-	//{
-	//	ifstream uiVanilla("ui_chara_db.xml");
-	//	ofstream uiEdit("ui_chara_db_EDIT.xml");
-
-	//	if (uiVanilla.is_open() && uiEdit.is_open())
-	//	{
-	//		string code;
-	//		string line;
-
-	//		while (!uiVanilla.eof())
-	//		{
-	//			getline(uiVanilla, line);
-
-	//			if (line.find("\"name_id\"") != string::npos)
-	//			{
-	//				int begin = line.find(">") + 1;
-	//				int end = line.find("<", begin);
-	//				code = line.substr(begin, end - begin);
-
-	//				auto charIter = announcers.find(code);
-
-	//				if (charIter != announcers.end())
-	//				{
-	//					uiEdit << line << "\n";
-
-	//					vector<string> vanillaLabels;
-	//					string label = "";
-	//					bool action = false;
-
-	//					// Deal with characall_label
-	//					while (line.find("</struct>") == string::npos)
-	//					{
-	//						getline(uiVanilla, line);
-	//						uiEdit << line << endl;
-
-	//						// Store vanillaLabels
-	//						if (line.find("\"characall_label") != string::npos)
-	//						{
-	//							auto startPos = line.find('>') + 1;
-	//							vanillaLabels.push_back(line.substr(startPos, line.rfind("<") - startPos));
-	//						}
-
-	//						if (line.find("\"characall_label_c07\"") != string::npos)
-	//						{
-	//							label = "characall_label_c";
-	//							action = true;
-	//						}
-	//						else if (line.find("\"characall_label_article_c07\"") != string::npos)
-	//						{
-	//							label = "characall_label_article_c";
-	//							action = true;
-	//						}
-
-	//						if (action)
-	//						{
-	//							for (auto i = charIter->second.begin(); i != charIter->second.end(); i++)
-	//							{
-	//								string slot = (i->first + 8 > 9 ? "" : "0") + to_string(i->first + 8);
-
-	//								if (i->second == "Default")
-	//								{
-	//									string temp = (i->first > 9 ? "" : "0") + to_string(i->first);
-
-	//									// Find base slot
-	//									if (i->first > 7)
-	//									{
-	//										for (auto j = baseSlots[code].begin(); j != baseSlots[code].end(); j++)
-	//										{
-	//											if (j->second.find(temp) != j->second.end())
-	//											{
-	//												temp = vanillaLabels[stoi(j->first)];
-	//												break;
-	//											}
-	//										}
-	//									}
-	//									else
-	//									{
-	//										temp = vanillaLabels[i->first];
-	//									}
-
-	//									// Replace with 00's announcer if 0#'s announcer is empty
-	//									if (temp == "")
-	//									{
-	//										temp = vanillaLabels[0];
-	//									}
-
-	//									line = "      <hash40 hash=\"" + label + slot + "\">" + temp + "</hash40>";
-	//								}
-	//								else
-	//								{
-	//									line = "      <hash40 hash=\"" + label + slot + "\">" + i->second + "</hash40>";
-	//								}
-
-	//								uiEdit << line << "\n";
-	//							}
-
-	//							vanillaLabels.clear();
-	//							action = false;
-	//						}
-	//					}
-	//				}
-	//			}
-	//			else
-	//			{
-	//				uiEdit << line << endl;
-	//			}
-	//		}
-
-	//		uiVanilla.close();
-	//		uiEdit.close();
-
-	//		fs::remove(fs::current_path() / "ui_chara_db.xml");
-	//		fs::rename(fs::current_path() / "ui_chara_db_EDIT.xml", fs::current_path() / "ui_chara_db.xml");
-	//	}
-	//	else
-	//	{
-	//		if (!uiVanilla.is_open())
-	//		{
-	//			wxLog("> Error: " + fs::current_path().string() + "/ui_chara_db.xml could not be opened!");
-	//		}
-
-	//		if (!uiEdit.is_open())
-	//		{
-	//			wxLog("> Error: " + fs::current_path().string() + "/ui_chara_db_EDIT.xml could not be opened!");
-	//		}
-	//	}
-	//}
-}
-
-void ModHandler::patchXMLInkColors(map<int, InklingColor>& inklingColors)
-{
-	//if (!inklingColors.empty())
-	//{
-	//	ifstream effectVanilla("effect.xml");
-	//	ofstream effectEdit("effect_EDIT.xml");
-
-	//	if (effectVanilla.is_open() && effectEdit.is_open())
-	//	{
-	//		string line;
-
-	//		while (!effectVanilla.eof())
-	//		{
-	//			getline(effectVanilla, line);
-
-	//			if (line.find("hash=\"ink_") != string::npos)
-	//			{
-	//				char action;
-
-	//				if (line.find("ink_effect_color") != string::npos)
-	//				{
-	//					action = 'E';
-	//				}
-	//				else
-	//				{
-	//					action = 'A';
-	//				}
-
-	//				bool lastStruct = false;
-	//				int slot = -1;
-
-	//				effectEdit << line << endl;
-
-	//				auto i = inklingColors.begin();
-	//				while (i != inklingColors.end())
-	//				{
-	//					if (!lastStruct)
-	//					{
-	//						getline(effectVanilla, line);
-	//						slot = stoi(line.substr(line.find("\"") + 1, line.rfind("\"") - line.find("\"") - 1));
-	//					}
-
-	//					if (i->first == slot || lastStruct)
-	//					{
-	//						// <struct index = "[X]">
-	//						effectEdit << "    <struct index=\"" << to_string(i->first) << "\">" << endl;
-
-	//						if (action == 'E')
-	//						{
-	//							effectEdit << "      <float hash=\"r\">" << (i->second.effect.Red() / 255.0) << "</float>" << endl;
-	//							effectEdit << "      <float hash=\"g\">" << (i->second.effect.Green() / 255.0) << "</float>" << endl;
-	//							effectEdit << "      <float hash=\"b\">" << (i->second.effect.Blue() / 255.0) << "</float>" << endl;
-	//						}
-	//						else
-	//						{
-	//							effectEdit << "      <float hash=\"r\">" << (i->second.arrow.Red() / 255.0) << "</float>" << endl;
-	//							effectEdit << "      <float hash=\"g\">" << (i->second.arrow.Green() / 255.0) << "</float>" << endl;
-	//							effectEdit << "      <float hash=\"b\">" << (i->second.arrow.Blue() / 255.0) << "</float>" << endl;
-	//						}
-
-	//						if (!lastStruct)
-	//						{
-	//							// Read r, g, b, struct
-	//							for (int i = 0; i < 4; i++)
-	//							{
-	//								getline(effectVanilla, line);
-	//							}
-	//						}
-
-	//						effectEdit << "    </struct>" << endl;
-
-	//						i++;
-	//					}
-	//					else
-	//					{
-	//						// <struct index = "[X]">
-	//						effectEdit << line << endl;
-
-	//						// Read and write r, g, b, struct
-	//						for (int i = 0; i < 4; i++)
-	//						{
-	//							getline(effectVanilla, line);
-	//							effectEdit << line << endl;
-	//						}
-
-	//						if (slot == 7)
-	//						{
-	//							lastStruct = true;
-	//						}
-	//					}
-	//				}
-	//			}
-	//			else
-	//			{
-	//				effectEdit << line << endl;
-	//			}
-	//		}
-
-	//		effectVanilla.close();
-	//		effectEdit.close();
-
-	//		fs::remove(fs::current_path() / "effect.xml");
-	//		fs::rename(fs::current_path() / "effect_EDIT.xml", fs::current_path() / "effect.xml");
-	//	}
-	//	else
-	//	{
-	//		if (!effectVanilla.is_open())
-	//		{
-	//			wxLog("> Error: " + fs::current_path().string() + "/effect.xml could not be opened!");
-	//		}
-
-	//		if (!effectEdit.is_open())
-	//		{
-	//			wxLog("> Error: " + fs::current_path().string() + "/effect_EDIT.xml could not be opened!");
-	//		}
-	//	}
-	//}
-}
-
-void ModHandler::createPRCXML(map<string, map<int, Name>>& names, map<string, map<int, string>>& announcers, map<string, int>& maxSlots)
-{
-	//if (!maxSlots.empty() || !announcers.empty() || !names.empty())
-	//{
-	//	ifstream uiVanilla("ui_chara_db.xml");
-	//	ofstream uiEdit("ui_chara_db.prcxml");
-	//	ofstream msg;
-
-	//	if (!names.empty())
-	//	{
-	//		msg.open("msg_name.xmsbt", ios::out | ios::binary);
-
-	//		if (msg.is_open())
-	//		{
-	//			// UTF-16 LE BOM
-	//			unsigned char smarker[2];
-	//			smarker[0] = 0xFF;
-	//			smarker[1] = 0xFE;
-
-	//			msg << smarker[0];
-	//			msg << smarker[1];
-
-	//			msg.close();
-	//		}
-	//		else
-	//		{
-	//			wxLog("> Error: " + fs::current_path().string() + "/msg_name.xmsbt could not be opened!");
-	//		}
-	//	}
-
-	//	if (uiVanilla.is_open() && uiEdit.is_open())
-	//	{
-	//		wofstream msgUTF;
-	//		if (!names.empty())
-	//		{
-	//			msgUTF.open("msg_name.xmsbt", ios::binary | ios::app);
-	//			msgUTF.imbue(std::locale(msgUTF.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian>));
-
-	//			if (!msgUTF.is_open())
-	//			{
-	//				wxLog("> " + fs::current_path().string() + "/msg_name.xmsbt could not be opened!");
-	//				return;
-	//			}
-
-	//			outputUTF(msgUTF, "<?xml version=\"1.0\" encoding=\"utf-16\"?>");
-	//			outputUTF(msgUTF, "\n<xmsbt>");
-	//		}
-
-	//		uiEdit << "<?xml version=\"1.0\" encoding=\"UTF-16\"?>";
-	//		uiEdit << "\n<struct>";
-	//		uiEdit << "\n\t<list hash=\"db_root\">";
-
-	//		string code;
-	//		string line;
-	//		string currIndex = "";
-	//		char status = 0;
-
-	//		while (!uiVanilla.eof())
-	//		{
-	//			getline(uiVanilla, line);
-
-	//			if (line.find("<struct index=") != string::npos)
-	//			{
-	//				// TODO: Make efficent
-	//				currIndex = line.substr(line.find('"') + 1, line.rfind('"') - line.find('"') - 1);
-	//			}
-	//			else if (line.find("\"name_id\"") != string::npos)
-	//			{
-	//				int begin = line.find(">") + 1;
-	//				int end = line.find("<", begin);
-	//				code = line.substr(begin, end - begin);
-
-	//				// Deal with max-slots first
-	//				if (maxSlots.find(code) != maxSlots.end())
-	//				{
-	//					status = 1;
-	//					uiEdit << "\n\t\t<struct index=\"" << currIndex << "\">";
-	//					uiEdit << "\n\t\t\t<byte hash=\"color_num\">" << to_string(maxSlots[code]) << "</byte>";
-	//				}
-
-	//				// Deal with names second
-	//				if (!names.empty() && names.find(code) != names.end())
-	//				{
-	//					if (status != 1)
-	//					{
-	//						uiEdit << "\n\t\t<struct index=\"" << currIndex << "\">";
-	//						status = 1;
-	//					}
-	//					auto charIter = names.find(code);
-
-	//					auto i = charIter->second.begin();
-	//					while (i != charIter->second.end())
-	//					{
-	//						string slot;
-	//						string nameSlot = to_string(i->first + 8);
-
-	//						if (nameSlot.size() == 1)
-	//						{
-	//							nameSlot = "0" + nameSlot;
-	//						}
-
-	//						if (i->first > 9)
-	//						{
-	//							slot = to_string(i->first);
-	//						}
-	//						else
-	//						{
-	//							slot = "0" + to_string(i->first);
-	//						}
-
-	//						uiEdit << "\n\t\t\t<byte hash=\"n" << slot << "_index\">" << nameSlot << "</byte>";
-
-	//						if (nameSlot == "08")
-	//						{
-	//							outputUTF(msgUTF, "\n\t<entry label=\"nam_chr3_" + nameSlot + "_" + code + "\">");
-	//							outputUTF(msgUTF, "\n\t\t<text>");
-	//							outputUTF(msgUTF, i->second.cssName, true);
-	//							outputUTF(msgUTF, "</text>");
-	//							outputUTF(msgUTF, "\n\t</entry>");
-	//						}
-
-	//						outputUTF(msgUTF, "\n\t<entry label=\"nam_chr1_" + nameSlot + "_" + code + "\">");
-	//						outputUTF(msgUTF, "\n\t\t<text>");
-	//						outputUTF(msgUTF, i->second.cspName, true);
-	//						outputUTF(msgUTF, "</text>");
-	//						outputUTF(msgUTF, "\n\t</entry>");
-
-	//						outputUTF(msgUTF, "\n\t<entry label=\"nam_chr2_" + nameSlot + "_" + code + "\">");
-	//						outputUTF(msgUTF, "\n\t\t<text>");
-	//						outputUTF(msgUTF, i->second.vsName, true);
-	//						outputUTF(msgUTF, "</text>");
-	//						outputUTF(msgUTF, "\n\t</entry>");
-
-	//						if (code != "eflame_first" && code != "elight_first")
-	//						{
-	//							outputUTF(msgUTF, "\n\t<entry label=\"nam_stage_name_" + nameSlot + "_" + code + "\">");
-	//							outputUTF(msgUTF, "\n\t\t<text>");
-	//							outputUTF(msgUTF, i->second.stageName, true);
-	//							outputUTF(msgUTF, "</text>");
-	//							outputUTF(msgUTF, "\n\t</entry>");
-	//						}
-
-	//						i++;
-	//					}
-	//				}
-
-	//				// Deal with announcers third
-	//				if (!announcers.empty() && announcers.find(code) != announcers.end())
-	//				{
-	//					if (status != 1)
-	//					{
-	//						uiEdit << "\n\t\t<struct index=\"" << currIndex << "\">";
-	//						status = 1;
-	//					}
-	//					auto charIter = announcers.find(code);
-
-	//					vector<string> vanillaLabels;
-	//					string label = "";
-	//					bool action = false;
-
-	//					// Deal with characall_label
-	//					while (line.find("shop_item_tag") == string::npos)
-	//					{
-	//						getline(uiVanilla, line);
-
-	//						// Store vanillaLabels
-	//						if (line.find("\"characall_label") != string::npos)
-	//						{
-	//							auto startPos = line.find('>') + 1;
-	//							vanillaLabels.push_back(line.substr(startPos, line.rfind("<") - startPos));
-	//						}
-
-	//						if (line.find("\"characall_label_c07\"") != string::npos)
-	//						{
-	//							label = "characall_label_c";
-	//							action = true;
-	//						}
-	//						else if (line.find("\"characall_label_article_c07\"") != string::npos)
-	//						{
-	//							label = "characall_label_article_c";
-	//							action = true;
-	//						}
-
-	//						if (action)
-	//						{
-	//							for (auto i = charIter->second.begin(); i != charIter->second.end(); i++)
-	//							{
-	//								string slot = (i->first + 8 > 9 ? "" : "0") + to_string(i->first + 8);
-
-	//								if (i->second == "Default")
-	//								{
-	//									string temp = (i->first > 9 ? "" : "0") + to_string(i->first);
-
-	//									// Find base slot
-	//									if (i->first > 7)
-	//									{
-	//										for (auto j = baseSlots[code].begin(); j != baseSlots[code].end(); j++)
-	//										{
-	//											if (j->second.find(temp) != j->second.end())
-	//											{
-	//												temp = vanillaLabels[stoi(j->first)];
-	//												break;
-	//											}
-	//										}
-	//									}
-	//									else
-	//									{
-	//										temp = vanillaLabels[i->first];
-	//									}
-
-	//									// Replace with 00's announcer if 0#'s announcer is empty
-	//									if (temp == "")
-	//									{
-	//										temp = vanillaLabels[0];
-	//									}
-
-	//									line = "<hash40 hash=\"" + label + slot + "\">" + temp + "</hash40>";
-	//								}
-	//								else
-	//								{
-	//									line = "<hash40 hash=\"" + label + slot + "\">" + i->second + "</hash40>";
-	//								}
-
-	//								uiEdit << "\n\t\t\t" << line;
-	//							}
-
-	//							vanillaLabels.clear();
-	//							action = false;
-	//						}
-	//					}
-	//				}
-	//			}
-	//			else if (line.find("</struct>") != string::npos)
-	//			{
-	//				if (status == 0)
-	//				{
-	//					uiEdit << "\n\t\t<hash40 index=\"" << currIndex << "\">dummy</hash40>";
-
-	//				}
-	//				else if (status == 1)
-	//				{
-	//					uiEdit << "\n\t\t</struct>";
-	//					status = 0;
-	//				}
-	//				else
-	//				{
-	//					status = 0;
-	//				}
-
-	//				// Skip everything else as demon is the last code.
-	//				if (currIndex == "120")
-	//				{
-	//					break;
-	//				}
-	//			}
-	//		}
-
-	//		if (!names.empty())
-	//		{
-	//			outputUTF(msgUTF, "\n</xmsbt>");
-	//			msgUTF.close();
-
-	//			fs::create_directories(path + "/ui/message/");
-	//			fs::rename(fs::current_path() / "msg_name.xmsbt", path + "/ui/message/msg_name.xmsbt");
-	//		}
-
-
-	//		uiEdit << "\n\t</list>";
-	//		uiEdit << "\n</struct>";
-
-	//		uiVanilla.close();
-	//		uiEdit.close();
-
-	//		fs::remove(fs::current_path() / "ui_chara_db.xml");
-	//	}
-	//	else
-	//	{
-	//		if (!uiVanilla.is_open())
-	//		{
-	//			wxLog("> Error: " + fs::current_path().string() + "/ui_chara_db.xml could not be opened!");
-	//		}
-
-	//		if (!uiEdit.is_open())
-	//		{
-	//			wxLog("> Error: " + fs::current_path().string() + "/ui_chara_db_EDIT.xml could not be opened!");
-	//		}
-	//	}
-	//}
-}
-
-void ModHandler::createInkPRCXML(map<int, InklingColor>& inklingColors)
-{
-	//if (!inklingColors.empty())
-	//{
-	//	ifstream effectVanilla("effect.prcxml");
-	//	ofstream effectEdit("effect_EDIT.prcxml");
-
-	//	if (effectVanilla.is_open() && effectEdit.is_open())
-	//	{
-	//		string line;
-
-	//		while (!effectVanilla.eof())
-	//		{
-	//			getline(effectVanilla, line);
-
-	//			if (line.find("hash=\"ink_") != string::npos)
-	//			{
-	//				char action;
-
-	//				if (line.find("ink_effect_color") != string::npos)
-	//				{
-	//					action = 'E';
-	//				}
-	//				else
-	//				{
-	//					action = 'A';
-	//				}
-
-	//				effectEdit << line << endl;
-
-	//				auto iter = inklingColors.begin();
-
-	//				// Fill out 0-7
-	//				for (int i = 0; i < 8; i++)
-	//				{
-	//					auto iter = inklingColors.find(i);
-
-	//					if (iter != inklingColors.end())
-	//					{
-	//						effectEdit << "    <struct index=\"" << to_string(i) << "\">" << endl;
-
-	//						if (action == 'E')
-	//						{
-	//							effectEdit << "      <float hash=\"r\">" << (iter->second.effect.Red() / 255.0) << "</float>" << endl;
-	//							effectEdit << "      <float hash=\"g\">" << (iter->second.effect.Green() / 255.0) << "</float>" << endl;
-	//							effectEdit << "      <float hash=\"b\">" << (iter->second.effect.Blue() / 255.0) << "</float>" << endl;
-	//						}
-	//						else
-	//						{
-	//							effectEdit << "      <float hash=\"r\">" << (iter->second.arrow.Red() / 255.0) << "</float>" << endl;
-	//							effectEdit << "      <float hash=\"g\">" << (iter->second.arrow.Green() / 255.0) << "</float>" << endl;
-	//							effectEdit << "      <float hash=\"b\">" << (iter->second.arrow.Blue() / 255.0) << "</float>" << endl;
-	//						}
-
-	//						effectEdit << "    </struct>" << endl;
-	//					}
-	//					else
-	//					{
-	//						effectEdit << "    <hash40 index=\"" << to_string(i) << "\">dummy</hash40>" << endl;
-	//					}
-	//				}
-
-	//				// Move iter to earliest additional slot
-	//				while (iter->first <= 7 && iter != inklingColors.end())
-	//				{
-	//					iter++;
-	//				}
-
-	//				while (iter != inklingColors.end())
-	//				{
-	//					effectEdit << "    <struct index=\"" << to_string(iter->first) << "\">" << endl;
-
-	//					if (action == 'E')
-	//					{
-	//						effectEdit << "      <float hash=\"r\">" << (iter->second.effect.Red() / 255.0) << "</float>" << endl;
-	//						effectEdit << "      <float hash=\"g\">" << (iter->second.effect.Green() / 255.0) << "</float>" << endl;
-	//						effectEdit << "      <float hash=\"b\">" << (iter->second.effect.Blue() / 255.0) << "</float>" << endl;
-	//					}
-	//					else
-	//					{
-	//						effectEdit << "      <float hash=\"r\">" << (iter->second.arrow.Red() / 255.0) << "</float>" << endl;
-	//						effectEdit << "      <float hash=\"g\">" << (iter->second.arrow.Green() / 255.0) << "</float>" << endl;
-	//						effectEdit << "      <float hash=\"b\">" << (iter->second.arrow.Blue() / 255.0) << "</float>" << endl;
-	//					}
-
-	//					effectEdit << "    </struct>" << endl;
-	//				}
-	//			}
-	//			else
-	//			{
-	//				effectEdit << line << endl;
-	//			}
-	//		}
-
-	//		effectVanilla.close();
-	//		effectEdit.close();
-	//	}
-	//	else
-	//	{
-	//		if (!effectVanilla.is_open())
-	//		{
-	//			wxLog("> Error: " + fs::current_path().string() + "/effect.prcxml could not be opened!");
-	//		}
-
-	//		if (!effectEdit.is_open())
-	//		{
-	//			wxLog("> Error: " + fs::current_path().string() + "/effect_EDIT.prcxml could not be opened!");
-	//		}
-	//	}
-	//}
-}
-
-void ModHandler::outputUTF(wofstream& file, wxString str, bool parse)
-{
-	if (parse)
+	else
 	{
-		wxString result = "";
+		wxLog("> WARN: config.json is not needed.");
+	}
+}
 
-		for (auto i = str.begin(); i != str.end(); i++)
+void ModHandler::create_message_xmsbt(map<string, map<Slot, Name>>& names)
+{
+	ofstream msg;
+	if (!names.empty())
+	{
+		msg.open("msg_name.xmsbt", ios::out | ios::binary);
+
+		if (msg.is_open())
 		{
-			if (*i == '"')
+			// UTF-16 LE BOM
+			msg << (unsigned char)0xFF << (unsigned char)0xFE;
+
+			msg.close();
+
+			wofstream msgUTF;
+			msgUTF.open("msg_name.xmsbt", ios::binary | ios::app);
+			msgUTF.imbue(std::locale(msgUTF.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian>));
+
+			if (msgUTF.is_open())
 			{
-				result += "&quot;";
-			}
-			else if (*i == '\'')
-			{
-				result += "&apos;";
-			}
-			else if (*i == '&')
-			{
-				result += "&amp;";
-			}
-			else if (*i == '<')
-			{
-				result += "&lt;";
-			}
-			else if (*i == '>')
-			{
-				result += "&gt;";
-			}
-			else if (*i == '|')
-			{
-				result += '\n';
+				outputUTF(msgUTF, "<?xml version=\"1.0\" encoding=\"utf-16\"?>");
+				outputUTF(msgUTF, "\n<xmsbt>");
+
+				for (auto i = names.begin(); i != names.end(); i++)
+				{
+					for (auto j = i->second.begin(); j != i->second.end(); j++)
+					{
+						string nIndex = Slot(j->first.getInt() + 8).getString();
+
+						if (j->first.getInt() == 0)
+						{
+							outputUTF(msgUTF, "\n\t<entry label=\"nam_chr3_" + nIndex + "_" + i->first + "\">");
+							outputUTF(msgUTF, "\n\t\t<text>");
+							outputUTF(msgUTF, j->second.cssName, true);
+							outputUTF(msgUTF, "</text>");
+							outputUTF(msgUTF, "\n\t</entry>");
+						}
+
+						outputUTF(msgUTF, "\n\t<entry label=\"nam_chr1_" + nIndex + "_" + i->first + "\">");
+						outputUTF(msgUTF, "\n\t\t<text>");
+						outputUTF(msgUTF, j->second.cspName, true);
+						outputUTF(msgUTF, "</text>");
+						outputUTF(msgUTF, "\n\t</entry>");
+
+						outputUTF(msgUTF, "\n\t<entry label=\"nam_chr2_" + nIndex + "_" + i->first + "\">");
+						outputUTF(msgUTF, "\n\t\t<text>");
+						outputUTF(msgUTF, j->second.vsName, true);
+						outputUTF(msgUTF, "</text>");
+						outputUTF(msgUTF, "\n\t</entry>");
+
+						if (i->first != "eflame_first" && i->first != "elight_first")
+						{
+							outputUTF(msgUTF, "\n\t<entry label=\"nam_stage_name_" + nIndex + "_" + i->first + "\">");
+							outputUTF(msgUTF, "\n\t\t<text>");
+							outputUTF(msgUTF, j->second.stageName, true);
+							outputUTF(msgUTF, "</text>");
+							outputUTF(msgUTF, "\n\t</entry>");
+						}
+					}
+				}
+
+				outputUTF(msgUTF, "\n</xmsbt>");
+				msgUTF.close();
+
+				fs::create_directories(path + "/ui/message/");
+				fs::rename(fs::current_path() / "msg_name.xmsbt", path + "/ui/message/msg_name.xmsbt");
 			}
 			else
 			{
-				result += *i;
+				wxLog("> " + fs::current_path().string() + "/msg_name.xmsbt could not be opened!");
 			}
 		}
-
-		file << result.ToStdWstring();
-	}
-	else
-	{
-		file << str.ToStdWstring();
+		else
+		{
+			wxLog("> Error: " + fs::current_path().string() + "/msg_name.xmsbt could not be opened!");
+		}
 	}
 }
 
-map<int, InklingColor> ModHandler::readInk()
+void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<string, map<Slot, string>>& announcers, map<string, Slot>& maxSlots)
 {
-	map<int, InklingColor> inkColors;
-
-	// Read XML
-	if (fs::exists(path + "/fighter/common/param/effect.prcxml"))
+	if (!maxSlots.empty() || !announcers.empty() || !names.empty())
 	{
-		ifstream inFile(path + "/fighter/common/param/effect.prcxml");
-		char action = 'F';
-		string line;
+		ifstream uiVanilla("ui_chara_db.xml");
+		ofstream uiEdit("ui_chara_db.prcxml");
 
-		// Go through effect.prcxml line by line
-		while (getline(inFile, line))
+		if (uiVanilla.is_open() && uiEdit.is_open())
 		{
-			// If Inkling related data is found, make a copy of the data.
-			if (line.find("ink_effect_color") != string::npos)
-			{
-				action = 'E';
-			}
-			else if (line.find("ink_arrow_color") != string::npos)
-			{
-				action = 'A';
-			}
+			uiEdit << "<?xml version=\"1.0\" encoding=\"UTF-16\"?>";
+			uiEdit << "\n<struct>";
+			uiEdit << "\n\t<list hash=\"db_root\">";
 
-			if (action != 'F')
+			string code;
+			string line;
+			string currIndex = "";
+			char status = 0;
+
+			while (!uiVanilla.eof())
 			{
-				while (line.find("</list>") == string::npos)
+				getline(uiVanilla, line);
+
+				if (line.find("<struct index=") != string::npos)
 				{
-					if (line.find("<struct") != string::npos)
+					currIndex = line.substr(line.find('"') + 1, line.rfind('"') - line.find('"') - 1);
+				}
+				else if (line.find("\"name_id\"") != string::npos)
+				{
+					int begin = line.find(">") + 1;
+					int end = line.find("<", begin);
+					code = line.substr(begin, end - begin);
+
+					// Deal with max-slots first
+					auto charIter = maxSlots.find(code);
+					if (charIter != maxSlots.end())
 					{
-						auto start = line.find("\"");
-						auto end = line.rfind("\"");
+						status = 1;
+						uiEdit << "\n\t\t<struct index=\"" << currIndex << "\">";
+						uiEdit << "\n\t\t\t<byte hash=\"color_num\">" << charIter->second.getString() << "</byte>";
 
-						int slot = stoi(line.substr(start + 1, end - start - 1));
-
-						getline(inFile, line);
-						double red = stod(line.substr(line.find(">") + 1, line.rfind("<") - line.find(">") - 1));
-
-						getline(inFile, line);
-						double green = stod(line.substr(line.find(">") + 1, line.rfind("<") - line.find(">") - 1));
-
-						getline(inFile, line);
-						double blue = stod(line.substr(line.find(">") + 1, line.rfind("<") - line.find(">") - 1));
-
-						// Red
-						if (action == 'E')
+						// Add cIndex/cGroup info
+						auto charLter = slots.find(code);
+						if (charLter != slots.end())
 						{
-							inkColors[slot].effect.Set(red * 255, green * 255, blue * 255);
-						}
-						else
-						{
-							inkColors[slot].arrow.Set(red * 255, green * 255, blue * 255);
+							for (int i = 8; i < charIter->second.getInt(); i++)
+							{
+								auto slotIter = charLter->second.find(Slot(i));
+								if (slotIter != charLter->second.end())
+								{
+									auto db = vHandler.getXMLData(code, slotIter->second);
+
+									if (db.cIndex != 0)
+									{
+										uiEdit << "\n\t\t\t<byte hash=\"c" + Slot(i).getString() + "_index\">" << to_string(db.cIndex) << "</byte>";
+									}
+									if (db.cGroup != 0)
+									{
+										uiEdit << "\n\t\t\t<byte hash=\"c" + Slot(i).getString() + "_index\">" << to_string(db.cGroup) << "</byte>";
+									}
+								}
+							}
 						}
 					}
 
-					getline(inFile, line);
-				}
+					// Deal with names second
+					auto charJter = names.find(code);
+					if (!names.empty() && charJter != names.end())
+					{
+						if (status != 1)
+						{
+							uiEdit << "\n\t\t<struct index=\"" << currIndex << "\">";
+							status = 1;
+						}
 
-				action = 'F';
+						auto i = charJter->second.begin();
+						while (i != charJter->second.end())
+						{
+							string nameSlot = Slot(i->first.getInt() + 8).getString();
+							uiEdit << "\n\t\t\t<byte hash=\"n" << i->first.getString() << "_index\">" << nameSlot << "</byte>";
+							i++;
+						}
+					}
+
+					// Deal with announcers third
+					auto charKter = announcers.find(code);
+					if (!announcers.empty() && charKter != announcers.end())
+					{
+						if (status != 1)
+						{
+							uiEdit << "\n\t\t<struct index=\"" << currIndex << "\">";
+							status = 1;
+						}
+
+						auto charLter = slots.find(code);
+						if (charLter != slots.end())
+						{
+							for (auto i = charKter->second.begin(); i != charKter->second.end(); i++)
+							{
+								auto slotIter = charLter->second.find(i->first);
+								if (slotIter != charLter->second.end())
+								{
+									auto db = vHandler.getXMLData(code, slotIter->second);
+									string slot = Slot(i->first.getInt() + 8).getString();
+
+									if (i->second == "Default")
+									{
+										uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_article_c" + slot + "\">" + db.label << "</hash40>";
+										if (!db.article.empty())
+										{
+											uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_article_c" + slot + "\">" + db.article << "</hash40>";
+										}
+									}
+									else
+									{
+										uiEdit << "<hash40 hash=\"characall_label_article_c" + slot + "\">" + i->second << "</hash40>";
+									}
+								}
+							}
+						}
+					}
+				}
+				else if (line.find("</struct>") != string::npos)
+				{
+					if (status == 0)
+					{
+						uiEdit << "\n\t\t<hash40 index=\"" << currIndex << "\">dummy</hash40>";
+					}
+					else if (status == 1)
+					{
+						uiEdit << "\n\t\t</struct>";
+						status = 0;
+					}
+					else
+					{
+						status = 0;
+					}
+
+					// Skip everything else as demon is the last code.
+					if (currIndex == "120")
+					{
+						break;
+					}
+				}
+			}
+
+			uiEdit << "\n\t</list>";
+			uiEdit << "\n</struct>";
+
+			uiVanilla.close();
+			uiEdit.close();
+
+			fs::remove(fs::current_path() / "ui_chara_db.xml");
+		}
+		else if (!uiVanilla.is_open())
+		{
+			wxLog("> Error: " + fs::current_path().string() + "/ui_chara_db.xml could not be opened!");
+		}
+		else
+		{
+			wxLog("> Error: " + fs::current_path().string() + "/ui_chara_db_EDIT.xml could not be opened!");
+		}
+	}
+	else
+	{
+		wxLog("> WARN: ui_chara_db.prcxml is not needed for the requested changes.");
+	}
+}
+
+void ModHandler::create_ink_prcxml(map<Slot, InklingColor>& inklingColors)
+{
+	if (!inklingColors.empty())
+	{
+		ifstream effectVanilla("effect.prcxml");
+		ofstream effectEdit("effect_EDIT.prcxml");
+
+		if (effectVanilla.is_open() && effectEdit.is_open())
+		{
+			string line;
+			while (!effectVanilla.eof())
+			{
+				getline(effectVanilla, line);
+
+				if (line.find("hash=\"ink_") != string::npos)
+				{
+					char action;
+
+					if (line.find("ink_effect_color") != string::npos)
+					{
+						action = 'E';
+					}
+					else
+					{
+						action = 'A';
+					}
+
+					effectEdit << line << endl;
+
+					// Fill out Slots 0-7
+					auto iter = inklingColors.begin();
+					for (int i = 0; i < 8; i++)
+					{
+						auto iter = inklingColors.find(Slot(i));
+						if (iter != inklingColors.end())
+						{
+							effectEdit << "    <struct index=\"" << to_string(i) << "\">" << endl;
+
+							if (action == 'E')
+							{
+								effectEdit << "      <float hash=\"r\">" << (iter->second.effect.Red() / 255.0) << "</float>" << endl;
+								effectEdit << "      <float hash=\"g\">" << (iter->second.effect.Green() / 255.0) << "</float>" << endl;
+								effectEdit << "      <float hash=\"b\">" << (iter->second.effect.Blue() / 255.0) << "</float>" << endl;
+							}
+							else
+							{
+								effectEdit << "      <float hash=\"r\">" << (iter->second.arrow.Red() / 255.0) << "</float>" << endl;
+								effectEdit << "      <float hash=\"g\">" << (iter->second.arrow.Green() / 255.0) << "</float>" << endl;
+								effectEdit << "      <float hash=\"b\">" << (iter->second.arrow.Blue() / 255.0) << "</float>" << endl;
+							}
+
+							effectEdit << "    </struct>" << endl;
+						}
+						else
+						{
+							effectEdit << "    <hash40 index=\"" << to_string(i) << "\">dummy</hash40>" << endl;
+						}
+					}
+
+					// Move iter to earliest additional slot
+					while (iter != inklingColors.end() && iter->first.getInt() <= 7)
+					{
+						iter++;
+					}
+
+					while (iter != inklingColors.end())
+					{
+						// to_string used because index cannot start with 0.
+						effectEdit << "    <struct index=\"" << to_string(iter->first.getInt()) << "\">" << endl;
+
+						if (action == 'E')
+						{
+							effectEdit << "      <float hash=\"r\">" << (iter->second.effect.Red() / 255.0) << "</float>" << endl;
+							effectEdit << "      <float hash=\"g\">" << (iter->second.effect.Green() / 255.0) << "</float>" << endl;
+							effectEdit << "      <float hash=\"b\">" << (iter->second.effect.Blue() / 255.0) << "</float>" << endl;
+						}
+						else
+						{
+							effectEdit << "      <float hash=\"r\">" << (iter->second.arrow.Red() / 255.0) << "</float>" << endl;
+							effectEdit << "      <float hash=\"g\">" << (iter->second.arrow.Green() / 255.0) << "</float>" << endl;
+							effectEdit << "      <float hash=\"b\">" << (iter->second.arrow.Blue() / 255.0) << "</float>" << endl;
+						}
+
+						effectEdit << "    </struct>" << endl;
+					}
+				}
+				else
+				{
+					effectEdit << line << endl;
+				}
+			}
+
+			effectVanilla.close();
+			effectEdit.close();
+		}
+		else
+		{
+			if (!effectVanilla.is_open())
+			{
+				wxLog("> Error: " + fs::current_path().string() + "/effect.prcxml could not be opened!");
+			}
+
+			if (!effectEdit.is_open())
+			{
+				wxLog("> Error: " + fs::current_path().string() + "/effect_EDIT.prcxml could not be opened!");
 			}
 		}
 	}
-
-	return inkColors;
 }
 
-map<string, map<Slot, Slot>> ModHandler::readBaseSlots()
+// Readers
+map<string, map<Slot, Slot>> ModHandler::read_config_slots()
 {
-	map<string, map<Slot, Slot>> baseSlots;
-
+	map<string, map<Slot, Slot>> slots;
 	if (fs::exists(path + "/config.json"))
 	{
 		ifstream inFile(path + "/config.json");
-
 		if (inFile.is_open())
 		{
-			string line;
-
+			// Reach section where base slots can be easily found.
+			string line = "";
 			while (line.find("\"new-dir-infos-base\"") == string::npos && !inFile.eof())
 			{
 				getline(inFile, line);
 			}
 
-			// Found base-slot section
+			// Make sure this is not end of file.
 			if (line.find("\"new-dir-infos-base\"") != string::npos)
 			{
 				while (line.find('}') == string::npos && !inFile.eof())
@@ -2767,7 +2276,6 @@ map<string, map<Slot, Slot>> ModHandler::readBaseSlots()
 					getline(inFile, line);
 
 					auto camPos = line.find("/camera");
-
 					if (camPos != string::npos)
 					{
 						auto beg = line.find("fighter/") + 8;
@@ -2778,9 +2286,8 @@ map<string, map<Slot, Slot>> ModHandler::readBaseSlots()
 
 						end = line.find("/camera", camPos + 7) - 1;
 						beg = line.find(code + "/c", camPos + 7) + 2 + code.size();
-						Slot baseSlot = Slot(line.substr(beg, end - beg + 1));
 
-						baseSlots[code][newSlot] = baseSlot;
+						slots[code][newSlot] = Slot(line.substr(beg, end - beg + 1));
 					}
 				}
 			}
@@ -2790,13 +2297,12 @@ map<string, map<Slot, Slot>> ModHandler::readBaseSlots()
 			wxLog("> ERROR: " + path + "/config.json" + "could not be opened!");
 		}
 	}
-
-	return baseSlots;
+	return slots;
 }
 
-map<string, map<string, Name>> ModHandler::readNames()
+map<string, map<Slot, Name>> ModHandler::read_message_names()
 {
-	map<string, map<string, Name>> names;
+	map<string, map<Slot, Name>> names;
 	int count = 0;
 
 	if (fs::exists(path + "/ui/message/msg_name.xmsbt"))
@@ -2860,13 +2366,8 @@ map<string, map<string, Name>> ModHandler::readNames()
 
 				if (action)
 				{
-					string slot = to_string(stoi(lines[i].substr(beg, end - beg)) - 8);
+					Slot slot = Slot(stoi(lines[i].substr(beg, end - beg)) - 8);
 					string code = lines[i].substr(end + 1, lines[i].find("\"", end + 1) - end - 1);
-
-					if (slot.size() == 1)
-					{
-						slot = "0" + slot;
-					}
 					string name = lines[i + 2].substr(0, lines[i + 2].find("<"));
 
 					if (type == '1')
@@ -2906,6 +2407,73 @@ map<string, map<string, Name>> ModHandler::readNames()
 	return names;
 }
 
+map<Slot, InklingColor> ModHandler::read_ink_colors()
+{
+	map<Slot, InklingColor> inkColors;
+
+	// Read XML
+	if (fs::exists(path + "/fighter/common/param/effect.prcxml"))
+	{
+		ifstream inFile(path + "/fighter/common/param/effect.prcxml");
+		char action = 'F';
+		string line;
+
+		// Go through effect.prcxml line by line
+		while (getline(inFile, line))
+		{
+			// If Inkling related data is found, make a copy of the data.
+			if (line.find("ink_effect_color") != string::npos)
+			{
+				action = 'E';
+			}
+			else if (line.find("ink_arrow_color") != string::npos)
+			{
+				action = 'A';
+			}
+
+			if (action != 'F')
+			{
+				while (line.find("</list>") == string::npos)
+				{
+					if (line.find("<struct") != string::npos)
+					{
+						auto start = line.find("\"");
+						auto end = line.rfind("\"");
+
+						Slot slot = Slot(line.substr(start + 1, end - start - 1));
+
+						getline(inFile, line);
+						double red = stod(line.substr(line.find(">") + 1, line.rfind("<") - line.find(">") - 1));
+
+						getline(inFile, line);
+						double green = stod(line.substr(line.find(">") + 1, line.rfind("<") - line.find(">") - 1));
+
+						getline(inFile, line);
+						double blue = stod(line.substr(line.find(">") + 1, line.rfind("<") - line.find(">") - 1));
+
+						// Red
+						if (action == 'E')
+						{
+							inkColors[slot].effect.Set(red * 255, green * 255, blue * 255);
+						}
+						else
+						{
+							inkColors[slot].arrow.Set(red * 255, green * 255, blue * 255);
+						}
+					}
+
+					getline(inFile, line);
+				}
+
+				action = 'F';
+			}
+		}
+	}
+
+	return inkColors;
+}
+
+/* --- RESET/CLEANUP --- */
 void ModHandler::clear()
 {
 	for (auto i = files.begin(); i != files.end(); i++)
@@ -2916,12 +2484,16 @@ void ModHandler::clear()
 			{
 				k->second.clear();
 			}
-
 			j->second.clear();
 		}
+		i->second.clear();
+	}
 
+	for (auto i = slots.begin(); i != slots.end(); i++)
+	{
 		i->second.clear();
 	}
 
 	files.clear();
+	slots.clear();
 }

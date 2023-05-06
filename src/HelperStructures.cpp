@@ -449,3 +449,24 @@ bool Path::operator<(const Path& rhs) const
 {
 	return this->path < rhs.path;
 }
+
+/* --- {DBData} ---*/
+DBData::DBData()
+{
+	nIndex = 0;
+	cIndex = 0;
+	cGroup = 0;
+
+	label = "";
+	article = "";
+}
+
+DBData::DBData(string code)
+{
+	nIndex = 0;
+	cIndex = 0;
+	cGroup = 0;
+
+	label = "vc_narration_characall_" + code;
+	article = "";
+}

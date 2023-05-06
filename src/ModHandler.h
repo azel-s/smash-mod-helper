@@ -28,6 +28,7 @@ private:
 
 	/* --- HELPERS (UNIVERSAL) --- */
 	void addFile(string code, string fileType, int slot, string file);
+	void outputUTF(wofstream& file, wxString str, bool parse = false);
 
 	/* --- HELPERS (WX) --- */
 	void wxLog(string message, bool debug = true);
@@ -47,9 +48,11 @@ public:
 	void wxSetLog(wxLogTextCtrl* log);
 
 	/* --- GETTERS (UNIVERSAL) --- */
+	string getPath();
 	string getName(string code);
 	string getCode(string name);
 	int getNumCharacters();
+	map<string, set<Slot>> getAllSlots() const;
 	set<Slot> getAddSlots(string code)  const;
 	map<string, set<Slot>> getAddSlots() const;
 	Slot getBaseSlot(string code, Slot slot) const;
@@ -57,7 +60,9 @@ public:
 	/* --- GETTERS (WX) --- */
 	wxArrayString wxGetCharacterNames(string fileType = "") const;
 	wxArrayString wxGetFileTypes(string code = "") const;
+	wxArrayString wxGetFileTypes(wxArrayString codes, bool findInAll = false) const;
 	wxArrayString wxGetSlots(string code, wxArrayString fileTypes = {}, bool findInAll = false) const;
+	wxArrayString wxGetSlots(wxArrayString codes, wxArrayString fileTypes = {}, bool findInAll = false) const;
 
 	/* --- VERIFIERS (UNIVERSAL) ---*/
 	bool hasChar(string code = "") const;
@@ -66,10 +71,11 @@ public:
 
 	/* --- VERIFIERS (WX) --- */
 	bool wxHasSlot(string code, Slot slot, wxArrayString fileTypes = {}, bool findInAll = false) const;
+	bool wxHasSlot(wxArrayString codes, Slot slot, wxArrayString fileTypes = {}, bool findInAll = false) const;
 
 	/* --- FUNCTIONS (UNIVERSAL) --- */
 	void readFiles(string path);
-	void removeDesktopINI();
+	void remove_desktop_ini();
 
 	/* --- FUNCTIONS (WX) --- */
 	void adjustFiles(string action, string code, wxArrayString fileTypes, Slot iSlot, Slot fSlot);
@@ -84,22 +90,18 @@ public:
 		map<string, map<Slot, map<string, set<string>>>>& shareToAdded,
 		map<string, map<Slot, map<string, set<string>>>>& newDirFiles
 	);
-	bool createConfig();
 
-	// Config & PRCX
-	void patchXMLSlots(map<string, int>& maxSlots);
-	void patchXMLNames(map<string, map<int, Name>>& names);
-	void patchXMLAnnouncer(map<string, map<int, string>>& announcers);
-	void patchXMLInkColors(map<int, InklingColor>& inklingColors);
-	void createPRCXML(map<string, map<int, Name>>& names, map<string, map<int, string>>& announcers, map<string, int>& maxSlots);
-	void createInkPRCXML(map<int, InklingColor>& inklingColors);
-	void outputUTF(wofstream& file, wxString str, bool parse = false);
+	// Creators
+	void create_config();
+	void create_message_xmsbt(map<string, map<Slot, Name>>& names);
+	void create_db_prcxml(map<string, map<Slot, Name>>& names, map<string, map<Slot, string>>& announcers, map<string, Slot>& maxSlots);
+	void create_ink_prcxml(map<Slot, InklingColor>& inklingColors);
 
 	// Readers
-	map<int, InklingColor> readInk();
-	map<string, map<Slot, Slot>> readBaseSlots();
-	map<string, map<string, Name>> readNames();
+	map<string, map<Slot, Slot>> read_config_slots();
+	map<string, map<Slot, Name>> read_message_names();
+	map<Slot, InklingColor> read_ink_colors();
 
-	// Clear Mod Data
+	/* --- RESET/CLEANUP --- */
 	void clear();
 };

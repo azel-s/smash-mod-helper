@@ -57,22 +57,6 @@ MainFrame::MainFrame(const wxString& title) :
 
 	wxMenu* optionsMenu = new wxMenu();
 
-	wxMenu* prcOutput = new wxMenu();
-	optionsMenu->AppendSubMenu(prcOutput, "Set PRC output");
-	auto prcxmlID = prcOutput->AppendRadioItem(wxID_ANY, "PRCXML", "This configuration is readable, but sacrifices load times.")->GetId();
-	auto prcxID = prcOutput->AppendRadioItem(wxID_ANY, "PRCX", "This configuration is faster, but sacrifices readability.")->GetId();
-	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcxmlID);
-	this->Bind(wxEVT_MENU, &MainFrame::togglePRCOutput, this, prcxID);
-
-	if (settings.prcxOutput)
-	{
-		prcOutput->Check(prcxID, true);
-	}
-	else
-	{
-		prcOutput->Check(prcxmlID, true);
-	}
-
 	wxMenu* loadFromMod = new wxMenu();
 	optionsMenu->AppendSubMenu(loadFromMod, "Load from mod");
 	auto readBaseID = loadFromMod->AppendCheckItem(wxID_ANY, "Base Slots", "Enables reading information from config.json")->GetId();
@@ -99,7 +83,7 @@ MainFrame::MainFrame(const wxString& title) :
 	browse.button->Bind(wxEVT_BUTTON, &MainFrame::onBrowse, this);
 
 	// Create characters List
-	charsList = new wxListBox(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize);
+	charsList = new wxListBox(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxArrayString(), wxLB_MULTIPLE);
 	charsList->Bind(wxEVT_LISTBOX, &MainFrame::onCharSelect, this);
 
 	// Create file type checkboxes
@@ -255,6 +239,23 @@ void MainFrame::resetButtons()
 	buttons.del->Disable();
 }
 
+wxArrayString MainFrame::getSelectedCharCodes()
+{
+	wxArrayString codes;
+
+	wxArrayInt selections;
+	charsList->GetSelections(selections);
+	if (!selections.empty())
+	{
+		for (auto& selection : selections)
+		{
+			codes.Add(mHandler.getCode(charsList->GetString(selection).ToStdString()));
+		}
+	}
+
+	return codes;
+}
+
 wxArrayString MainFrame::getSelectedFileTypes()
 {
 	wxArrayString result;
@@ -292,8 +293,6 @@ void MainFrame::readSettings()
 		int bit;
 
 		settingsFile >> bit;
-		settings.prcxOutput = (bit == 1) ? true : false;
-		settingsFile >> bit;
 		//settings.showLogWindow = (bit == 1) ? true : false;
 		settingsFile >> bit;
 		settings.readBase = (bit == 1) ? true : false;
@@ -316,7 +315,6 @@ void MainFrame::updateSettings()
 
 	if (settingsFile.is_open())
 	{
-		settingsFile << settings.prcxOutput << ' ';
 		settingsFile << settings.showLogWindow << ' ';
 		settingsFile << settings.readBase << ' ';
 		settingsFile << settings.readNames << ' ';
@@ -332,9 +330,10 @@ void MainFrame::updateSettings()
 
 void MainFrame::updateFileTypeBoxes()
 {
-	if (charsList->GetSelection() != wxNOT_FOUND)
+	auto codes = getSelectedCharCodes();
+	if (!codes.empty())
 	{
-		wxArrayString fileTypes = mHandler.wxGetFileTypes(vHandler.getCharCode(charsList->GetStringSelection().ToStdString()));
+		wxArrayString fileTypes = mHandler.wxGetFileTypes(codes, true);
 
 		// Enable or disable file type checkbox based on whether or not it exists in character's map
 		auto fTypes = mHandler.wxGetFileTypes();
@@ -361,7 +360,7 @@ void MainFrame::updateButtons()
 		Slot finalSlot = Slot(finalSlots.list->GetValue());
 		wxArrayString fileTypes = this->getSelectedFileTypes();
 
-		if (mHandler.wxHasSlot(mHandler.getCode(charsList->GetStringSelection().ToStdString()), finalSlot, fileTypes))
+		if (mHandler.wxHasSlot(getSelectedCharCodes(), finalSlot, fileTypes, true))
 		{
 			buttons.mov->Disable();
 			buttons.dup->Disable();
@@ -395,24 +394,6 @@ void MainFrame::updateInkMenu()
 		inkMenu->Enable();
 		inkMenu->SetHelp("Add or modify colors. Required for additional slots.");
 	}
-}
-
-void MainFrame::togglePRCOutput(wxCommandEvent& evt)
-{
-	settings.prcxOutput = !settings.prcxOutput;
-
-	if (settings.prcxOutput)
-	{
-		log->LogText("> Set PRC output to PRCX");
-		buttons.prc->SetLabel("Create PRCX");
-	}
-	else
-	{
-		log->LogText("> Set PRC output to PRCXML");
-		buttons.prc->SetLabel("Create PRCXML");
-	}
-
-	updateSettings();
 }
 
 void MainFrame::toggleBaseReading(wxCommandEvent& evt)
@@ -509,7 +490,7 @@ void MainFrame::onCharSelect(wxCommandEvent& evt)
 {
 	this->updateFileTypeBoxes();
 
-	initSlots.list->Set(mHandler.wxGetSlots(mHandler.getCode(charsList->GetStringSelection().ToStdString()), getSelectedFileTypes()));
+	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), true));
 
 	if (!initSlots.list->IsEmpty())
 	{
@@ -521,9 +502,7 @@ void MainFrame::onCharSelect(wxCommandEvent& evt)
 
 void MainFrame::onFileTypeSelect(wxCommandEvent& evt)
 {
-	wxArrayString fileTypes = getSelectedFileTypes();
-
-	initSlots.list->Set(mHandler.wxGetSlots(mHandler.getCode(charsList->GetStringSelection().ToStdString()), fileTypes));
+	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), true));
 
 	if (!initSlots.list->IsEmpty())
 	{
@@ -550,9 +529,9 @@ void MainFrame::onMovePressed(wxCommandEvent& evt)
 	Slot initSlot = Slot(initSlots.list->GetStringSelection().ToStdString());
 	Slot finalSlot = Slot(finalSlots.list->GetValue());
 
-	mHandler.adjustFiles("move", vHandler.getCharCode(charsList->GetStringSelection().ToStdString()), fileTypes, initSlot, finalSlot);
-	initSlots.list->Set(mHandler.wxGetSlots(mHandler.getCode(charsList->GetStringSelection().ToStdString()), getSelectedFileTypes()));
-	initSlots.list->SetStringSelection(finalSlot.getString());
+	mHandler.adjustFiles("move", getSelectedCharCodes(), fileTypes, initSlot, finalSlot);
+	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), true));
+	initSlots.list->SetStringSelection("c" + finalSlot.getString());
 
 	this->updateButtons();
 
@@ -579,12 +558,12 @@ void MainFrame::onDuplicatePressed(wxCommandEvent& evt)
 {
 	wxArrayString fileTypes = getSelectedFileTypes();
 
-	int initSlot = stoi(initSlots.list->GetStringSelection().ToStdString());
-	int finalSlot = finalSlots.list->GetValue();
+	Slot initSlot = Slot(initSlots.list->GetStringSelection().ToStdString());
+	Slot finalSlot = Slot(finalSlots.list->GetValue());
 
-	mHandler.adjustFiles("duplicate", vHandler.getCharCode(charsList->GetStringSelection().ToStdString()), fileTypes, initSlot, finalSlot);
-	initSlots.list->Set(mHandler.wxGetSlots(vHandler.getCharCode(charsList->GetStringSelection().ToStdString()), getSelectedFileTypes()));
-	initSlots.list->SetStringSelection(to_string(initSlot));
+	mHandler.adjustFiles("duplicate", getSelectedCharCodes(), fileTypes, initSlot, finalSlot);
+	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), true));
+	initSlots.list->SetStringSelection("c" + initSlot.getString());
 
 	this->updateButtons();
 
@@ -605,7 +584,7 @@ void MainFrame::onDeletePressed(wxCommandEvent& evt)
 {
 	int numChar = mHandler.getNumCharacters();
 
-	mHandler.adjustFiles("delete", mHandler.getCode(charsList->GetStringSelection().ToStdString()), getSelectedFileTypes(), Slot(initSlots.list->GetStringSelection().ToStdString()), Slot(-1));
+	mHandler.adjustFiles("delete", getSelectedCharCodes(), getSelectedFileTypes(), Slot(initSlots.list->GetStringSelection().ToStdString()), Slot(-1));
 
 	if (mHandler.getNumCharacters() != numChar)
 	{
@@ -617,7 +596,7 @@ void MainFrame::onDeletePressed(wxCommandEvent& evt)
 	else
 	{
 		this->updateFileTypeBoxes();
-		initSlots.list->Set(mHandler.wxGetSlots(mHandler.getCode(charsList->GetStringSelection().ToStdString()), getSelectedFileTypes()));
+		initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), true));
 
 		if (!initSlots.list->IsEmpty())
 		{
@@ -682,7 +661,7 @@ void MainFrame::onBasePressed(wxCommandEvent& evt)
 
 void MainFrame::onConfigPressed(wxCommandEvent& evt)
 {
-	mHandler.createConfig();
+	mHandler.create_config();
 }
 
 void MainFrame::onInkPressed(wxCommandEvent& evt)
@@ -780,158 +759,79 @@ void MainFrame::onInkPressed(wxCommandEvent& evt)
 
 void MainFrame::onPrcPressed(wxCommandEvent& evt)
 {
-	//bool hasAddSlots = data.hasAdditionalSlot();
+	bool hasAddSlots = mHandler.hasAddSlot();
 
-	//if (hasAddSlots || !data.mod.empty())
-	//{
-	//	// Make character-slots map
-	//	map<string, set<string>> allSlots;
-	//	for (auto i = data.mod.begin(); i != data.mod.end(); i++)
-	//	{
-	//		wxArrayString slots = data.getSlots(i->first);
+	if (hasAddSlots || mHandler.hasChar())
+	{
+		// Make character-slots map
 
-	//		for (auto j = slots.begin(); j != slots.end(); j++)
-	//		{
-	//			if (*j == "all")
-	//			{
-	//				continue;
-	//			}
+		PrcSelection dlg(this, wxID_ANY, "Make Selection", mHandler, settings.readNames);
+		if (dlg.ShowModal() == wxID_OK)
+		{
+			auto finalSlots = dlg.getMaxSlots(&mHandler);
+			auto finalNames = dlg.getNames();
+			auto finalAnnouncers = dlg.getAnnouncers();
 
-	//			allSlots[i->first].insert(j->ToStdString());
-	//		}
-	//	}
+			wxArrayString exeLog;
 
-	//	PrcSelection dlg(this, wxID_ANY, "Make Selection", data, settings.readNames);
-	//	if (dlg.ShowModal() == wxID_OK)
-	//	{
-	//		map<string, int> finalSlots = dlg.getMaxSlots(allSlots);
-	//		map<string, map<int, Name>> finalNames = dlg.getNames();
-	//		map<string, map<int, string>> finalAnnouncers = dlg.getAnnouncers();
+			if (hasAddSlots || !finalNames.empty() || !finalAnnouncers.empty())
+			{
+				// Change working directory
+				wxSetWorkingDirectory("Files/prc/");
 
-	//		wxArrayString exeLog;
+				// Create XML
+				wxExecute("param-xml disasm vanilla.prc -o ui_chara_db.xml -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
 
-	//		if (hasAddSlots || !finalNames.empty() || !finalAnnouncers.empty())
-	//		{
-	//			if (settings.prcxOutput)
-	//			{
-	//				// Change directory to parcel and param-xml's location
-	//				// INFO: parcel requires current working directory to be the same,
-	//				wxSetWorkingDirectory("Files/prc/");
+				mHandler.create_db_prcxml(finalNames, finalAnnouncers, finalSlots);
+				if (!finalNames.empty())
+				{
+					mHandler.create_message_xmsbt(finalNames);
+				}
 
-	//				// Create XML
-	//				wxExecute("param-xml disasm vanilla.prc -o ui_chara_db.xml -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
+				if (exeLog.size() == 1 && exeLog[0].substr(0, 9) == "Completed")
+				{
+					log->LogText("> Success! ui_chara_db.prcxml was created!");
 
-	//				// Edit Vanilla XML
-	//				if (hasAddSlots)
-	//				{
-	//					data.patchXMLSlots(finalSlots);
-	//				}
-	//				if (!finalNames.empty())
-	//				{
-	//					data.patchXMLNames(finalNames);
-	//				}
-	//				if (!finalAnnouncers.empty())
-	//				{
-	//					data.patchXMLAnnouncer(finalAnnouncers);
-	//				}
+					if (!finalNames.empty())
+					{
+						log->LogText("> Success! msg_name.xmsbt was created!");
+					}
 
-	//				// Create Modif PRC
-	//				wxExecute("param-xml asm ui_chara_db.xml -o modif.prc -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
+					fs::create_directories(mHandler.getPath() + "/ui/param/database/");
+					fs::rename(fs::current_path() / "ui_chara_db.prcxml", mHandler.getPath() + "/ui/param/database/ui_chara_db.prcxml");
 
-	//				// Create Modif PRCX
-	//				wxExecute("parcel diff vanilla.prc modif.prc ui_chara_db.prcx", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
+					if (fs::exists(mHandler.getPath() + "/ui/param/database/ui_chara_db.prcx"))
+					{
+						fs::remove(mHandler.getPath() + "/ui/param/database/ui_chara_db.prcx");
+					}
+				}
+				else
+				{
+					log->LogText("> Error: Something went wrong, possible issue below:");
 
-	//				if (exeLog.size() == 2 && exeLog[0].substr(0, 9) == "Completed")
-	//				{
-	//					log->LogText("> Success! ui_chara_db.prcx was created!");
+					for (int i = 0; i < exeLog.size(); i++)
+					{
+						log->LogText(">" + exeLog[i]);
+					}
+				}
 
-	//					if (!finalNames.empty())
-	//					{
-	//						log->LogText("> Success! msg_name.xmsbt was created!");
-	//					}
-
-	//					fs::create_directories(data.rootPath + "/ui/param/database/");
-	//					fs::rename(fs::current_path() / "ui_chara_db.prcx", data.rootPath + "/ui/param/database/ui_chara_db.prcx");
-
-	//					fs::remove(fs::current_path() / "modif.prc");
-	//					fs::remove(fs::current_path() / "ui_chara_db.xml");
-
-	//					if (fs::exists(data.rootPath + "/ui/param/database/ui_chara_db.prcxml"))
-	//					{
-	//						fs::remove(data.rootPath + "/ui/param/database/ui_chara_db.prcxml");
-	//					}
-	//				}
-	//				else
-	//				{
-	//					log->LogText("> Error: Something went wrong, possible issue below:");
-
-	//					for (int i = 0; i < exeLog.size(); i++)
-	//					{
-	//						log->LogText(">" + exeLog[i]);
-	//					}
-	//				}
-
-	//				// Restore working directory
-	//				wxSetWorkingDirectory("../../");
-	//			}
-	//			else
-	//			{
-	//				// Change directory to parcel and param-xml's location
-	//				// INFO: parcel requires current working directory to be the same,
-	//				wxSetWorkingDirectory("Files/prc/");
-
-	//				// Create XML
-	//				wxExecute("param-xml disasm vanilla.prc -o ui_chara_db.xml -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
-
-	//				// Create PRCXML
-	//				data.createPRCXML(finalNames, finalAnnouncers, finalSlots);
-
-	//				if (exeLog.size() == 1 && exeLog[0].substr(0, 9) == "Completed")
-	//				{
-	//					log->LogText("> Success! ui_chara_db.prcx was created!");
-
-	//					if (!finalNames.empty())
-	//					{
-	//						log->LogText("> Success! msg_name.xmsbt was created!");
-	//					}
-
-	//					fs::create_directories(data.rootPath + "/ui/param/database/");
-	//					fs::rename(fs::current_path() / "ui_chara_db.prcxml", data.rootPath + "/ui/param/database/ui_chara_db.prcxml");
-
-
-	//					if (fs::exists(data.rootPath + "/ui/param/database/ui_chara_db.prcx"))
-	//					{
-	//						fs::remove(data.rootPath + "/ui/param/database/ui_chara_db.prcx");
-	//					}
-	//				}
-	//				else
-	//				{
-	//					log->LogText("> Error: Something went wrong, possible issue below:");
-
-	//					for (int i = 0; i < exeLog.size(); i++)
-	//					{
-	//						log->LogText(">" + exeLog[i]);
-	//					}
-	//				}
-
-	//				// Restore working directory
-	//				wxSetWorkingDirectory("../../");
-	//			}
-	//		}
-	//		else
-	//		{
-	//			log->LogText("> N/A: No changes were made.");
-	//		}
-	//	}
-	//}
-	//else if (data.mod.empty())
-	//{
-	//	log->LogText("> N/A: Mod is empty, cannot create a prcx!");
-	//}
-	//else
-	//{
-	//	log->LogText("> N/A: No additional slots detected.");
-	//}
+				// Restore working directory
+				wxSetWorkingDirectory("../../");
+			}
+			else
+			{
+				log->LogText("> N/A: No changes were made.");
+			}
+		}
+	}
+	else if (!mHandler.hasChar())
+	{
+		log->LogText("> N/A: Mod is empty, cannot create a prcx!");
+	}
+	else
+	{
+		log->LogText("> N/A: No additional slots detected.");
+	}
 }
 
 void MainFrame::onMenuClose(wxCommandEvent& evt)
@@ -941,18 +841,17 @@ void MainFrame::onMenuClose(wxCommandEvent& evt)
 
 void MainFrame::onClose(wxCloseEvent& evt)
 {
-
 	evt.Skip();
 }
 
 void MainFrame::onTestPressed(wxCommandEvent& evt)
 {
-	mHandler.createConfig();
+	mHandler.test();
 }
 
 void MainFrame::onDeskPressed(wxCommandEvent& evt)
 {
-	mHandler.removeDesktopINI();
+	mHandler.remove_desktop_ini();
 }
 
 MainFrame::~MainFrame()
