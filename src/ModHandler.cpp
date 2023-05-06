@@ -210,6 +210,21 @@ string ModHandler::getCode(string name)
 	return vHandler.getCharCode(name);
 }
 
+InklingColor ModHandler::getInklingColor(Slot slot)
+{
+	auto charIter = slots.find("inkling");
+	if (charIter != slots.end())
+	{
+		auto slotIter = charIter->second.find(slot);
+		if (slotIter != charIter->second.end())
+		{
+			return vHandler.getInklingColor(slotIter->second);
+		}
+	}
+
+	return vHandler.getInklingColor(slot);
+}
+
 int ModHandler::getNumCharacters()
 {
 	return files.size();
@@ -1146,13 +1161,27 @@ void ModHandler::adjustFiles(string action, string code, wxArrayString fileTypes
 			wxLog("> Error! " + code + " does not exist!");
 		}
 
-		if (iSlot.getInt() == 999)
+		if (action != "delete")
 		{
-			wxLog("> Success! " + getName(code) + "'s default slot was moved to c" + fSlot.getString() + "!");
+			if (iSlot.getInt() == 999)
+			{
+				wxLog("> Success! " + getName(code) + "'s default slot was " + action + "d to c" + fSlot.getString() + "!");
+			}
+			else
+			{
+				wxLog("> Success! " + getName(code) + "'s c" + iSlot.getString() + " was " + action + "d to c" + fSlot.getString() + "!");
+			}
 		}
 		else
 		{
-			wxLog("> Success! " + getName(code) + "'s c" + iSlot.getString() + " was moved to c" + fSlot.getString() + "!");
+			if (iSlot.getInt() == 999)
+			{
+				wxLog("> Success! " + getName(code) + "'s default slot was deleted!");
+			}
+			else
+			{
+				wxLog("> Success! " + getName(code) + "'s c" + iSlot.getString() + " was deleted!");
+			}
 		}
 	}
 }

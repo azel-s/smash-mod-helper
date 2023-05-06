@@ -51,6 +51,7 @@ public:
 	string getPath();
 	string getName(string code);
 	string getCode(string name);
+	InklingColor getInklingColor(Slot slot);
 	int getNumCharacters();
 	map<string, set<Slot>> getAllSlots() const;
 	set<Slot> getAddSlots(string code)  const;

@@ -666,95 +666,36 @@ void MainFrame::onConfigPressed(wxCommandEvent& evt)
 
 void MainFrame::onInkPressed(wxCommandEvent& evt)
 {
-	//auto inklingColors = data.readInk();
+	InkSelection dlg(this, wxID_ANY, "Choose Inkling Colors", mHandler, settings.readInk);
 
-	//InkSelection dlg(this, wxID_ANY, "Choose Inkling Colors", data, settings.readInk);
+	if (dlg.ShowModal() == wxID_OK)
+	{
+		auto finalColors = dlg.getFinalColors();
 
-	//if (dlg.ShowModal() == wxID_OK)
-	//{
-	//	auto finalColors = dlg.getFinalColors();
+		if (!finalColors.empty())
+		{
+			// Change directory to parcel and param-xml's location
+			// TODO: Make function not rely on directory change
+			wxSetWorkingDirectory("Files/prc/");
 
-	//	if (!finalColors.empty())
-	//	{
-	//		if (settings.prcxOutput)
-	//		{
-	//			wxArrayString exeLog;
+			mHandler.create_ink_prcxml(finalColors);
 
-	//			// Change directory to parcel and param-xml's location
-	//			// INFO: parcel requires current working directory to be the same,
-	//			wxSetWorkingDirectory("Files/prc/");
+			fs::create_directories(mHandler.getPath() + "/fighter/common/param/");
+			fs::rename(fs::current_path() / "effect_Edit.prcxml", mHandler.getPath() + "/fighter/common/param/effect.prcxml");
 
-	//			// Create XML
-	//			wxExecute("param-xml disasm effect.prc -o effect.xml -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
+			if (fs::exists(mHandler.getPath() + "/fighter/common/param/effect.prcx"))
+			{
+				fs::remove(mHandler.getPath() + "/fighter/common/param/effect.prcx");
+			}
 
-	//			// Patch Colors
-	//			data.patchXMLInkColors(finalColors);
-
-	//			// Create Modif PRC
-	//			wxExecute("param-xml asm effect.xml -o modif_effect.prc -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
-
-	//			// Create Modif PRCX
-	//			wxExecute("parcel diff effect.prc modif_effect.prc effect.prcx", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
-
-	//			bool error = true;
-
-	//			if (exeLog.size() == 2 && exeLog[0].substr(0, 9) == "Completed")
-	//			{
-	//				log->LogText("> Success! effect.prcx was created!");
-	//				error = false;
-	//			}
-
-	//			if (error)
-	//			{
-	//				log->LogText("> Error: Something went wrong, possible issue below:");
-
-	//				for (int i = 0; i < exeLog.size(); i++)
-	//				{
-	//					log->LogText(">" + exeLog[i]);
-	//				}
-	//			}
-	//			else
-	//			{
-	//				fs::create_directories(data.rootPath + "/fighter/common/param/");
-	//				fs::rename(fs::current_path() / "effect.prcx", data.rootPath + "/fighter/common/param/effect.prcx");
-
-	//				fs::remove(fs::current_path() / "modif_effect.prc");
-
-	//				if (fs::exists(data.rootPath + "/fighter/common/param/effect.prcxml"))
-	//				{
-	//					fs::remove(data.rootPath + "/fighter/common/param/effect.prcxml");
-	//				}
-	//				fs::remove(fs::current_path() / "effect.xml");
-	//			}
-
-	//			// Restore working directory
-	//			wxSetWorkingDirectory("../../");
-	//		}
-	//		else
-	//		{
-	//			// Change directory to parcel and param-xml's location
-	//			// TODO: Make function not rely on directory change
-	//			wxSetWorkingDirectory("Files/prc/");
-
-	//			data.createInkPRCXML(finalColors);
-
-	//			fs::create_directories(data.rootPath + "/fighter/common/param/");
-	//			fs::rename(fs::current_path() / "effect_Edit.prcxml", data.rootPath + "/fighter/common/param/effect.prcxml");
-
-	//			if (fs::exists(data.rootPath + "/fighter/common/param/effect.prcx"))
-	//			{
-	//				fs::remove(data.rootPath + "/fighter/common/param/effect.prcx");
-	//			}
-
-	//			// Restore working directory
-	//			wxSetWorkingDirectory("../../");
-	//		}
-	//	}
-	//	else
-	//	{
-	//		log->LogText("> N/A: No changes were made.");
-	//	}
-	//}
+			// Restore working directory
+			wxSetWorkingDirectory("../../");
+		}
+		else
+		{
+			log->LogText("> N/A: No changes were made.");
+		}
+	}
 }
 
 void MainFrame::onPrcPressed(wxCommandEvent& evt)
