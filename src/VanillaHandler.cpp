@@ -276,7 +276,7 @@ int VanillaHandler::getFiles(string code, Slot slot, map<string, set<Path>>& fil
 							}
 						}
 					}
-					else
+					else if(code != "element")
 					{
 						return -1;
 					}
@@ -288,9 +288,9 @@ int VanillaHandler::getFiles(string code, Slot slot, map<string, set<Path>>& fil
 				{
 					insertFiles(*fsIter, files, "finalsmash");
 				}
-				else
+				else if (code != "element")
 				{
-					result = -1;
+					return -1;
 				}
 			}
 			else
@@ -311,7 +311,7 @@ int VanillaHandler::getFiles(string code, Slot slot, map<string, set<Path>>& fil
 				files["effect"].insert(Path(*i));
 			}
 		}
-		else
+		else if (code != "element")
 		{
 			return -1;
 		}

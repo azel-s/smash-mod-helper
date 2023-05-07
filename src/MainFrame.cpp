@@ -29,7 +29,7 @@ MainFrame::MainFrame(const wxString& title) :
 {
 	// Set Initial Path
 	iPath = fs::current_path().string();
-	std::replace(iPath.begin(), iPath.end(), '\\', '/');
+	replace(iPath.begin(), iPath.end(), '\\', '/');
 
 	// Set log window to be greyed out.
 	logWindow->SetEditable(false);
@@ -58,17 +58,26 @@ MainFrame::MainFrame(const wxString& title) :
 	wxMenu* optionsMenu = new wxMenu();
 
 	wxMenu* loadFromMod = new wxMenu();
+	wxMenu* selectionType = new wxMenu();
 	optionsMenu->AppendSubMenu(loadFromMod, "Load from mod");
+	optionsMenu->AppendSubMenu(selectionType, "Selection type");
 	auto readBaseID = loadFromMod->AppendCheckItem(wxID_ANY, "Base Slots", "Enables reading information from config.json")->GetId();
 	auto readNameID = loadFromMod->AppendCheckItem(wxID_ANY, "Custom Names", "Enables reading information from msg_name.xmsbt")->GetId();
 	auto readInkID = loadFromMod->AppendCheckItem(wxID_ANY, "Inkling Colors", "Enables reading information from effect.prcxml")->GetId();
+	auto selectUnionID = selectionType->AppendRadioItem(wxID_ANY, "Union", "Mario [c00 & c02] + Luigi [c00 + c03]-> [c01, c02, c03]")->GetId();
+	auto selectIntersectID = selectionType->AppendRadioItem(wxID_ANY, "Intersect", "Mario [c00 & c02] + Luigi [c00 + c03] -> [c00]")->GetId();
 	this->Bind(wxEVT_MENU, &MainFrame::toggleBaseReading, this, readBaseID);
 	this->Bind(wxEVT_MENU, &MainFrame::toggleNameReading, this, readNameID);
 	this->Bind(wxEVT_MENU, &MainFrame::toggleInkReading, this, readInkID);
+	this->Bind(wxEVT_MENU, &MainFrame::selectUnion, this, selectUnionID);
+	this->Bind(wxEVT_MENU, &MainFrame::selectIntersect, this, selectIntersectID);
 
 	loadFromMod->Check(readBaseID, settings.readBase);
 	loadFromMod->Check(readNameID, settings.readNames);
 	loadFromMod->Check(readInkID, settings.readInk);
+
+	selectionType->Check(selectUnionID, !settings.selectionType);
+	selectionType->Check(selectIntersectID, settings.selectionType);
 
 	menuBar->Append(fileMenu, "&File");
 	menuBar->Append(toolsMenu, "&Tools");
@@ -293,6 +302,8 @@ void MainFrame::readSettings()
 		int bit;
 
 		settingsFile >> bit;
+		settings.selectionType = (bit == 1) ? true : false;
+		settingsFile >> bit;
 		//settings.showLogWindow = (bit == 1) ? true : false;
 		settingsFile >> bit;
 		settings.readBase = (bit == 1) ? true : false;
@@ -315,6 +326,7 @@ void MainFrame::updateSettings()
 
 	if (settingsFile.is_open())
 	{
+		settingsFile << settings.selectionType << ' ';
 		settingsFile << settings.showLogWindow << ' ';
 		settingsFile << settings.readBase << ' ';
 		settingsFile << settings.readNames << ' ';
@@ -333,7 +345,7 @@ void MainFrame::updateFileTypeBoxes()
 	auto codes = getSelectedCharCodes();
 	if (!codes.empty())
 	{
-		wxArrayString fileTypes = mHandler.wxGetFileTypes(codes, true);
+		wxArrayString fileTypes = mHandler.wxGetFileTypes(codes, settings.selectionType);
 
 		// Enable or disable file type checkbox based on whether or not it exists in character's map
 		auto fTypes = mHandler.wxGetFileTypes();
@@ -360,7 +372,7 @@ void MainFrame::updateButtons()
 		Slot finalSlot = Slot(finalSlots.list->GetValue());
 		wxArrayString fileTypes = this->getSelectedFileTypes();
 
-		if (mHandler.wxHasSlot(getSelectedCharCodes(), finalSlot, fileTypes, true))
+		if (mHandler.wxHasSlot(getSelectedCharCodes(), finalSlot, fileTypes, false))
 		{
 			buttons.mov->Disable();
 			buttons.dup->Disable();
@@ -444,6 +456,58 @@ void MainFrame::toggleInkReading(wxCommandEvent& evt)
 	updateSettings();
 }
 
+void MainFrame::selectUnion(wxCommandEvent& evt)
+{
+	settings.selectionType = false;
+	updateSettings();
+	log->LogText("> Selection type is now set to union.");
+
+	this->updateFileTypeBoxes();
+	auto selectedFileTypes = getSelectedFileTypes();
+
+	if (!selectedFileTypes.empty())
+	{
+		initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), selectedFileTypes, settings.selectionType));
+	}
+	else
+	{
+		initSlots.list->Set(wxArrayString());
+	}
+
+	if (!initSlots.list->IsEmpty())
+	{
+		initSlots.list->Select(0);
+	}
+
+	updateButtons();
+}
+
+void MainFrame::selectIntersect(wxCommandEvent& evt)
+{
+	settings.selectionType = true;
+	updateSettings();
+	log->LogText("> Selection type is now set to intersect.");
+
+	this->updateFileTypeBoxes();
+	auto selectedFileTypes = getSelectedFileTypes();
+
+	if (!selectedFileTypes.empty())
+	{
+		initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), selectedFileTypes, settings.selectionType));
+	}
+	else
+	{
+		initSlots.list->Set(wxArrayString());
+	}
+
+	if (!initSlots.list->IsEmpty())
+	{
+		initSlots.list->Select(0);
+	}
+
+	updateButtons();
+}
+
 void MainFrame::onBrowse(wxCommandEvent& evt)
 {
 	wxDirDialog dialog(this, "Choose the root directory of your mod...", "", wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
@@ -489,8 +553,16 @@ void MainFrame::onBrowse(wxCommandEvent& evt)
 void MainFrame::onCharSelect(wxCommandEvent& evt)
 {
 	this->updateFileTypeBoxes();
+	auto selectedFileTypes = getSelectedFileTypes();
 
-	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), true));
+	if (!selectedFileTypes.empty())
+	{
+		initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), selectedFileTypes, settings.selectionType));
+	}
+	else
+	{
+		initSlots.list->Set(wxArrayString());
+	}
 
 	if (!initSlots.list->IsEmpty())
 	{
@@ -502,7 +574,7 @@ void MainFrame::onCharSelect(wxCommandEvent& evt)
 
 void MainFrame::onFileTypeSelect(wxCommandEvent& evt)
 {
-	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), true));
+	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), settings.selectionType));
 
 	if (!initSlots.list->IsEmpty())
 	{
@@ -530,7 +602,7 @@ void MainFrame::onMovePressed(wxCommandEvent& evt)
 	Slot finalSlot = Slot(finalSlots.list->GetValue());
 
 	mHandler.adjustFiles("move", getSelectedCharCodes(), fileTypes, initSlot, finalSlot);
-	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), true));
+	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), settings.selectionType));
 	initSlots.list->SetStringSelection("c" + finalSlot.getString());
 
 	this->updateButtons();
@@ -562,7 +634,7 @@ void MainFrame::onDuplicatePressed(wxCommandEvent& evt)
 	Slot finalSlot = Slot(finalSlots.list->GetValue());
 
 	mHandler.adjustFiles("duplicate", getSelectedCharCodes(), fileTypes, initSlot, finalSlot);
-	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), true));
+	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), settings.selectionType));
 	initSlots.list->SetStringSelection("c" + initSlot.getString());
 
 	this->updateButtons();
@@ -596,7 +668,7 @@ void MainFrame::onDeletePressed(wxCommandEvent& evt)
 	else
 	{
 		this->updateFileTypeBoxes();
-		initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), true));
+		initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), settings.selectionType));
 
 		if (!initSlots.list->IsEmpty())
 		{

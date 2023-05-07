@@ -53,7 +53,7 @@ public:
 	string getCode(string name);
 	InklingColor getInklingColor(Slot slot);
 	int getNumCharacters();
-	map<string, set<Slot>> getAllSlots() const;
+	map<string, set<Slot>> getAllSlots(bool withAll = true) const;
 	set<Slot> getAddSlots(string code)  const;
 	map<string, set<Slot>> getAddSlots() const;
 	Slot getBaseSlot(string code, Slot slot) const;

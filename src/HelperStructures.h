@@ -78,7 +78,7 @@ struct Config
 
 struct Settings
 {
-	bool prcxOutput = false;
+	bool selectionType = false;
 	bool showLogWindow = false;
 
 	bool readBase = true;

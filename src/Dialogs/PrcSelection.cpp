@@ -24,7 +24,8 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 
 	gridSizer->SetFlexibleDirection(wxBOTH);
 
-	auto allSlots = mHandler.getAllSlots();
+	auto allSlots = mHandler.getAllSlots(false);
+
 	auto prevNames = mHandler.read_message_names();
 	bool slots = mHandler.hasAddSlot();
 
@@ -313,7 +314,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 						gridSizer->Add(text, wxGBPosition(currRow, currCol), wxGBSpan(), wxALIGN_CENTER_HORIZONTAL | wxALIGN_CENTER_VERTICAL);
 						currCol++;
 
-						if (hasSlot00 && j->getString() == 0)
+						if (hasSlot00 && j->getInt() == 0)
 						{
 							if (hasFlameSlot)
 							{
@@ -380,7 +381,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 							hasLightSlot = true;
 						}
 
-						if (hasSlot00 && j->getString() == 0)
+						if (hasSlot00 && j->getInt() == 0)
 						{
 							if (hasLightSlot)
 							{
@@ -472,7 +473,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 
 map<string, Slot> PrcSelection::getMaxSlots(ModHandler* mHandler)
 {
-	auto allSlots = mHandler->getAllSlots();
+	auto allSlots = mHandler->getAllSlots(false);
 	map<string, Slot> result;
 
 	if (!maxSlots.empty())

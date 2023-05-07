@@ -47,6 +47,8 @@ private:
 	void toggleBaseReading(wxCommandEvent& evt);
 	void toggleNameReading(wxCommandEvent& evt);
 	void toggleInkReading(wxCommandEvent& evt);
+	void selectUnion(wxCommandEvent& evt);
+	void selectIntersect(wxCommandEvent& evt);
 	void onBrowse(wxCommandEvent& evt);
 	void onCharSelect(wxCommandEvent& evt);
 	void onFileTypeSelect(wxCommandEvent& evt);

@@ -287,7 +287,7 @@ set<Slot> ModHandler::getAddSlots(string code) const
 	return addSlots;
 }
 
-map<string, set<Slot>> ModHandler::getAllSlots() const
+map<string, set<Slot>> ModHandler::getAllSlots(bool withAll) const
 {
 	map<string, set<Slot>> slots;
 
@@ -295,7 +295,10 @@ map<string, set<Slot>> ModHandler::getAllSlots() const
 	{
 		for (auto j = i->second.begin(); j != i->second.end(); j++)
 		{
-			slots[i->first].insert(j->first);
+			if (withAll || j->first.getInt() != 999)
+			{
+				slots[i->first].insert(j->first);
+			}
 		}
 	}
 
@@ -596,7 +599,7 @@ wxArrayString ModHandler::wxGetSlots(wxArrayString codes, wxArrayString fileType
 	{
 		for (auto& code : codes)
 		{
-			auto slots = wxGetSlots(code.ToStdString());
+			auto slots = wxGetSlots(code.ToStdString(), fileTypes);
 
 			for (auto& slot : slots)
 			{
@@ -666,7 +669,7 @@ bool ModHandler::hasAddSlot(string code) const
 				// Navigate slots
 				for (auto j = i->second.begin(); j != i->second.end(); j++)
 				{
-					if (j->first.getInt() > 7)
+					if (j->first.getInt() > 7 && j->first.getInt() != 999)
 					{
 						return true;
 					}
@@ -735,6 +738,10 @@ bool ModHandler::wxHasSlot(string code, Slot slot, wxArrayString fileTypes, bool
 							{
 								return false;
 							}
+						}
+						else
+						{
+							return false;
 						}
 					}
 				}
