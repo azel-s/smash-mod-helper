@@ -28,6 +28,19 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 	auto prevNames = mHandler.read_message_names();
 	bool slots = mHandler.hasAddSlot();
 
+	int rpm; // Aegis max slot.
+	{
+		bool hasRex = mHandler.hasChar("element");
+		bool hasPyra = mHandler.hasChar("eflame");
+		bool hasMythra = mHandler.hasChar("elight");
+
+		int r = hasRex ? allSlots.find("element")->second.rbegin()->getInt() + 1 : 0;
+		int p = hasRex ? allSlots.find("eflame")->second.rbegin()->getInt() + 1 : 0;
+		int m = hasRex ? allSlots.find("elight")->second.rbegin()->getInt() + 1 : 0;
+
+		rpm = max({ r, p, m });
+	}
+
 	wxString fieldName;
 
 	bool hasChar = false;
@@ -122,7 +135,16 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 
 		if (slots)
 		{
-			wxSpinCtrl* userSlot = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxSize(50, -1), wxSP_WRAP, 8, 255, i->second.rbegin()->getInt() + 1);
+			wxSpinCtrl* userSlot;
+			if (i->first == "element" || i->first == "eflame" || i->first == "elight")
+			{
+				userSlot = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxSize(50, -1), wxSP_WRAP, 8, 255, rpm);
+			}
+			else
+			{
+				userSlot = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxSize(50, -1), wxSP_WRAP, 8, 255, i->second.rbegin()->getInt() + 1);
+			}
+
 			maxSlots.push_back(userSlot);
 
 			if (i->first != "element")
@@ -473,6 +495,10 @@ map<string, Slot> PrcSelection::getMaxSlots(ModHandler* mHandler)
 				}
 				else if (i->first == "elight")
 				{
+					if (allSlots.find("element") == allSlots.end())
+					{
+						result["element"] = maxSlots[index]->GetValue();
+					}
 					result["elight_first"] = maxSlots[index]->GetValue();
 					result["elight_only"] = maxSlots[index]->GetValue();
 					index++;

@@ -2,6 +2,9 @@
 #include <wx/wx.h>
 #include <wx/spinctrl.h>
 #include <string>
+#include <set>
+#include <map>
+#include <vector>
 #include <locale>
 using namespace std;
 
@@ -57,6 +60,20 @@ struct DBData
 	// Constructors
 	DBData();
 	DBData(string code);
+};
+
+struct Config
+{
+	// files
+	vector<string> newDirInfos;
+	// files
+	vector<string> newDirInfosBase;
+	// code, slot, base-file, files
+	map<string, map<Slot, map<string, set<string>>>> shareToVanilla;
+	// code, slot, base-file, files
+	map<string, map<Slot, map<string, set<string>>>> shareToAdded;
+	// code, slot, section-label, files
+	map<string, map<Slot, map<string, set<string>>>> newDirFiles;
 };
 
 struct Settings

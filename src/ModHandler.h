@@ -83,14 +83,8 @@ public:
 	void adjustFiles(string action, wxArrayString codes, wxArrayString fileTypes, Slot iSlot, Slot fSlot);
 
 	/* --- FUNCTIONS (CONFIG/PRC) --- */
-	void getNewDirSlots
-	(
-		vector<string>& newDirInfos,
-		vector<string>& newDirInfosBase,
-		map<string, map<Slot, map<string, set<string>>>>& shareToVanilla,
-		map<string, map<Slot, map<string, set<string>>>>& shareToAdded,
-		map<string, map<Slot, map<string, set<string>>>>& newDirFiles
-	);
+	Config getNewDirSlots();
+	void getNewDirSlots(string code, Slot slot, Config& config);
 
 	// Creators
 	void create_config();

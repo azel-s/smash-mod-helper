@@ -241,7 +241,7 @@ Path::Path(string path)
 
 		if (slot.getInt() == -1)
 		{
-			auto endPos = path.rfind('/c');
+			auto endPos = path.rfind("/c");
 			if (endPos != string::npos)
 			{
 				try
