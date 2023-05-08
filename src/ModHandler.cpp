@@ -2,10 +2,9 @@
 
 #include "nlohmann/json.hpp"
 #include "ModHandler.h"
-#include <string>
 #include <filesystem>
 #include <fstream>
-#include <thread>
+#include <string>
 #include <codecvt>
 #include <queue>
 #include <cmath>
@@ -149,12 +148,7 @@ void ModHandler::wxLog(string message, bool debug)
 /* --- TEST FUNCTIONS (WIP/DEBUG) --- */
 void ModHandler::test()
 {
-	string code = "pickel";
-	auto db = vHandler.getXMLData(code, Slot(6));
 
-	wxLog("> " + code + ": (" + to_string(db.cIndex) + " " + to_string(db.cGroup) + " " + to_string(db.nIndex) + ")");
-	wxLog("> " + code + ": " + db.label);
-	wxLog("> " + code + ": " + db.article);
 }
 
 /* --- CONSTRUCTORS (UNIVERSAL) --- */
@@ -1511,7 +1505,7 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 					{
 						continue;
 					}
-					
+
 					Path path(k->getPath().substr(this->path.size() + 1));
 
 					allFiles.insert(path);
@@ -2023,9 +2017,14 @@ void ModHandler::create_config()
 			wxLog("> Error: " + (path + "/" + "config.json") + " could not be opened!");
 		}
 	}
+	else if (fs::exists(path + "/config.json"))
+	{
+		fs::remove(path + "/config.json");
+		wxLog("> NOTE: config.json is not needed, previous one was deleted.");
+	}
 	else
 	{
-		wxLog("> WARN: config.json is not needed.");
+		wxLog("> NOTE: config.json is not needed.");
 	}
 }
 
@@ -2269,10 +2268,6 @@ void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<strin
 		{
 			wxLog("> Error: " + fs::current_path().string() + "/ui_chara_db_EDIT.xml could not be opened!");
 		}
-	}
-	else
-	{
-		wxLog("> WARN: ui_chara_db.prcxml is not needed for the requested changes.");
 	}
 }
 

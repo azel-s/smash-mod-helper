@@ -795,9 +795,14 @@ void MainFrame::onPrcPressed(wxCommandEvent& evt)
 				// Restore working directory
 				wxSetWorkingDirectory("../../");
 			}
+			else if (fs::exists(mHandler.getPath() + "/ui/param/database/ui_chara_db.prcxml"))
+			{
+				fs::remove(mHandler.getPath() + "/ui/param/database/ui_chara_db.prcxml");
+				log->LogText("> NOTE: ui_chara_db.prcxml is not needed, previous one was deleted.");
+			}
 			else
 			{
-				log->LogText("> N/A: No changes were made.");
+				log->LogText("> NOTE: ui_chara_db.prcxml is not needed.");
 			}
 		}
 	}
