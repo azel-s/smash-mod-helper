@@ -29,6 +29,7 @@ private:
 	/* --- HELPERS (UNIVERSAL) --- */
 	void addFile(string code, string fileType, int slot, string file);
 	void outputUTF(wofstream& file, wxString str, bool parse = false);
+	void deleteEmptyDirs(string path);
 
 	/* --- HELPERS (WX) --- */
 	void wxLog(string message, bool debug = true);

@@ -85,6 +85,29 @@ void ModHandler::outputUTF(wofstream& file, wxString str, bool parse)
 	}
 }
 
+void ModHandler::deleteEmptyDirs(string path)
+{
+	for (const auto& i : fs::directory_iterator(path))
+	{
+		if (fs::is_directory(i))
+		{
+			if (fs::is_empty(i))
+			{
+				fs::remove(i);
+			}
+			else
+			{
+				deleteEmptyDirs(i.path().string());
+
+				if (fs::is_empty(i))
+				{
+					fs::remove(i);
+				}
+			}
+		}
+	}
+}
+
 void ModHandler::remove_desktop_ini()
 {
 	int count = 0;
@@ -795,6 +818,8 @@ void ModHandler::readFiles(string path)
 	replace(path.begin(), path.end(), '\\', '/');
 	this->path = path;
 
+	deleteEmptyDirs(path);
+
 	for (const auto& i : fs::directory_iterator(path))
 	{
 		string fileType = i.path().filename().string();
@@ -1119,40 +1144,24 @@ void ModHandler::adjustFiles(string action, string code, wxArrayString fileTypes
 								wxLog("> Error! " + fPath.getPath() + " has an invalid slot!");
 							}
 						}
-					}
 
-					if (action == "move")
-					{
-						files[code][fileTypes[i].ToStdString()].extract(slotIter->first);
-						slots[code].extract(slotIter->first);
-					}
-					else if (action == "delete")
-					{
-						files[code][fileTypes[i].ToStdString()].extract(slotIter->first);
-						slots[code].extract(slotIter->first);
-
-						if (files[code][fileTypes[i].ToStdString()].empty())
+						if (action == "move")
 						{
-							files[code].extract(fileTypes[i].ToStdString());
-
-							if (fileTypes[i] == "fighter")
-							{
-								std::filesystem::remove_all((path + "/fighter/" + code));
-							}
-
-							// Delete empty folders
-							// TODO: Check folder before deletion
-							/*
-							if (!hasFileType(fileTypes[i]))
-							{
-								std::filesystem::remove_all((this->path + "/" + fileTypes[i]).ToStdString());
-							}
-							*/
+							files[code][fileTypes[i].ToStdString()].extract(slotIter->first);
+							slots[code].extract(slotIter->first);
 						}
-
-						if (files[code].empty())
+						else if (action == "delete")
 						{
-							files.extract(code);
+							files[code][fileTypes[i].ToStdString()].extract(slotIter->first);
+							slots[code].extract(slotIter->first);
+
+							if (files[code][fileTypes[i].ToStdString()].empty())
+							{
+								files[code].extract(fileTypes[i].ToStdString());
+							}
+
+							// REMOVE ALL EMPTY DIRS
+							deleteEmptyDirs(path);
 						}
 					}
 				}
@@ -1160,6 +1169,11 @@ void ModHandler::adjustFiles(string action, string code, wxArrayString fileTypes
 				{
 					continue;
 				}
+			}
+
+			if (files[code].empty())
+			{
+				files.extract(code);
 			}
 		}
 		else

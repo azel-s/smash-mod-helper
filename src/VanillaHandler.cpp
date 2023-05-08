@@ -125,7 +125,7 @@ VanillaHandler::~VanillaHandler()
 {
 	for (auto i = code_name.begin(); i != code_name.end(); i++)
 	{
-delete i->second;
+		delete i->second;
 	}
 
 	for (auto i = name_code.begin(); i != name_code.end(); i++)
@@ -276,7 +276,7 @@ int VanillaHandler::getFiles(string code, Slot slot, map<string, set<Path>>& fil
 							}
 						}
 					}
-					else if(code != "element")
+					else if (code != "element")
 					{
 						return -1;
 					}

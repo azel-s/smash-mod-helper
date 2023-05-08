@@ -619,12 +619,26 @@ void MainFrame::onDuplicatePressed(wxCommandEvent& evt)
 void MainFrame::onDeletePressed(wxCommandEvent& evt)
 {
 	int numChar = mHandler.getNumCharacters();
+	/*wxArrayString temp = charsList->GetStrings();
+	set<wxString> temp2(temp.begin(), temp.end());*/
 
 	mHandler.adjustFiles("delete", getSelectedCharCodes(), getSelectedFileTypes(), Slot(initSlots.list->GetStringSelection().ToStdString()), Slot(-1));
 
 	if (mHandler.getNumCharacters() != numChar)
 	{
+		// TODO: Retain character selection after delete
 		charsList->Set(mHandler.wxGetCharacterNames());
+
+		/*temp = charsList->GetStrings();
+
+		for (int i = 0; i != temp.size(); i++)
+		{
+			if (temp2.find(temp[i]) != temp2.end())
+			{
+				charsList->Select(i);
+			}
+		}*/
+
 		this->resetFileTypeBoxes();
 		initSlots.list->Clear();
 		this->resetButtons();
