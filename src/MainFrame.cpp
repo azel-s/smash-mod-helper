@@ -2,15 +2,12 @@
 #include "Dialogs/BaseSelection.h"
 #include "Dialogs/PrcSelection.h"
 #include "Dialogs/InkSelection.h"
-#include <wx/wx.h>
-#include <wx/spinctrl.h>
-#include <wx/dirdlg.h>
 #include <filesystem>
 #include <fstream>
-#include <codecvt>
+#include <wx/wx.h>
+#include <wx/spinctrl.h>
 namespace fs = std::filesystem;
-using std::string;
-using std::string; using std::ofstream;
+using std::ofstream, std::string;
 
 MainFrame::MainFrame(const wxString& title) :
 	wxFrame

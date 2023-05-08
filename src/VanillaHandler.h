@@ -30,8 +30,9 @@ private:
 	// Index: slot, Value: { wxColour effect, wxColour arrow }
 	vector<InklingColor> inklingColors;
 
-	// Helper Functions
+	/* --- Helper Functions --- */
 	void insertFiles(const json& tJson, map<string, set<Path>>& files, string type) const;
+	void insertCodeName(string code, string name);
 
 public:
 	/* --- Constructor/Destructor --- */
@@ -39,13 +40,10 @@ public:
 	// INFO: Deletes dynamic strings for code/name.
 	~VanillaHandler();
 
-	// Setters/Modifiers
-	void insertCodeName(string code, string name);
-
 	/* --- Getters --- */
 	// Character code/name
-	string getCharName(string code) const;
-	string getCharCode(string name) const;
+	string getName(string code) const;
+	string getCode(string name) const;
 	
 	// JSON (and effect.data) Info
 	int getFiles(string code, Slot slot, map<string, set<Path>>& files) const;

@@ -1,16 +1,15 @@
 #pragma once
 
 #include "VanillaHandler.h"
-#include <wx/wx.h>
-#include <set>
+#include <unordered_map>
 #include <unordered_set>
 #include <map>
-#include <unordered_map>
-#include <thread>
+#include <set>
+#include <wx/wx.h>
 using json = nlohmann::json;
 using std::vector, std::set, std::unordered_set, std::map, std::unordered_map;
 
-class ModHandler
+class ModHandler : public VanillaHandler
 {
 private:
 	string path; // Mod Path
@@ -21,7 +20,6 @@ private:
 	// Access Order: code, final-slot, base-slot,
 	unordered_map<string, map<Slot, Slot>> slots;
 
-	VanillaHandler vHandler;
 	wxLogTextCtrl* log;
 
 	bool debug;
@@ -50,14 +48,12 @@ public:
 
 	/* --- GETTERS (UNIVERSAL) --- */
 	string getPath();
-	string getName(string code);
-	string getCode(string name);
-	InklingColor getInklingColor(Slot slot);
 	int getNumCharacters();
 	map<string, set<Slot>> getAllSlots(bool withAll = true) const;
 	set<Slot> getAddSlots(string code)  const;
 	map<string, set<Slot>> getAddSlots() const;
 	Slot getBaseSlot(string code, Slot slot) const;
+	InklingColor getInklingColor(Slot slot);
 
 	/* --- GETTERS (WX) --- */
 	wxArrayString wxGetCharacterNames(string fileType = "") const;

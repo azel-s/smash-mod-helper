@@ -26,7 +26,7 @@ void ModHandler::addFile(string code, string fileType, int slot, string file)
 		code = "ice_climber";
 	}
 
-	if (!vHandler.getCharName(code).empty())
+	if (!VanillaHandler::getName(code).empty())
 	{
 		replace(file.begin(), file.end(), '\\', '/');
 
@@ -217,16 +217,6 @@ string ModHandler::getPath()
 }
 
 /* --- GETTERS (UNIVERSAL) --- */
-string ModHandler::getName(string code)
-{
-	return vHandler.getCharName(code);
-}
-
-string ModHandler::getCode(string name)
-{
-	return vHandler.getCharCode(name);
-}
-
 InklingColor ModHandler::getInklingColor(Slot slot)
 {
 	auto charIter = slots.find("inkling");
@@ -235,11 +225,11 @@ InklingColor ModHandler::getInklingColor(Slot slot)
 		auto slotIter = charIter->second.find(slot);
 		if (slotIter != charIter->second.end())
 		{
-			return vHandler.getInklingColor(slotIter->second);
+			return VanillaHandler::getInklingColor(slotIter->second);
 		}
 	}
 
-	return vHandler.getInklingColor(slot);
+	return VanillaHandler::getInklingColor(slot);
 }
 
 int ModHandler::getNumCharacters()
@@ -354,7 +344,7 @@ wxArrayString ModHandler::wxGetCharacterNames(string fileType) const
 	{
 		if (fileType.empty() || i->second.find(fileType) != i->second.end())
 		{
-			characters.Add(vHandler.getCharName(i->first));
+			characters.Add(VanillaHandler::getName(i->first));
 		}
 	}
 	return characters;
@@ -1185,22 +1175,22 @@ void ModHandler::adjustFiles(string action, string code, wxArrayString fileTypes
 		{
 			if (iSlot.getInt() == 999)
 			{
-				wxLog("> Success! " + getName(code) + "'s default slot was " + action + "d to c" + fSlot.getString() + "!");
+				wxLog("> Success! " + VanillaHandler::getName(code) + "'s default slot was " + action + "d to c" + fSlot.getString() + "!");
 			}
 			else
 			{
-				wxLog("> Success! " + getName(code) + "'s c" + iSlot.getString() + " was " + action + "d to c" + fSlot.getString() + "!");
+				wxLog("> Success! " + VanillaHandler::getName(code) + "'s c" + iSlot.getString() + " was " + action + "d to c" + fSlot.getString() + "!");
 			}
 		}
 		else
 		{
 			if (iSlot.getInt() == 999)
 			{
-				wxLog("> Success! " + getName(code) + "'s default slot was deleted!");
+				wxLog("> Success! " + VanillaHandler::getName(code) + "'s default slot was deleted!");
 			}
 			else
 			{
-				wxLog("> Success! " + getName(code) + "'s c" + iSlot.getString() + " was deleted!");
+				wxLog("> Success! " + VanillaHandler::getName(code) + "'s c" + iSlot.getString() + " was deleted!");
 			}
 		}
 	}
@@ -1537,7 +1527,7 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 			if (additionalSlot)
 			{
 				// TODO: Verify with popo/nana
-				if (vHandler.getFiles(charcode, slotIter->second, baseFiles) != 0)
+				if (VanillaHandler::getFiles(charcode, slotIter->second, baseFiles) != 0)
 				{
 					wxLog("> Error: Unknown error encountered while gathering files from vanilla JSON.");
 				}
@@ -1768,7 +1758,7 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 			// Add NEW fighter files to newDirFiles
 			if (slotHasFighter)
 			{
-				if (!additionalSlot && vHandler.getFiles(code, slot, baseFiles) != 0)
+				if (!additionalSlot && VanillaHandler::getFiles(code, slot, baseFiles) != 0)
 				{
 					wxLog("> Error: Unknown error encountered while gathering files from vanilla JSON.");
 				}
@@ -2170,7 +2160,7 @@ void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<strin
 								auto slotIter = charLter->second.find(Slot(i));
 								if (slotIter != charLter->second.end())
 								{
-									auto db = vHandler.getXMLData(code, slotIter->second);
+									auto db = VanillaHandler::getXMLData(code, slotIter->second);
 
 									if (db.cIndex != 0)
 									{
@@ -2222,7 +2212,7 @@ void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<strin
 								auto slotIter = charLter->second.find(i->first);
 								if (slotIter != charLter->second.end())
 								{
-									auto db = vHandler.getXMLData(code, slotIter->second);
+									auto db = VanillaHandler::getXMLData(code, slotIter->second);
 									string slot = Slot(i->first.getInt() + 8).getString();
 
 									if (i->second == "Default")

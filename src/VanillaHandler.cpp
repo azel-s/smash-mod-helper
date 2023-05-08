@@ -143,7 +143,7 @@ void VanillaHandler::insertCodeName(string code, string name)
 	name_code[name] = codePtr;
 }
 
-string VanillaHandler::getCharName(string code) const
+string VanillaHandler::getName(string code) const
 {
 	auto iter = code_name.find(code);
 
@@ -159,7 +159,7 @@ string VanillaHandler::getCharName(string code) const
 
 // @INPUT: Character's codename.
 // @RETURN: Character's actual name (or empty if not found).
-string VanillaHandler::getCharCode(string name) const
+string VanillaHandler::getCode(string name) const
 {
 	auto iter = name_code.find(name);
 
