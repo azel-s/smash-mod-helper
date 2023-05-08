@@ -611,7 +611,10 @@ wxArrayString ModHandler::wxGetSlots(wxArrayString codes, wxArrayString fileType
 	wxArrayString slots;
 	for (auto& slot : slotsSet)
 	{
-		slots.Add(slot);
+		if (slot != "All" || slotsSet.size() == 1)
+		{
+			slots.Add(slot);
+		}
 	}
 	return slots;
 }
@@ -1508,14 +1511,11 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 					{
 						continue;
 					}
+					
+					Path path(k->getPath().substr(this->path.size() + 1));
 
-					for (const auto& l : fs::directory_iterator(k->getPath()))
-					{
-						string path = l.path().string().substr(this->path.size() + 1);
-
-						allFiles.insert(path);
-						soundFiles.insert(path);
-					}
+					allFiles.insert(path);
+					soundFiles.insert(path);
 				}
 
 				if (code == "ice_climber" && soundFiles.empty())
@@ -2214,7 +2214,7 @@ void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<strin
 
 									if (i->second == "Default")
 									{
-										uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_article_c" + slot + "\">" + db.label << "</hash40>";
+										uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_c" + slot + "\">" + db.label << "</hash40>";
 										if (!db.article.empty())
 										{
 											uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_article_c" + slot + "\">" + db.article << "</hash40>";
