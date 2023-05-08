@@ -177,24 +177,34 @@ void ModHandler::test()
 /* --- CONSTRUCTORS (UNIVERSAL) --- */
 ModHandler::ModHandler(wxLogTextCtrl* log) : log(log)
 {
-	debug = false;
+	path = "";
 
 	fileTypes.push_back("effect");
 	fileTypes.push_back("fighter");
 	fileTypes.push_back("sound");
 	fileTypes.push_back("ui");
+
+	debug = false;
 }
 
 /* --- SETTERS (UNIVERSAL) --- */
-void ModHandler::setSlots(map<string, map<Slot, set<Slot>>> slots)
+void ModHandler::setBaseSlots(map<string, map<Slot, set<Slot>>> slots)
 {
 	for (auto i = slots.begin(); i != slots.end(); i++)
 	{
-		for (auto j = i->second.begin(); j != i->second.end(); j++)
+		auto charIter = this->slots.find(i->first);
+		if (charIter != this->slots.end())
 		{
-			for (auto k = j->second.begin(); k != j->second.end(); k++)
+			for (auto j = i->second.begin(); j != i->second.end(); j++)
 			{
-				this->slots[i->first][*k] = j->first;
+				for (auto k = j->second.begin(); k != j->second.end(); k++)
+				{
+					auto slotIter = charIter->second.find(*k);
+					if (slotIter != charIter->second.end())
+					{
+						slotIter->second = j->first;
+					}
+				}
 			}
 		}
 	}
@@ -805,6 +815,9 @@ bool ModHandler::wxHasSlot(wxArrayString codes, Slot slot, wxArrayString fileTyp
 // TODO: Add in slot verification (look at Path Object for reference).
 void ModHandler::readFiles(string path)
 {
+	files.clear();
+	slots.clear();
+
 	replace(path.begin(), path.end(), '\\', '/');
 	this->path = path;
 
@@ -1205,7 +1218,6 @@ void ModHandler::adjustFiles(string action, wxArrayString codes, wxArrayString f
 }
 
 /* --- FUNCTIONS (CONFIG/PRC) --- */
-
 // Creators
 Config ModHandler::getNewDirSlots()
 {
@@ -2604,29 +2616,4 @@ map<Slot, InklingColor> ModHandler::read_ink_colors()
 	}
 
 	return inkColors;
-}
-
-/* --- RESET/CLEANUP --- */
-void ModHandler::clear()
-{
-	for (auto i = files.begin(); i != files.end(); i++)
-	{
-		for (auto j = i->second.begin(); j != i->second.end(); j++)
-		{
-			for (auto k = j->second.begin(); k != j->second.end(); k++)
-			{
-				k->second.clear();
-			}
-			j->second.clear();
-		}
-		i->second.clear();
-	}
-
-	for (auto i = slots.begin(); i != slots.end(); i++)
-	{
-		i->second.clear();
-	}
-
-	files.clear();
-	slots.clear();
 }

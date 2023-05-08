@@ -30,14 +30,13 @@ MainFrame::MainFrame(const wxString& title) :
 
 	// Set log window to be greyed out.
 	logWindow->SetEditable(false);
+	logWindow->Show(false);
 
 	readSettings();
-
-	// Window's status is updated after setting creation.
-	logWindow->Show(settings.showLogWindow);
+	updateSettings();
 
 	// Setup Menu
-	menuBar = new wxMenuBar();
+	wxMenuBar* menuBar = new wxMenuBar();
 
 	wxMenu* fileMenu = new wxMenu();
 	this->Bind(wxEVT_MENU, &MainFrame::onBrowse, this, fileMenu->Append(wxID_ANY, "&Open Folder\tCtrl-O")->GetId());
@@ -48,31 +47,31 @@ MainFrame::MainFrame(const wxString& title) :
 	deskMenu = new wxMenuItem(fileMenu, wxID_ANY, "Delete Desktop.ini Files", "Open a directory to enable this feature.");
 	this->Bind(wxEVT_MENU, &MainFrame::onInkPressed, this, toolsMenu->Append(inkMenu)->GetId());
 	this->Bind(wxEVT_MENU, &MainFrame::onDeskPressed, this, toolsMenu->Append(deskMenu)->GetId());
-	this->Bind(wxEVT_MENU, &MainFrame::onTestPressed, this, toolsMenu->Append(wxID_ANY, "Test Function")->GetId());
 	inkMenu->Enable(false);
 	deskMenu->Enable(false);
+
+	this->Bind(wxEVT_MENU, &MainFrame::onTestPressed, this, toolsMenu->Append(wxID_ANY, "Test Function")->GetId());
 
 	wxMenu* optionsMenu = new wxMenu();
 
 	wxMenu* loadFromMod = new wxMenu();
-	wxMenu* selectionType = new wxMenu();
 	optionsMenu->AppendSubMenu(loadFromMod, "Load from mod");
-	optionsMenu->AppendSubMenu(selectionType, "Selection type");
 	auto readBaseID = loadFromMod->AppendCheckItem(wxID_ANY, "Base Slots", "Enables reading information from config.json")->GetId();
 	auto readNameID = loadFromMod->AppendCheckItem(wxID_ANY, "Custom Names", "Enables reading information from msg_name.xmsbt")->GetId();
 	auto readInkID = loadFromMod->AppendCheckItem(wxID_ANY, "Inkling Colors", "Enables reading information from effect.prcxml")->GetId();
-	auto selectUnionID = selectionType->AppendRadioItem(wxID_ANY, "Union", "Mario [c00 & c02] + Luigi [c00 + c03]-> [c01, c02, c03]")->GetId();
-	auto selectIntersectID = selectionType->AppendRadioItem(wxID_ANY, "Intersect", "Mario [c00 & c02] + Luigi [c00 + c03] -> [c00]")->GetId();
 	this->Bind(wxEVT_MENU, &MainFrame::toggleBaseReading, this, readBaseID);
 	this->Bind(wxEVT_MENU, &MainFrame::toggleNameReading, this, readNameID);
 	this->Bind(wxEVT_MENU, &MainFrame::toggleInkReading, this, readInkID);
-	this->Bind(wxEVT_MENU, &MainFrame::toggleSelectionType, this, selectUnionID);
-	this->Bind(wxEVT_MENU, &MainFrame::toggleSelectionType, this, selectIntersectID);
-
 	loadFromMod->Check(readBaseID, settings.readBase);
 	loadFromMod->Check(readNameID, settings.readNames);
 	loadFromMod->Check(readInkID, settings.readInk);
 
+	wxMenu* selectionType = new wxMenu();
+	optionsMenu->AppendSubMenu(selectionType, "Selection type");
+	auto selectUnionID = selectionType->AppendRadioItem(wxID_ANY, "Union", "Mario [c00 & c02] + Luigi [c00 + c03]-> [c01, c02, c03]")->GetId();
+	auto selectIntersectID = selectionType->AppendRadioItem(wxID_ANY, "Intersect", "Mario [c00 & c02] + Luigi [c00 + c03] -> [c00]")->GetId();
+	this->Bind(wxEVT_MENU, &MainFrame::toggleSelectionType, this, selectUnionID);
+	this->Bind(wxEVT_MENU, &MainFrame::toggleSelectionType, this, selectIntersectID);
 	selectionType->Check(selectUnionID, !settings.selectionType);
 	selectionType->Check(selectIntersectID, settings.selectionType);
 
@@ -116,20 +115,20 @@ MainFrame::MainFrame(const wxString& title) :
 	// Create Move Button
 	buttons.mov = new wxButton(panel, wxID_ANY, "Move", wxDefaultPosition, wxDefaultSize);
 	buttons.mov->Bind(wxEVT_BUTTON, &MainFrame::onMovePressed, this);
-	buttons.mov->Disable();
 	buttons.mov->SetToolTip("Initial Slot is moved to Final Slot");
+	buttons.mov->Disable();
 
 	// Create Duplicate Button
 	buttons.dup = new wxButton(panel, wxID_ANY, "Duplicate", wxDefaultPosition, wxDefaultSize);
 	buttons.dup->Bind(wxEVT_BUTTON, &MainFrame::onDuplicatePressed, this);
-	buttons.dup->Disable();
 	buttons.dup->SetToolTip("Initial Slot is duplicated to Final Slot");
+	buttons.dup->Disable();
 
 	// Create Delete Button
 	buttons.del = new wxButton(panel, wxID_ANY, "Delete", wxDefaultPosition, wxDefaultSize);
 	buttons.del->Bind(wxEVT_BUTTON, &MainFrame::onDeletePressed, this);
-	buttons.del->Disable();
 	buttons.del->SetToolTip("Initial Slot is deleted");
+	buttons.del->Disable();
 
 	// Create Log Button
 	buttons.log = new wxButton(panel, wxID_ANY, "Show Log", wxDefaultPosition, wxDefaultSize);
@@ -139,26 +138,24 @@ MainFrame::MainFrame(const wxString& title) :
 	// Create Base Slots Button
 	buttons.base = new wxButton(panel, wxID_ANY, "Select Base Slots", wxDefaultPosition, wxDefaultSize);
 	buttons.base->Bind(wxEVT_BUTTON, &MainFrame::onBasePressed, this);
-	buttons.base->Hide();
 	buttons.base->SetToolTip("Choose source slot(s) for each additional slot");
+	buttons.base->Hide();
 
 	// Create Config Button
 	buttons.config = new wxButton(panel, wxID_ANY, "Create Config", wxDefaultPosition, wxDefaultSize);
 	buttons.config->Bind(wxEVT_BUTTON, &MainFrame::onConfigPressed, this);
-	buttons.config->Hide();
 	buttons.config->SetToolTip("Creata a config for any additionals costumes, extra textures, and/or effects");
+	buttons.config->Hide();
 
 	// Create prcx Buttons
-	buttons.prc = new wxButton(panel, wxID_ANY, "Create PRCXML", wxDefaultPosition, wxDefaultSize);
-	buttons.prc->Bind(wxEVT_BUTTON, &MainFrame::onPrcPressed, this);
-	buttons.prc->Hide();
-	buttons.prc->SetToolTip("Edit slot names or modify max slots for each character");
+	buttons.prcxml = new wxButton(panel, wxID_ANY, "Create PRCXML", wxDefaultPosition, wxDefaultSize);
+	buttons.prcxml->Bind(wxEVT_BUTTON, &MainFrame::onPrcPressed, this);
+	buttons.prcxml->SetToolTip("Edit slot names or modify max slots for each character");
+	buttons.prcxml->Hide();
 
-	// Set Close Window Bind
+	// Misc.
 	this->Bind(wxEVT_CLOSE_WINDOW, &MainFrame::onClose, this);
-
-	// Create Statusbar
-	statusBar = CreateStatusBar();
+	CreateStatusBar();
 
 	// Setup Sizer
 	wxBoxSizer* sizerM = new wxBoxSizer(wxVERTICAL);
@@ -220,7 +217,7 @@ MainFrame::MainFrame(const wxString& title) :
 	sizerC->AddStretchSpacer();
 
 	sizerC->Add(buttons.config, 1, wxALIGN_CENTER_VERTICAL);
-	sizerC->Add(buttons.prc, 1, wxALIGN_CENTER_VERTICAL);
+	sizerC->Add(buttons.prcxml, 1, wxALIGN_CENTER_VERTICAL);
 	sizerC->Add(buttons.base, 1, wxALIGN_CENTER_VERTICAL);
 
 	// D
@@ -247,18 +244,16 @@ void MainFrame::resetButtons()
 
 wxArrayString MainFrame::getSelectedCharCodes()
 {
-	wxArrayString codes;
+	auto selections = charsList->GetStrings();
 
-	wxArrayInt selections;
-	charsList->GetSelections(selections);
+	wxArrayString codes;
 	if (!selections.empty())
 	{
 		for (auto& selection : selections)
 		{
-			codes.Add(mHandler.getCode(charsList->GetString(selection).ToStdString()));
+			codes.Add(mHandler.getCode(selection.ToStdString()));
 		}
 	}
-
 	return codes;
 }
 
@@ -297,8 +292,6 @@ void MainFrame::readSettings()
 		settingsFile >> bit;
 		settings.selectionType = (bit == 1) ? true : false;
 		settingsFile >> bit;
-		//settings.showLogWindow = (bit == 1) ? true : false;
-		settingsFile >> bit;
 		settings.readBase = (bit == 1) ? true : false;
 		settingsFile >> bit;
 		settings.readNames = (bit == 1) ? true : false;
@@ -319,7 +312,6 @@ void MainFrame::updateSettings()
 	if (settingsFile.is_open())
 	{
 		settingsFile << settings.selectionType << ' ';
-		settingsFile << settings.showLogWindow << ' ';
 		settingsFile << settings.readBase << ' ';
 		settingsFile << settings.readNames << ' ';
 		settingsFile << settings.readInk;
@@ -354,6 +346,10 @@ void MainFrame::updateFileTypeBoxes()
 				fileTypeBoxes[i]->SetValue(false);
 			}
 		}
+	}
+	else
+	{
+		resetFileTypeBoxes();
 	}
 }
 
@@ -478,7 +474,6 @@ void MainFrame::onBrowse(wxCommandEvent& evt)
 	if (dialog.ShowModal() != wxID_CANCEL)
 	{
 		// Reset previous information
-		mHandler.clear();
 		charsList->Clear();
 		initSlots.list->Clear();
 		this->resetFileTypeBoxes();
@@ -496,13 +491,13 @@ void MainFrame::onBrowse(wxCommandEvent& evt)
 		{
 			buttons.base->Show();
 			buttons.config->Hide();
-			buttons.prc->Hide();
+			buttons.prcxml->Hide();
 		}
 		else
 		{
 			buttons.base->Hide();
 			buttons.config->Show();
-			buttons.prc->Show();
+			buttons.prcxml->Show();
 		}
 
 		updateInkMenu();
@@ -573,13 +568,13 @@ void MainFrame::onMovePressed(wxCommandEvent& evt)
 	{
 		buttons.base->Show();
 		buttons.config->Hide();
-		buttons.prc->Hide();
+		buttons.prcxml->Hide();
 	}
 	else
 	{
 		buttons.base->Hide();
 		buttons.config->Show();
-		buttons.prc->Show();
+		buttons.prcxml->Show();
 	}
 
 	updateInkMenu();
@@ -605,7 +600,7 @@ void MainFrame::onDuplicatePressed(wxCommandEvent& evt)
 	{
 		buttons.base->Show();
 		buttons.config->Hide();
-		buttons.prc->Hide();
+		buttons.prcxml->Hide();
 	}
 
 	updateInkMenu();
@@ -616,49 +611,42 @@ void MainFrame::onDuplicatePressed(wxCommandEvent& evt)
 void MainFrame::onDeletePressed(wxCommandEvent& evt)
 {
 	int numChar = mHandler.getNumCharacters();
-	/*wxArrayString temp = charsList->GetStrings();
-	set<wxString> temp2(temp.begin(), temp.end());*/
+	
+	auto selections = charsList->GetStrings();
+	set<wxString> selectionSet(selections.begin(), selections.end());
 
 	mHandler.adjustFiles("delete", getSelectedCharCodes(), getSelectedFileTypes(), Slot(initSlots.list->GetStringSelection().ToStdString()), Slot(-1));
 
 	if (mHandler.getNumCharacters() != numChar)
 	{
-		// TODO: Retain character selection after delete
 		charsList->Set(mHandler.wxGetCharacterNames());
 
-		/*temp = charsList->GetStrings();
+		selections = charsList->GetStrings();
 
-		for (int i = 0; i != temp.size(); i++)
+		for (int i = 0; i != selections.size(); i++)
 		{
-			if (temp2.find(temp[i]) != temp2.end())
+			if (selectionSet.find(selections[i]) != selectionSet.end())
 			{
 				charsList->Select(i);
 			}
-		}*/
-
-		this->resetFileTypeBoxes();
-		initSlots.list->Clear();
-		this->resetButtons();
-	}
-	else
-	{
-		this->updateFileTypeBoxes();
-		initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), settings.selectionType));
-
-		if (!initSlots.list->IsEmpty())
-		{
-			initSlots.list->SetSelection(0);
 		}
-
-		this->updateButtons();
 	}
+
+	updateFileTypeBoxes();
+	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), settings.selectionType));
+
+	if (!initSlots.list->IsEmpty())
+	{
+		initSlots.list->SetSelection(0);
+	}
+	updateButtons();
 
 	// Update buttons
 	if (!mHandler.hasAddSlot())
 	{
 		buttons.base->Hide();
 		buttons.config->Show();
-		buttons.prc->Show();
+		buttons.prcxml->Show();
 	}
 
 	updateInkMenu();
@@ -668,8 +656,6 @@ void MainFrame::onDeletePressed(wxCommandEvent& evt)
 
 void MainFrame::onLogPressed(wxCommandEvent& evt)
 {
-	settings.showLogWindow = !settings.showLogWindow;
-
 	if (logWindow->IsShown())
 	{
 		logWindow->Show(false);
@@ -692,12 +678,12 @@ void MainFrame::onBasePressed(wxCommandEvent& evt)
 
 	if (dlg.ShowModal() == wxID_OK)
 	{
-		mHandler.setSlots(dlg.getBaseSlots());
+		mHandler.setBaseSlots(dlg.getBaseSlots());
 
 		// Update Buttons
 		buttons.base->Hide();
 		buttons.config->Show();
-		buttons.prc->Show();
+		buttons.prcxml->Show();
 
 		inkMenu->Enable();
 		inkMenu->SetHelp("Add or modify colors. Required for additional slots.");

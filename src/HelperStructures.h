@@ -79,7 +79,6 @@ struct Config
 struct Settings
 {
 	bool selectionType = false;
-	bool showLogWindow = false;
 
 	bool readBase = true;
 	bool readNames = true;
@@ -113,7 +112,7 @@ struct wxButtons
 	wxButton* log;
 	wxButton* base;
 	wxButton* config;
-	wxButton* prc;
+	wxButton* prcxml;
 };
 
 struct Name

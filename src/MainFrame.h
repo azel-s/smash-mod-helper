@@ -10,7 +10,6 @@ class MainFrame : public wxFrame
 private:
 	/* --- GUI Parts --- */
 	wxPanel* panel;
-	wxMenuBar* menuBar;
 	wxMenuItem* inkMenu;
 	wxMenuItem* deskMenu;
 	wxBrowse browse;
@@ -21,7 +20,6 @@ private:
 	wxButtons buttons;
 	wxTextCtrl* logWindow;
 	wxLogTextCtrl* log;
-	wxStatusBar* statusBar;
 
 	/* --- Data Variables --- */
 	ModHandler mHandler;

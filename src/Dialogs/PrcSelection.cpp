@@ -453,7 +453,11 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 
 	sizerM->Add(gridSizer, 1, wxEXPAND | wxALL, 20);
 
-	text = new wxStaticText(panel, wxID_ANY, "Note: A slot's name can be left default if CSS/CSP/VS/Stage are not modified.");
+	text = new wxStaticText(panel, wxID_ANY, "Note 1: A slot's name can be left default if CSS/CSP/VS/Stage are not modified.");
+	text->SetFont(*boldFont);
+	sizerM->Add(text, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, 20);
+
+	text = new wxStaticText(panel, wxID_ANY, "Note 2: You can add a new line using the '|' character.");
 	text->SetFont(*boldFont);
 	sizerM->Add(text, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, 20);
 

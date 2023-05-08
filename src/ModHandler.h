@@ -40,7 +40,7 @@ public:
 	ModHandler(wxLogTextCtrl* log = nullptr);
 
 	/* --- SETTERS (UNIVERSAL) --- */
-	void setSlots(map<string, map<Slot, set<Slot>>> slots);
+	void setBaseSlots(map<string, map<Slot, set<Slot>>> slots);
 	void setDebug(bool debug);
 
 	/* --- SETTERS (WX) --- */
@@ -93,7 +93,4 @@ public:
 	map<string, map<Slot, Slot>> read_config_slots();
 	map<string, map<Slot, Name>> read_message_names();
 	map<Slot, InklingColor> read_ink_colors();
-
-	/* --- RESET/CLEANUP --- */
-	void clear();
 };
