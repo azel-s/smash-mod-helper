@@ -29,7 +29,7 @@ MainFrame::MainFrame(const wxString& title) :
 		title,
 		wxDefaultPosition,
 		wxDefaultSize,
-		wxSYSTEM_MENU | wxCAPTION | wxCLOSE_BOX | wxMINIMIZE_BOX & ~wxRESIZE_BORDER
+		wxDEFAULT_FRAME_STYLE & ~wxMAXIMIZE_BOX
 	),
 	panel(new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize)),
 	logWindow(new wxTextCtrl(panel, wxID_ANY, "Log Window:\n", wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE)),
@@ -116,12 +116,12 @@ MainFrame::MainFrame(const wxString& title) :
 	}
 
 	/* --- Initial/Final list --- */
-	initSlots.text = new wxStaticText(panel, wxID_ANY, "Initial Slot: ", wxDefaultPosition, wxSize(55, -1));
-	initSlots.list = new wxChoice(panel, wxID_ANY, wxDefaultPosition, wxSize(50, -1));
+	initSlots.text = new wxStaticText(panel, wxID_ANY, "Initial Slot: ", wxDefaultPosition, FromDIP(wxSize(55, -1)));
+	initSlots.list = new wxChoice(panel, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(50), -1));
 	initSlots.list->SetToolTip("Final Slot's source slot");
 
-	finalSlots.text = new wxStaticText(panel, wxID_ANY, "Final Slot: ", wxDefaultPosition, wxSize(55, -1));
-	finalSlots.list = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxSize(50, -1), wxSP_WRAP, 0, 255, 0);
+	finalSlots.text = new wxStaticText(panel, wxID_ANY, "Final Slot: ", wxDefaultPosition, FromDIP(wxSize(55, -1)));
+	finalSlots.list = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, FromDIP(wxSize(50, -1)), wxSP_WRAP, 0, 255, 0);
 	finalSlots.list->Bind(wxEVT_SPINCTRL, &MainFrame::onSelect, this, wxID_ANY, wxID_ANY, new wxArgument("finalSlot"));
 	finalSlots.list->SetToolTip("Initial Slot's target slot");
 
@@ -173,28 +173,31 @@ MainFrame::MainFrame(const wxString& title) :
 	wxBoxSizer* sizerB3A = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer* sizerB3B = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer* sizerC = new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* sizerC1 = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* sizerC2 = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* sizerC3 = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* sizerD = new wxBoxSizer(wxHORIZONTAL);
 
 	// Main Sizer
-	sizerM->Add(sizerA, 0, wxEXPAND | wxALL, 20);
-	sizerM->Add(sizerB, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxBOTTOM | wxRIGHT, 20);
-	sizerM->Add(sizerC, 0, wxLEFT | wxBOTTOM | wxRIGHT, 20);
-	sizerM->Add(sizerD, 0, wxEXPAND | wxLEFT | wxBOTTOM | wxRIGHT, 20);
+	sizerM->Add(sizerA, 1, wxEXPAND | wxALL, FromDIP(20));
+	sizerM->Add(sizerB, 10, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxBOTTOM | wxRIGHT, FromDIP(20));
+	sizerM->Add(sizerC, 1, wxEXPAND | wxLEFT | wxBOTTOM | wxRIGHT, FromDIP(20));
+	sizerM->Add(sizerD, 10, wxEXPAND | wxLEFT | wxBOTTOM | wxRIGHT, FromDIP(20));
 
 	// A
-	sizerA->Add(browse.text, 1, wxRIGHT, 10);
+	sizerA->Add(browse.text, 1, wxRIGHT, FromDIP(10));
 	sizerA->Add(browse.button, 0);
 
 	// B1
-	sizerB->Add(sizerB1, 3, wxEXPAND | wxRIGHT, 20);
+	sizerB->Add(sizerB1, 3, wxEXPAND | wxRIGHT, FromDIP(20));
 	sizerB1->Add(charsList, 1, wxEXPAND);
 
 	// B2
-	sizerB->Add(sizerB2, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 20);
+	sizerB->Add(sizerB2, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(20));
 	for (int i = 0; i < fileTypeBoxes.size() - 1; i++)
 	{
 		sizerB2->Add(fileTypeBoxes[i], 1);
-		sizerB2->AddSpacer(20);
+		sizerB2->AddSpacer(FromDIP(20));
 	}
 	sizerB2->Add(fileTypeBoxes[fTypes.size() - 1], 1);
 
@@ -202,12 +205,12 @@ MainFrame::MainFrame(const wxString& title) :
 	sizerB->Add(sizerB3, 1, wxALIGN_CENTER_VERTICAL);
 
 	// B3A
-	sizerB3->Add(sizerB3A, 1, wxBOTTOM, 10);
+	sizerB3->Add(sizerB3A, 1, wxBOTTOM, FromDIP(10));
 	sizerB3A->Add(initSlots.text, 0, wxALIGN_CENTER_VERTICAL);
 	sizerB3A->Add(initSlots.list, 1, wxALIGN_CENTER_VERTICAL);
 
 	// B3B
-	sizerB3->Add(sizerB3B, 1, wxBOTTOM, 10);
+	sizerB3->Add(sizerB3B, 1, wxBOTTOM, FromDIP(10));
 	sizerB3B->Add(finalSlots.text, 0, wxALIGN_CENTER_VERTICAL);
 	sizerB3B->Add(finalSlots.list, 1, wxALIGN_CENTER_VERTICAL);
 
@@ -217,14 +220,10 @@ MainFrame::MainFrame(const wxString& title) :
 	sizerB3->Add(buttons.del, 1, wxEXPAND);
 
 	// C
-	sizerC->Add(buttons.log, 1, wxALIGN_CENTER_VERTICAL);
-
-	sizerC->AddStretchSpacer();
-	sizerC->AddStretchSpacer();
-
-	sizerC->Add(buttons.config, 1, wxALIGN_CENTER_VERTICAL);
-	sizerC->Add(buttons.prcxml, 1, wxALIGN_CENTER_VERTICAL);
-	sizerC->Add(buttons.base, 1, wxALIGN_CENTER_VERTICAL);
+	sizerC->Add(buttons.log, 1);
+	sizerC->Add(buttons.base, 1);
+	sizerC->Add(buttons.config, 1);
+	sizerC->Add(buttons.prcxml, 1);
 
 	// D
 	sizerD->Add(logWindow, 1, wxEXPAND);
@@ -583,13 +582,13 @@ void MainFrame::onLogPressed(wxCommandEvent& evt)
 	if (logWindow->IsShown())
 	{
 		logWindow->Show(false);
-		this->SetSize(wxSize(this->GetSize().x, this->GetSize().y - 200));
+		this->SetSize(FromDIP(wxSize(this->GetSize().x, this->GetSize().y - 200)));
 		buttons.log->SetLabel("Show Log");
 	}
 	else
 	{
 		logWindow->Show(true);
-		this->SetSize(wxSize(this->GetSize().x, this->GetSize().y + 200));
+		this->SetSize(FromDIP(wxSize(this->GetSize().x, this->GetSize().y + 200)));
 		buttons.log->SetLabel("Hide Log");
 	}
 

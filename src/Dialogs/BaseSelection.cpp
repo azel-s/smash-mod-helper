@@ -73,13 +73,13 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
             proportion += 1;
         }
 
-        sizerM->AddSpacer(20);
+        sizerM->AddSpacer(FromDIP(20));
 
-        sizerM->Add(sizerA, proportion, wxEXPAND | wxLEFT | wxRIGHT, 20);
+        sizerM->Add(sizerA, proportion, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(20));
 
         wxStaticText* charName = new wxStaticText(panel, wxID_ANY, mHandler.getName(i->first));
         sizerA1->Add(charName, proportion, wxALIGN_CENTER_HORIZONTAL);
-        sizerA->Add(sizerA1, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 20);
+        sizerA->Add(sizerA1, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(20));
 
         wxBoxSizer* sizerA2A = nullptr;
         int index = 0;
@@ -97,10 +97,10 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
                 sizerA2->Add(sizerA2A, 1);
             }
 
-            wxStaticText* slot = new wxStaticText(panel, wxID_ANY, "Slot c" + j->getString() + ": ", wxDefaultPosition, wxSize(50, -1));
+            wxStaticText* slot = new wxStaticText(panel, wxID_ANY, "Slot c" + j->getString() + ": ", wxDefaultPosition, FromDIP(wxSize(50, -1)));
             sizerA2A->Add(slot, 0, wxALIGN_CENTER_VERTICAL);
 
-            wxChoice* baseSlotList = new wxChoice(panel, wxID_ANY, wxDefaultPosition, wxSize(50, -1), slotList);
+            wxChoice* baseSlotList = new wxChoice(panel, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(50, -1)), slotList);
 
             if (hasSlot)
             {
@@ -112,7 +112,7 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
             }
 
             baseSlots.push_back(baseSlotList);
-            sizerA2A->Add(baseSlotList, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 10);
+            sizerA2A->Add(baseSlotList, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(10));
 
             hasSlot = false;
             index++;
@@ -128,13 +128,13 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
     auto sizer = new wxBoxSizer(wxVERTICAL);
 
     sizer->Add(panel, 1, wxEXPAND);
-    sizer->Add(CreateButtonSizer(wxOK | wxCANCEL), 0, wxALIGN_RIGHT | wxTOP | wxRIGHT | wxBOTTOM, 20);
+    sizer->Add(CreateButtonSizer(wxOK | wxCANCEL), 0, wxALIGN_RIGHT | wxTOP | wxRIGHT | wxBOTTOM, FromDIP(20));
 
     this->SetSizerAndFit(sizer);
 
     if (sizer->GetMinSize().y > 600)
     {
-        this->SetMinSize(wxSize(sizer->GetMinSize().x, 600));
+        this->SetMinSize(FromDIP(wxSize(sizer->GetMinSize().x, 600)));
     }
 }
 

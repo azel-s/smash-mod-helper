@@ -139,11 +139,11 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 			wxSpinCtrl* userSlot;
 			if (i->first == "element" || i->first == "eflame" || i->first == "elight")
 			{
-				userSlot = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxSize(50, -1), wxSP_WRAP, 8, 255, rpm);
+				userSlot = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, FromDIP(wxSize(50, -1)), wxSP_WRAP, 8, 255, rpm);
 			}
 			else
 			{
-				userSlot = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxSize(50, -1), wxSP_WRAP, 8, 255, i->second.rbegin()->getInt() + 1);
+				userSlot = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, FromDIP(wxSize(50, -1)), wxSP_WRAP, 8, 255, i->second.rbegin()->getInt() + 1);
 			}
 
 			maxSlots.push_back(userSlot);
@@ -451,27 +451,27 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 		currCol = 0;
 	}
 
-	sizerM->Add(gridSizer, 1, wxEXPAND | wxALL, 20);
+	sizerM->Add(gridSizer, 1, wxEXPAND | wxALL, FromDIP(20));
 
 	text = new wxStaticText(panel, wxID_ANY, "Note 1: A slot's name can be left default if CSS/CSP/VS/Stage are not modified.");
 	text->SetFont(*boldFont);
-	sizerM->Add(text, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, 20);
+	sizerM->Add(text, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, FromDIP(20));
 
 	text = new wxStaticText(panel, wxID_ANY, "Note 2: You can add a new line using the '|' character.");
 	text->SetFont(*boldFont);
-	sizerM->Add(text, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, 20);
+	sizerM->Add(text, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxRIGHT, FromDIP(20));
 
 	panel->SetSizerAndFit(sizerM);
 	auto sizer = new wxBoxSizer(wxVERTICAL);
 
 	sizer->Add(panel, 1, wxEXPAND);
-	sizer->Add(CreateButtonSizer(wxOK | wxCANCEL), 0, wxALIGN_RIGHT | wxALL, 20);
+	sizer->Add(CreateButtonSizer(wxOK | wxCANCEL), 0, wxALIGN_RIGHT | wxALL, FromDIP(20));
 
 	this->SetSizerAndFit(sizer);
 
 	if (sizer->GetMinSize().y > 600)
 	{
-		this->SetMinSize(wxSize(sizer->GetMinSize().x, 600));
+		this->SetMinSize(FromDIP(wxSize(sizer->GetMinSize().x, 600)));
 	}
 }
 
