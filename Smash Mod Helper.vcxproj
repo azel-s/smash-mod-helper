@@ -19,7 +19,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\App.h" />
     <ClInclude Include="src\Dialogs\BaseSelection.h" />
     <ClInclude Include="src\Dialogs\InkSelection.h" />
     <ClInclude Include="src\Dialogs\PrcSelection.h" />
@@ -29,7 +28,6 @@
     <ClInclude Include="src\VanillaHandler.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\App.cpp" />
     <ClCompile Include="src\Dialogs\BaseSelection.cpp" />
     <ClCompile Include="src\Dialogs\InkSelection.cpp" />
     <ClCompile Include="src\Dialogs\PrcSelection.cpp" />

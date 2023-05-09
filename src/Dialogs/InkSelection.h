@@ -1,7 +1,6 @@
 #pragma once
 #include "../ModHandler.h"
 #include <wx/wx.h>
-#include <wx/spinctrl.h>
 #include <wx/clrpicker.h>
 
 class InkSelection : public wxDialog

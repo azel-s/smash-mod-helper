@@ -5,6 +5,12 @@
 #include <wx/spinctrl.h>
 using std::vector;
 
+class App : public wxApp
+{
+public:
+	bool OnInit();
+};
+
 class MainFrame : public wxFrame
 {
 private:

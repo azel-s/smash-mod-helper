@@ -104,7 +104,7 @@ bool Slot::operator<(const Slot& rhs) const
 			return false;
 		}
 	}
-	return this->slot < rhs.slot;	
+	return this->slot < rhs.slot;
 }
 
 /* --- {Path} ---*/
@@ -190,9 +190,24 @@ Path::Path(string path)
 			}
 		}
 	}
-	else if (path.find("fighter") == 0 || path.find("camera") == 0)
+	else if (path.find("append") == 0 || path.find("fighter") == 0 || path.find("camera") == 0 || path.find("prebuilt:/movie") == 0)
 	{
-		this->type = path.find("fighter") == 0 ? "fighter" : "camera";
+		if (path.find("append") == 0)
+		{
+			this->type = "append";
+		}
+		else if (path.find("fighter") == 0)
+		{
+			this->type = "fighter";
+		}
+		else if (path.find("camera") == 0)
+		{
+			this->type = "camera";
+		}
+		else
+		{
+			this->type = "movie";
+		}
 
 		int index = 0;
 		while (index < path.size() - 1)

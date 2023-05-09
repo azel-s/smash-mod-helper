@@ -281,17 +281,6 @@ int VanillaHandler::getFiles(string code, Slot slot, map<string, set<Path>>& fil
 						return -1;
 					}
 				}
-
-				// FinalSmash files.
-				auto fsIter = iter->find("finalsmash");
-				if (fsIter != iter->end())
-				{
-					insertFiles(*fsIter, files, "finalsmash");
-				}
-				else if (code != "element")
-				{
-					return -1;
-				}
 			}
 			else
 			{

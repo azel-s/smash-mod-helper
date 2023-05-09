@@ -5,9 +5,21 @@
 #include <filesystem>
 #include <fstream>
 #include <wx/wx.h>
-#include <wx/spinctrl.h>
 namespace fs = std::filesystem;
 using std::ofstream, std::string;
+
+wxIMPLEMENT_APP(App);
+
+bool App::OnInit()
+{
+	MainFrame* mainFrame = new MainFrame("Smash Ultimate Mod Helper");
+	mainFrame->SetIcons(wxICON(SMASH_ICON));
+	mainFrame->SetClientSize(400, 300);
+	mainFrame->SetMinSize(mainFrame->GetSize());
+	mainFrame->Show();
+
+	return true;
+}
 
 MainFrame::MainFrame(const wxString& title) :
 	wxFrame

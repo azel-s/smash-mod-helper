@@ -2,20 +2,10 @@
 #include <wx/wx.h>
 #include <wx/spinctrl.h>
 #include <string>
-#include <set>
-#include <map>
 #include <vector>
-#include <locale>
+#include <map>
+#include <set>
 using namespace std;
-
-class wxArgument : public wxObject
-{
-public:
-	wxArgument(string str = "", int num = 0) : str(str), num(num) {}
-
-	string str;
-	int num;
-};
 
 class Slot
 {
@@ -57,18 +47,13 @@ public:
 	bool operator <(const Path& rhs) const;
 };
 
-struct DBData
+struct Settings
 {
-	int nIndex;
-	int cIndex;
-	int cGroup;
+	bool selectionType = false;
 
-	string label;
-	string article;
-
-	// Constructors
-	DBData();
-	DBData(string code);
+	bool readBase = true;
+	bool readNames = true;
+	bool readInk = true;
 };
 
 struct Config
@@ -85,13 +70,27 @@ struct Config
 	map<string, map<Slot, map<string, set<string>>>> newDirFiles;
 };
 
-struct Settings
+struct DBData
 {
-	bool selectionType = false;
+	int nIndex;
+	int cIndex;
+	int cGroup;
 
-	bool readBase = true;
-	bool readNames = true;
-	bool readInk = true;
+	string label;
+	string article;
+
+	// Constructors
+	DBData();
+	DBData(string code);
+};
+
+class wxArgument : public wxObject
+{
+public:
+	wxArgument(string str = "", int num = 0) : str(str), num(num) {}
+
+	string str;
+	int num;
 };
 
 struct wxBrowse
@@ -147,15 +146,6 @@ struct InklingColor
 	wxColour effect;
 	wxColour arrow;
 
-	InklingColor()
-	{
-		effect.Set(0, 0, 0);
-		arrow.Set(0, 0, 0);
-	}
-
-	InklingColor(wxColour effect, wxColour arrow)
-	{
-		this->effect.SetRGB(effect.GetRGB());
-		this->arrow.SetRGB(arrow.GetRGB());
-	}
+	InklingColor() : effect(0, 0, 0), arrow(0, 0, 0) {}
+	InklingColor(wxColour effect, wxColour arrow) : effect(effect), arrow(arrow) {}
 };

@@ -1597,7 +1597,23 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 							string label;
 
 							// Camera Files
-							if (k->first == "camera")
+							if (k->first == "append")
+							{
+								label = "\"fighter/" + charcode + "/append/c" + slot.getString() + "\"";
+
+								if (allFiles.find(path) == allFiles.end())
+								{
+									if (path.getPath().find("/motion/") == string::npos)
+									{
+										config.shareToVanilla[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
+									}
+									else
+									{
+										config.shareToAdded[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
+									}
+								}
+							}
+							else if (k->first == "camera")
 							{
 								label = "\"fighter/" + charcode + "/camera/c" + slot.getString() + "\"";
 								config.shareToAdded[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
@@ -1670,16 +1686,20 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 									}
 								}
 							}
-							else if (false) // TODO: FinalSmash)
-							{
-
-							}
 
 							config.newDirFiles[code][slot][label].insert("\"" + path.getPath() + "\"");
 						}
 						else
 						{
-							wxLog("> WARN: Ignored " + l->getPath(), true);
+							if (k->first == "append")
+							{
+								config.shareToVanilla[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
+								config.newDirFiles[code][slot]["\"fighter/" + charcode + "/append/c" + slot.getString() + "\""].insert("\"" + path.getPath() + "\"");
+							}
+							else
+							{
+								wxLog("> WARN: Ignored " + l->getPath(), true);
+							}
 						}
 					}
 				}
@@ -2157,7 +2177,7 @@ void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<strin
 					{
 						status = 1;
 						uiEdit << "\n\t\t<struct index=\"" << currIndex << "\">";
-						uiEdit << "\n\t\t\t<byte hash=\"color_num\">" << charIter->second.getString() << "</byte>";
+						uiEdit << "\n\t\t\t<byte hash=\"color_num\">" << to_string(charIter->second.getInt()) << "</byte>";
 
 						// Add cIndex/cGroup info
 						auto charLter = slots.find(code);
