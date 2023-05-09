@@ -14,7 +14,7 @@ bool App::OnInit()
 {
 	MainFrame* mainFrame = new MainFrame("Smash Ultimate Mod Helper");
 	mainFrame->SetIcons(wxICON(SMASH_ICON));
-	mainFrame->SetClientSize(mainFrame->FromDIP(wxSize(400, 300)));
+	mainFrame->SetClientSize(mainFrame->FromDIP(wxSize(mainFrame->GetBestSize().x, mainFrame->GetBestSize().y * 14.0 / 24)));
 	mainFrame->SetMinSize(mainFrame->FromDIP(mainFrame->GetSize()));
 	mainFrame->Show();
 
@@ -582,13 +582,15 @@ void MainFrame::onLogPressed(wxCommandEvent& evt)
 	if (logWindow->IsShown())
 	{
 		logWindow->Show(false);
-		this->SetSize(FromDIP(wxSize(this->GetSize().x, this->GetSize().y - 200)));
+		this->SetSize(FromDIP(wxSize(this->GetSize().x, this->GetSize().y * 14.0 / 24)));
+		// this->SetSize(FromDIP(wxSize(this->GetSize().x, this->GetSize().y - 200)));
 		buttons.log->SetLabel("Show Log");
 	}
 	else
 	{
 		logWindow->Show(true);
-		this->SetSize(FromDIP(wxSize(this->GetSize().x, this->GetSize().y + 200)));
+		this->SetSize(FromDIP(wxSize(this->GetSize().x, this->GetSize().y * 24.0 / 14)));
+		//this->SetSize(FromDIP(wxSize(this->GetSize().x, this->GetSize().y + 200)));
 		buttons.log->SetLabel("Hide Log");
 	}
 
