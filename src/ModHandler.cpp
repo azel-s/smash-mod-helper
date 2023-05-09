@@ -321,7 +321,10 @@ map<string, set<Slot>> ModHandler::getAddSlots() const
 	map<string, set<Slot>> addSlots;
 	for (auto i = slots.begin(); i != slots.end(); i++)
 	{
-		addSlots[i->first] = getAddSlots(i->first);
+		if (hasAddSlot(i->first))
+		{
+			addSlots[i->first] = getAddSlots(i->first);
+		}
 	}
 	return addSlots;
 }
@@ -899,7 +902,6 @@ void ModHandler::readFiles(string path)
 									}
 								}
 
-								// TODO: CHECK
 								file = l.path().string();
 
 								addFile(code, fileType, slot, file);
@@ -1144,20 +1146,19 @@ void ModHandler::adjustFiles(string action, string code, wxArrayString fileTypes
 
 						if (action == "move")
 						{
-							files[code][fileTypes[i].ToStdString()].extract(slotIter->first);
 							slots[code].extract(slotIter->first);
+							files[code][fileTypes[i].ToStdString()].extract(slotIter->first);
 						}
 						else if (action == "delete")
 						{
-							files[code][fileTypes[i].ToStdString()].extract(slotIter->first);
 							slots[code].extract(slotIter->first);
+							files[code][fileTypes[i].ToStdString()].extract(slotIter->first);
 
 							if (files[code][fileTypes[i].ToStdString()].empty())
 							{
 								files[code].extract(fileTypes[i].ToStdString());
 							}
 
-							// REMOVE ALL EMPTY DIRS
 							deleteEmptyDirs(path);
 						}
 					}
@@ -1171,6 +1172,7 @@ void ModHandler::adjustFiles(string action, string code, wxArrayString fileTypes
 			if (files[code].empty())
 			{
 				files.extract(code);
+				slots.extract(code);
 			}
 		}
 		else

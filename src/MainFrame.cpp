@@ -41,7 +41,7 @@ MainFrame::MainFrame(const wxString& title) :
 
 	// File menu
 	wxMenu* fileMenu = new wxMenu();
-	this->Bind(wxEVT_MENU, &MainFrame::onBrowse, this, fileMenu->Append(wxID_ANY, "&Open Folder\tCtrl-O")->GetId());
+	this->Bind(wxEVT_MENU, &MainFrame::onBrowse, this, fileMenu->Append(wxID_ANY, "&Open Folder\tCtrl-O")->GetId(), wxID_ANY, new wxArgument("button"));
 	this->Bind(wxEVT_MENU, &MainFrame::onMenuClose, this, fileMenu->Append(wxID_ANY, "Close\tAlt-F4")->GetId());
 
 	// Tools menu
@@ -53,8 +53,6 @@ MainFrame::MainFrame(const wxString& title) :
 	inkMenu->Enable(false);
 	deskMenu->Enable(false);
 
-	// this->Bind(wxEVT_MENU, &MainFrame::onTestPressed, this, toolsMenu->Append(wxID_ANY, "Test Function")->GetId());
-
 	// Options Menu
 	wxMenu* optionsMenu = new wxMenu();
 
@@ -63,9 +61,9 @@ MainFrame::MainFrame(const wxString& title) :
 	auto readBaseID = loadFromMod->AppendCheckItem(wxID_ANY, "Base Slots", "Enables reading information from config.json")->GetId();
 	auto readNameID = loadFromMod->AppendCheckItem(wxID_ANY, "Custom Names", "Enables reading information from msg_name.xmsbt")->GetId();
 	auto readInkID = loadFromMod->AppendCheckItem(wxID_ANY, "Inkling Colors", "Enables reading information from effect.prcxml")->GetId();
-	this->Bind(wxEVT_MENU, &MainFrame::toggleBaseReading, this, readBaseID);
-	this->Bind(wxEVT_MENU, &MainFrame::toggleNameReading, this, readNameID);
-	this->Bind(wxEVT_MENU, &MainFrame::toggleInkReading, this, readInkID);
+	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, readBaseID, wxID_ANY, new wxArgument("base"));
+	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, readNameID, wxID_ANY, new wxArgument("name"));
+	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, readInkID, wxID_ANY, new wxArgument("ink"));
 	loadFromMod->Check(readBaseID, settings.readBase);
 	loadFromMod->Check(readNameID, settings.readNames);
 	loadFromMod->Check(readInkID, settings.readInk);
@@ -74,8 +72,8 @@ MainFrame::MainFrame(const wxString& title) :
 	optionsMenu->AppendSubMenu(selectionType, "Selection type");
 	auto selectUnionID = selectionType->AppendRadioItem(wxID_ANY, "Union", "Mario [c00 & c02] + Luigi [c00 + c03]-> [c01, c02, c03]")->GetId();
 	auto selectIntersectID = selectionType->AppendRadioItem(wxID_ANY, "Intersect", "Mario [c00 & c02] + Luigi [c00 + c03] -> [c00]")->GetId();
-	this->Bind(wxEVT_MENU, &MainFrame::toggleSelectionType, this, selectUnionID);
-	this->Bind(wxEVT_MENU, &MainFrame::toggleSelectionType, this, selectIntersectID);
+	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, selectUnionID, wxID_ANY, new wxArgument("select"));
+	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, selectIntersectID, wxID_ANY, new wxArgument("select"));
 	selectionType->Check(selectUnionID, !settings.selectionType);
 	selectionType->Check(selectIntersectID, settings.selectionType);
 
@@ -86,49 +84,48 @@ MainFrame::MainFrame(const wxString& title) :
 	SetMenuBar(menuBar);
 
 	/* --- Browse --- */
-	browse.text = new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize);
-	browse.text->Bind(wxEVT_TEXT_ENTER, &MainFrame::onBrowse, this);
+	browse.text = new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+	browse.text->Bind(wxEVT_TEXT_ENTER, &MainFrame::onBrowse, this, wxID_ANY, wxID_ANY, new wxArgument("text"));
 	browse.button = new wxButton(panel, wxID_ANY, "Browse...", wxDefaultPosition, wxDefaultSize);
 	browse.button->SetToolTip("Open folder containing fighter/ui/effect/sound folder(s)");
-	browse.button->Bind(wxEVT_BUTTON, &MainFrame::onBrowse, this);
+	browse.button->Bind(wxEVT_BUTTON, &MainFrame::onBrowse, this, wxID_ANY, wxID_ANY, new wxArgument("button"));
 
 	/* --- Characters list --- */
 	charsList = new wxListBox(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxArrayString(), wxLB_MULTIPLE);
-	charsList->Bind(wxEVT_LISTBOX, &MainFrame::onCharSelect, this);
+	charsList->Bind(wxEVT_LISTBOX, &MainFrame::onSelect, this, wxID_ANY, wxID_ANY, new wxArgument("char"));
 
 	/* --- File type boxes --- */
 	auto fTypes = mHandler.wxGetFileTypes();
 	for (int i = 0; i < fTypes.size(); i++)
 	{
 		fileTypeBoxes.push_back(new wxCheckBox(panel, wxID_ANY, fTypes[i], wxDefaultPosition, wxDefaultSize));
-		fileTypeBoxes[i]->Bind(wxEVT_CHECKBOX, &MainFrame::onFileTypeSelect, this);
+		fileTypeBoxes[i]->Bind(wxEVT_CHECKBOX, &MainFrame::onSelect, this, wxID_ANY, wxID_ANY, new wxArgument("fileType"));
 		fileTypeBoxes[i]->Disable();
 	}
 
 	/* --- Initial/Final list --- */
 	initSlots.text = new wxStaticText(panel, wxID_ANY, "Initial Slot: ", wxDefaultPosition, wxSize(55, -1));
 	initSlots.list = new wxChoice(panel, wxID_ANY, wxDefaultPosition, wxSize(50, -1));
-	initSlots.list->Bind(wxEVT_CHOICE, &MainFrame::onModSlotSelect, this);
 	initSlots.list->SetToolTip("Final Slot's source slot");
 
 	finalSlots.text = new wxStaticText(panel, wxID_ANY, "Final Slot: ", wxDefaultPosition, wxSize(55, -1));
 	finalSlots.list = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxSize(50, -1), wxSP_WRAP, 0, 255, 0);
-	finalSlots.list->Bind(wxEVT_SPINCTRL, &MainFrame::onUserSlotSelect, this);
+	finalSlots.list->Bind(wxEVT_SPINCTRL, &MainFrame::onSelect, this, wxID_ANY, wxID_ANY, new wxArgument("finalSlot"));
 	finalSlots.list->SetToolTip("Initial Slot's target slot");
 
 	/* --- Buttons --- */
 	buttons.mov = new wxButton(panel, wxID_ANY, "Move", wxDefaultPosition, wxDefaultSize);
-	buttons.mov->Bind(wxEVT_BUTTON, &MainFrame::onMovePressed, this);
+	buttons.mov->Bind(wxEVT_BUTTON, &MainFrame::onActionPressed, this, wxID_ANY, wxID_ANY, new wxArgument("move"));
 	buttons.mov->SetToolTip("Initial Slot is moved to Final Slot");
 	buttons.mov->Disable();
 
 	buttons.dup = new wxButton(panel, wxID_ANY, "Duplicate", wxDefaultPosition, wxDefaultSize);
-	buttons.dup->Bind(wxEVT_BUTTON, &MainFrame::onDuplicatePressed, this);
+	buttons.dup->Bind(wxEVT_BUTTON, &MainFrame::onActionPressed, this, wxID_ANY, wxID_ANY, new wxArgument("duplicate"));
 	buttons.dup->SetToolTip("Initial Slot is duplicated to Final Slot");
 	buttons.dup->Disable();
 
 	buttons.del = new wxButton(panel, wxID_ANY, "Delete", wxDefaultPosition, wxDefaultSize);
-	buttons.del->Bind(wxEVT_BUTTON, &MainFrame::onDeletePressed, this);
+	buttons.del->Bind(wxEVT_BUTTON, &MainFrame::onActionPressed, this, wxID_ANY, wxID_ANY, new wxArgument("delete"));
 	buttons.del->SetToolTip("Initial Slot is deleted");
 	buttons.del->Disable();
 
@@ -223,60 +220,181 @@ MainFrame::MainFrame(const wxString& title) :
 	panel->SetSizerAndFit(sizerM);
 }
 
-void MainFrame::resetFileTypeBoxes()
+/* --- HELPER FUNCTIONS --- */
+void MainFrame::updateControls(bool character, bool fileType, bool initSlot, bool finalSlot, bool newAddSlot, bool newInkSlot)
 {
-	for (auto& box : fileTypeBoxes)
-	{
-		box->Disable();
-		box->SetValue(false);
-	}
-}
-
-void MainFrame::resetButtons()
-{
-	buttons.mov->Disable();
-	buttons.dup->Disable();
-	buttons.del->Disable();
-}
-
-wxArrayString MainFrame::getSelectedCharCodes()
-{
-	auto selections = charsList->GetStrings();
-
 	wxArrayString codes;
-	if (!selections.empty())
+	wxArrayString fileTypes;
+
+	bool fileTypesFilled = false;
+	bool codesFilled = false;
+
+	if (character)
 	{
+		// Old names
+		wxArrayInt selections;
+		charsList->GetSelections(selections);
+		set<wxString> selectionSet;
 		for (auto& selection : selections)
 		{
-			codes.Add(mHandler.getCode(selection.ToStdString()));
+			selectionSet.insert(charsList->GetString(selection));
 		}
-	}
-	return codes;
-}
 
-wxArrayString MainFrame::getSelectedFileTypes()
-{
-	wxArrayString result;
-	for (auto& box : fileTypeBoxes)
-	{
-		if (box->IsChecked())
-		{
-			result.Add(box->GetLabel());
-		}
-	}
-	return result;
-}
+		// New names
+		auto newNames = mHandler.wxGetCharacterNames();
+		charsList->Set(newNames);
 
-bool MainFrame::isFileTypeSelected()
-{
-	for (auto& box : fileTypeBoxes)
-	{
-		if (box->IsChecked())
+		// Reselect old names
+		for (int i = 0; i < newNames.size(); i++)
 		{
-			return true;
+			if (selectionSet.find(newNames[i]) != selectionSet.end())
+			{
+				charsList->Select(i);
+			}
+		}
+
+		if (charsList->IsEmpty())
+		{
+			buttons.base->Hide();
+			buttons.config->Hide();
+			buttons.prcxml->Hide();
+		}
+
+		fileType = true;
+	}
+
+	if (fileType)
+	{
+		codes = getSelectedCharCodes();
+
+		// Enable or disable file type checkbox based on whether or not it exists in character's map
+		wxArrayString selectablefileTypes = mHandler.wxGetFileTypes(codes, settings.selectionType);
+		auto allFileTypes = mHandler.wxGetFileTypes();
+		for (int i = 0, j = 0; i < allFileTypes.size(); i++)
+		{
+			if (j < selectablefileTypes.size() && selectablefileTypes[j] == allFileTypes[i])
+			{
+				fileTypeBoxes[i]->Enable();
+				j++;
+			}
+			else
+			{
+				fileTypeBoxes[i]->Disable();
+				fileTypeBoxes[i]->SetValue(false);
+			}
+		}
+
+		fileTypes = getSelectedFileTypes();
+		fileTypesFilled = true;
+
+		initSlot = true;
+	}
+
+	if (initSlot)
+	{
+		if (!codesFilled)
+		{
+			codes = getSelectedCharCodes();
+		}
+		if (!fileTypesFilled)
+		{
+			fileTypes = getSelectedFileTypes();
+		}
+
+		string oldSlot = (initSlots.list->GetSelection() != wxNOT_FOUND) ? initSlots.list->GetStringSelection().ToStdString() : "";
+
+		initSlots.list->Set(mHandler.wxGetSlots(codes, fileTypes, settings.selectionType));
+		if (!initSlots.list->IsEmpty())
+		{
+			if (oldSlot.empty())
+			{
+				oldSlot = initSlots.list->GetString(0);
+			}
+
+			if (!initSlots.list->SetStringSelection(oldSlot))
+			{
+				initSlots.list->SetSelection(0);
+			}
+		}
+		else
+		{
+			buttons.mov->Disable();
+			buttons.dup->Disable();
+			buttons.del->Disable();
 		}
 	}
-	return false;
+
+	if (finalSlot)
+	{
+		if (!codesFilled)
+		{
+			codes = getSelectedCharCodes();
+		}
+		if (!fileTypesFilled)
+		{
+			fileTypes = getSelectedFileTypes();
+		}
+
+		if (initSlots.list->GetSelection() != wxNOT_FOUND)
+		{
+			if (mHandler.wxHasSlot(codes, Slot(finalSlots.list->GetValue()), fileTypes, false))
+			{
+				buttons.mov->Disable();
+				buttons.dup->Disable();
+				buttons.del->Enable();
+			}
+			else
+			{
+				buttons.mov->Enable();
+				buttons.dup->Enable();
+				buttons.del->Enable();
+			}
+		}
+		else
+		{
+			buttons.mov->Disable();
+			buttons.dup->Disable();
+			buttons.del->Disable();
+		}
+	}
+
+	if (newAddSlot)
+	{
+		buttons.base->Show();
+		buttons.config->Hide();
+		buttons.prcxml->Hide();
+	}
+
+	if (!mHandler.getPath().empty())
+	{
+		if (newInkSlot)
+		{
+			inkMenu->Enable(false);
+			inkMenu->SetHelp("Select base slots to enable this feature.");
+		}
+		else if(!mHandler.hasAddSlot("inkling"))
+		{
+			inkMenu->Enable();
+			inkMenu->SetHelp("Add or modify colors. Required for additional slots.");
+		}
+
+		deskMenu->Enable();
+		deskMenu->SetHelp("desktop.ini files can cause file-conflict issues.");
+	}
+	else
+	{
+		buttons.base->Hide();
+		buttons.config->Hide();
+		buttons.prcxml->Hide();
+
+		inkMenu->Enable(false);
+		inkMenu->SetHelp("Open a directory to enable this feature.");
+
+		deskMenu->Enable(false);
+		deskMenu->SetHelp("Open a directory to enable this feature.");
+	}
+
+	panel->SendSizeEvent();
 }
 
 void MainFrame::readSettings()
@@ -321,334 +439,131 @@ void MainFrame::updateSettings()
 	}
 }
 
-void MainFrame::updateFileTypeBoxes()
+/* --- BOUND FUNCTIONS --- */
+void MainFrame::toggleSetting(wxCommandEvent& evt)
 {
-	auto codes = getSelectedCharCodes();
-	if (!codes.empty())
-	{
-		wxArrayString fileTypes = mHandler.wxGetFileTypes(codes, settings.selectionType);
+	string setting = static_cast<wxArgument*>(evt.GetEventUserData())->str;
 
-		// Enable or disable file type checkbox based on whether or not it exists in character's map
-		auto fTypes = mHandler.wxGetFileTypes();
-		for (int i = 0, j = 0; i < fTypes.size(); i++)
-		{
-			if (j < fileTypes.size() && fileTypes[j] == fTypes[i])
-			{
-				fileTypeBoxes[i]->Enable();
-				j++;
-			}
-			else
-			{
-				fileTypeBoxes[i]->Disable();
-				fileTypeBoxes[i]->SetValue(false);
-			}
-		}
-	}
-	else
+	if (setting == "base")
 	{
-		resetFileTypeBoxes();
-	}
-}
-
-void MainFrame::updateButtons()
-{
-	if (initSlots.list->GetSelection() != wxNOT_FOUND)
-	{
-		if (mHandler.wxHasSlot(getSelectedCharCodes(), Slot(finalSlots.list->GetValue()), getSelectedFileTypes(), false))
+		settings.readBase = !settings.readBase;
+		if (settings.readBase)
 		{
-			buttons.mov->Disable();
-			buttons.dup->Disable();
-			buttons.del->Enable();
+			log->LogText("> Base slots will now be read from mods.");
 		}
 		else
 		{
-			buttons.mov->Enable();
-			buttons.dup->Enable();
-			buttons.del->Enable();
+			log->LogText("> Base slots will NOT be read from mods.");
 		}
 	}
-	else
+	else if (setting == "name")
 	{
-		resetButtons();
-	}
-
-	panel->SendSizeEvent();
-}
-
-void MainFrame::updateInkMenu()
-{
-	// Update Inkling Menu
-	if (mHandler.hasAddSlot("inkling"))
-	{
-		inkMenu->Enable(false);
-		inkMenu->SetHelp("Select base slots to enable this feature.");
-	}
-	else
-	{
-		inkMenu->Enable();
-		inkMenu->SetHelp("Add or modify colors. Required for additional slots.");
-	}
-}
-
-void MainFrame::toggleBaseReading(wxCommandEvent& evt)
-{
-	settings.readBase = !settings.readBase;
-	if (settings.readBase)
-	{
-		log->LogText("> Base slots will now be read from mods.");
-	}
-	else
-	{
-		log->LogText("> Base slots will NOT be read from mods.");
-	}
-	updateSettings();
-}
-
-void MainFrame::toggleNameReading(wxCommandEvent& evt)
-{
-	settings.readNames = !settings.readNames;
-	if (settings.readNames)
-	{
-		log->LogText("> Custom names will now be read from mods.");
-	}
-	else
-	{
-		log->LogText("> Custom names will NOT be read from mods.");
-	}
-	updateSettings();
-}
-
-void MainFrame::toggleInkReading(wxCommandEvent& evt)
-{
-	settings.readInk = !settings.readInk;
-	if (settings.readInk)
-	{
-		log->LogText("> Inkling colors will now be read from mods.");
-	}
-	else
-	{
-		log->LogText("> Inkling colors will NOT be read from mods.");
-	}
-	updateSettings();
-}
-
-void MainFrame::toggleSelectionType(wxCommandEvent& evt)
-{
-	settings.selectionType = !settings.selectionType;
-	if (settings.selectionType)
-	{
-		log->LogText("> Selection type is now set to intersect.");
-	}
-	else
-	{
-		log->LogText("> Selection type is now set to union.");
-	}
-	updateSettings();
-	updateFileTypeBoxes();
-
-	auto selectedFileTypes = getSelectedFileTypes();
-	if (!selectedFileTypes.empty())
-	{
-		initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), selectedFileTypes, settings.selectionType));
-
-		if (!initSlots.list->IsEmpty())
+		settings.readNames = !settings.readNames;
+		if (settings.readNames)
 		{
-			initSlots.list->Select(0);
+			log->LogText("> Custom names will now be read from mods.");
+		}
+		else
+		{
+			log->LogText("> Custom names will NOT be read from mods.");
 		}
 	}
-	else
+	else if (setting == "ink")
 	{
-		initSlots.list->Clear();
+		settings.readInk = !settings.readInk;
+		if (settings.readInk)
+		{
+			log->LogText("> Inkling colors will now be read from mods.");
+		}
+		else
+		{
+			log->LogText("> Inkling colors will NOT be read from mods.");
+		}
+	}
+	else if (setting == "select")
+	{
+		settings.selectionType = !settings.selectionType;
+		if (settings.selectionType)
+		{
+			log->LogText("> Selection type is now set to intersect.");
+		}
+		else
+		{
+			log->LogText("> Selection type is now set to union.");
+		}
+		updateControls();
 	}
 
-	updateButtons();
+	updateSettings();
 }
 
 void MainFrame::onBrowse(wxCommandEvent& evt)
 {
-	wxDirDialog dialog(this, "Choose the root directory of your mod...", "", wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
+	string path = "";
 
-	if (dialog.ShowModal() != wxID_CANCEL)
+	if (static_cast<wxArgument*>(evt.GetEventUserData())->str == "text")
 	{
-		// Reset previous information
-		charsList->Clear();
-		initSlots.list->Clear();
-		this->resetFileTypeBoxes();
-		this->resetButtons();
-
-		// Update path field
-		browse.text->SetValue(dialog.GetPath());
-
-		// Update data
-		mHandler.readFiles(dialog.GetPath().ToStdString());
-		charsList->Set(mHandler.wxGetCharacterNames());
-
-		// Update buttons
-		if (mHandler.hasAddSlot())
+		if (fs::is_directory(browse.text->GetValue().ToStdString()))
 		{
-			buttons.base->Show();
-			buttons.config->Hide();
-			buttons.prcxml->Hide();
-		}
-		else
-		{
-			buttons.base->Hide();
-			buttons.config->Show();
-			buttons.prcxml->Show();
-		}
-
-		updateInkMenu();
-		deskMenu->Enable();
-		deskMenu->SetHelp("desktop.ini files are unnecessary and end up causing file-conflict issues.");
-
-		panel->SendSizeEvent();
-	}
-}
-
-void MainFrame::onCharSelect(wxCommandEvent& evt)
-{
-	updateFileTypeBoxes();
-	auto selectedFileTypes = getSelectedFileTypes();
-	if (!selectedFileTypes.empty())
-	{
-		initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), selectedFileTypes, settings.selectionType));
-
-		if (!initSlots.list->IsEmpty())
-		{
-			initSlots.list->Select(0);
+			path = browse.text->GetValue();
 		}
 	}
 	else
 	{
-		initSlots.list->Clear();
-	}
-	updateButtons();
-}
-
-void MainFrame::onFileTypeSelect(wxCommandEvent& evt)
-{
-	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), settings.selectionType));
-
-	if (!initSlots.list->IsEmpty())
-	{
-		initSlots.list->Select(0);
-	}
-
-	updateButtons();
-}
-
-void MainFrame::onModSlotSelect(wxCommandEvent& evt)
-{
-	this->updateButtons();
-}
-
-void MainFrame::onUserSlotSelect(wxCommandEvent& evt)
-{
-	this->updateButtons();
-}
-
-void MainFrame::onMovePressed(wxCommandEvent& evt)
-{
-	wxArrayString fileTypes = getSelectedFileTypes();
-
-	Slot initSlot = Slot(initSlots.list->GetStringSelection().ToStdString());
-	Slot finalSlot = Slot(finalSlots.list->GetValue());
-
-	mHandler.adjustFiles("move", getSelectedCharCodes(), fileTypes, initSlot, finalSlot);
-	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), fileTypes, settings.selectionType));
-	initSlots.list->SetStringSelection("c" + finalSlot.getString());
-
-	this->updateButtons();
-
-	// Update buttons
-	if (mHandler.hasAddSlot())
-	{
-		buttons.base->Show();
-		buttons.config->Hide();
-		buttons.prcxml->Hide();
-	}
-	else
-	{
-		buttons.base->Hide();
-		buttons.config->Show();
-		buttons.prcxml->Show();
-	}
-
-	updateInkMenu();
-
-	panel->SendSizeEvent();
-}
-
-void MainFrame::onDuplicatePressed(wxCommandEvent& evt)
-{
-	wxArrayString fileTypes = getSelectedFileTypes();
-
-	Slot initSlot = Slot(initSlots.list->GetStringSelection().ToStdString());
-	Slot finalSlot = Slot(finalSlots.list->GetValue());
-
-	mHandler.adjustFiles("duplicate", getSelectedCharCodes(), fileTypes, initSlot, finalSlot);
-	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), fileTypes, settings.selectionType));
-	initSlots.list->SetStringSelection("c" + initSlot.getString());
-
-	this->updateButtons();
-
-	// Update buttons
-	if (mHandler.hasAddSlot())
-	{
-		buttons.base->Show();
-		buttons.config->Hide();
-		buttons.prcxml->Hide();
-	}
-
-	updateInkMenu();
-
-	panel->SendSizeEvent();
-}
-
-void MainFrame::onDeletePressed(wxCommandEvent& evt)
-{
-	int numChar = mHandler.getNumCharacters();
-	
-	auto selections = charsList->GetStrings();
-	set<wxString> selectionSet(selections.begin(), selections.end());
-
-	mHandler.adjustFiles("delete", getSelectedCharCodes(), getSelectedFileTypes(), Slot(initSlots.list->GetStringSelection().ToStdString()), Slot(-1));
-
-	if (mHandler.getNumCharacters() != numChar)
-	{
-		charsList->Set(mHandler.wxGetCharacterNames());
-
-		selections = charsList->GetStrings();
-
-		for (int i = 0; i != selections.size(); i++)
+		wxDirDialog dialog(this, "Choose the root directory of your mod...", "", wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
+		if (dialog.ShowModal() != wxID_CANCEL)
 		{
-			if (selectionSet.find(selections[i]) != selectionSet.end())
-			{
-				charsList->Select(i);
-			}
+			path = dialog.GetPath();
+			browse.text->SetValue(path);
 		}
 	}
 
-	updateFileTypeBoxes();
-	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), settings.selectionType));
-
-	if (!initSlots.list->IsEmpty())
+	if (!path.empty())
 	{
-		initSlots.list->SetSelection(0);
+		mHandler.readFiles(path);
+		updateControls(true, true, true, true, mHandler.hasAddSlot(), mHandler.hasAddSlot("inkling"));
 	}
-	updateButtons();
+}
 
-	// Update buttons
-	if (!mHandler.hasAddSlot())
+void MainFrame::onSelect(wxCommandEvent& evt)
+{
+	string select = static_cast<wxArgument*>(evt.GetEventUserData())->str;
+
+	if (select == "char")
 	{
-		buttons.base->Hide();
-		buttons.config->Show();
-		buttons.prcxml->Show();
+		updateControls(false, true);
 	}
+	else if (select == "fileType")
+	{
+		updateControls(false, false, true);
+	}
+	else if (select == "finalSlot")
+	{
+		updateControls(false, false, false, true);
+	}
+}
 
-	updateInkMenu();
+void MainFrame::onActionPressed(wxCommandEvent& evt)
+{
+	wxArgument* arg = static_cast<wxArgument*>(evt.GetEventUserData());
+	arg->num = mHandler.getNumCharacters();
 
-	panel->SendSizeEvent();
+	Slot initSlot = Slot(initSlots.list->GetStringSelection().ToStdString());
+	Slot finalSlot = Slot(finalSlots.list->GetValue());
+
+	auto fileTypes = getSelectedFileTypes();
+	bool inkHasSlot = mHandler.wxHasSlot("inkling", initSlot, fileTypes);
+
+	mHandler.adjustFiles(arg->str, getSelectedCharCodes(), fileTypes, initSlot, finalSlot);
+
+	if (arg->str != "delete")
+	{
+		updateControls(false, false, true, true, finalSlots.list->GetValue() > 7, finalSlots.list->GetValue() > 7 && inkHasSlot);
+	}
+	else
+	{
+		updateControls(mHandler.getNumCharacters() != arg->num, true, true, true, false, false);
+	}
 }
 
 void MainFrame::onLogPressed(wxCommandEvent& evt)
@@ -677,7 +592,6 @@ void MainFrame::onBasePressed(wxCommandEvent& evt)
 	{
 		mHandler.setBaseSlots(dlg.getBaseSlots());
 
-		// Update Buttons
 		buttons.base->Hide();
 		buttons.config->Show();
 		buttons.prcxml->Show();
@@ -692,40 +606,6 @@ void MainFrame::onBasePressed(wxCommandEvent& evt)
 void MainFrame::onConfigPressed(wxCommandEvent& evt)
 {
 	mHandler.create_config();
-}
-
-void MainFrame::onInkPressed(wxCommandEvent& evt)
-{
-	InkSelection dlg(this, wxID_ANY, "Choose Inkling Colors", mHandler, settings.readInk);
-
-	if (dlg.ShowModal() == wxID_OK)
-	{
-		auto finalColors = dlg.getFinalColors();
-
-		if (!finalColors.empty())
-		{
-			// Change directory to parcel and param-xml's location
-			// TODO: Make function not rely on directory change
-			wxSetWorkingDirectory("Files/prc/");
-
-			mHandler.create_ink_prcxml(finalColors);
-
-			fs::create_directories(mHandler.getPath() + "/fighter/common/param/");
-			fs::rename(fs::current_path() / "effect_Edit.prcxml", mHandler.getPath() + "/fighter/common/param/effect.prcxml");
-
-			if (fs::exists(mHandler.getPath() + "/fighter/common/param/effect.prcx"))
-			{
-				fs::remove(mHandler.getPath() + "/fighter/common/param/effect.prcx");
-			}
-
-			// Restore working directory
-			wxSetWorkingDirectory("../../");
-		}
-		else
-		{
-			log->LogText("> N/A: No changes were made.");
-		}
-	}
 }
 
 void MainFrame::onPrcPressed(wxCommandEvent& evt)
@@ -810,17 +690,73 @@ void MainFrame::onPrcPressed(wxCommandEvent& evt)
 	}
 }
 
+void MainFrame::onInkPressed(wxCommandEvent& evt)
+{
+	InkSelection dlg(this, wxID_ANY, "Choose Inkling Colors", mHandler, settings.readInk);
+
+	if (dlg.ShowModal() == wxID_OK)
+	{
+		auto finalColors = dlg.getFinalColors();
+
+		if (!finalColors.empty())
+		{
+			// Change directory to parcel and param-xml's location
+			// TODO: Make function not rely on directory change
+			wxSetWorkingDirectory("Files/prc/");
+
+			mHandler.create_ink_prcxml(finalColors);
+
+			fs::create_directories(mHandler.getPath() + "/fighter/common/param/");
+			fs::rename(fs::current_path() / "effect_Edit.prcxml", mHandler.getPath() + "/fighter/common/param/effect.prcxml");
+
+			if (fs::exists(mHandler.getPath() + "/fighter/common/param/effect.prcx"))
+			{
+				fs::remove(mHandler.getPath() + "/fighter/common/param/effect.prcx");
+			}
+
+			// Restore working directory
+			wxSetWorkingDirectory("../../");
+		}
+		else
+		{
+			log->LogText("> N/A: No changes were made.");
+		}
+	}
+}
+
+void MainFrame::onDeskPressed(wxCommandEvent& evt)
+{
+	mHandler.remove_desktop_ini();
+}
+
 void MainFrame::onMenuClose(wxCommandEvent& evt)
 {
 	Close(true);
 }
 
-//void MainFrame::onTestPressed(wxCommandEvent& evt)
-//{
-//	mHandler.test();
-//}
-
-void MainFrame::onDeskPressed(wxCommandEvent& evt)
+/* --- GETTERS --- */
+wxArrayString MainFrame::getSelectedCharCodes()
 {
-	mHandler.remove_desktop_ini();
+	wxArrayInt selections;
+	charsList->GetSelections(selections);
+
+	wxArrayString codes;
+	for (auto& selection : selections)
+	{
+		codes.Add(mHandler.getCode(charsList->GetString(selection).ToStdString()));
+	}
+	return codes;
+}
+
+wxArrayString MainFrame::getSelectedFileTypes()
+{
+	wxArrayString result;
+	for (auto& box : fileTypeBoxes)
+	{
+		if (box->IsChecked())
+		{
+			result.Add(box->GetLabel());
+		}
+	}
+	return result;
 }

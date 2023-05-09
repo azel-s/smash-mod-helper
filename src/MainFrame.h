@@ -24,50 +24,35 @@ private:
 	/* --- Data Variables --- */
 	ModHandler mHandler;
 	Settings settings;
-	string iPath;	// Initial Path
+	string iPath;
 
-	/* --- Helpers ---	*/
-	void resetFileTypeBoxes();
-	void resetButtons();
+	/* --- HELPER FUNCTIONS --- */
+	// Controls
+	void updateControls(bool character = true, bool fileType = true, bool initSlot = true, bool finalSlot = true, bool newAddSlot = false, bool newInkSlot = false);
 
 	// Settings
 	void readSettings();
 	void updateSettings();
 
-	// Updaters/Modifiers
-	void updateFileTypeBoxes();
-	void updateButtons();
-	void updateInkMenu();
-
-	// Bind Functions
-	void toggleBaseReading(wxCommandEvent& evt);
-	void toggleNameReading(wxCommandEvent& evt);
-	void toggleInkReading(wxCommandEvent& evt);
-	void toggleSelectionType(wxCommandEvent& evt);
+	/* --- BOUND FUNCTIONS --- */
+	void toggleSetting(wxCommandEvent& evt);
 	void onBrowse(wxCommandEvent& evt);
-	void onCharSelect(wxCommandEvent& evt);
-	void onFileTypeSelect(wxCommandEvent& evt);
-	void onModSlotSelect(wxCommandEvent& evt);
-	void onUserSlotSelect(wxCommandEvent& evt);
-	void onMovePressed(wxCommandEvent& evt);
-	void onDuplicatePressed(wxCommandEvent& evt);
-	void onDeletePressed(wxCommandEvent& evt);
+	void onSelect(wxCommandEvent& evt);
+	void onActionPressed(wxCommandEvent& evt);
 	void onLogPressed(wxCommandEvent& evt);
-	void onConfigPressed(wxCommandEvent& evt);
 	void onBasePressed(wxCommandEvent& evt);
+	void onConfigPressed(wxCommandEvent& evt);
+	void onPrcPressed(wxCommandEvent& evt);
 	void onInkPressed(wxCommandEvent& evt);
 	void onDeskPressed(wxCommandEvent& evt);
-	void onPrcPressed(wxCommandEvent& evt);
 	void onMenuClose(wxCommandEvent& evt);
-	// void onTestPressed(wxCommandEvent& evt);
 
 public:
-	/* --- Getters ---	*/
+	/* --- GETTERS ---	*/
 	wxArrayString getSelectedCharCodes();
 	wxArrayString getSelectedFileTypes();
-	bool isFileTypeSelected();
 
 public:
-	// Constructor
+	/* --- CONSTRUCTOR ---	*/
 	MainFrame(const wxString& title);
 };

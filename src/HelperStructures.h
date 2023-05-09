@@ -8,6 +8,15 @@
 #include <locale>
 using namespace std;
 
+class wxArgument : public wxObject
+{
+public:
+	wxArgument(string str = "", int num = 0) : str(str), num(num) {}
+
+	string str;
+	int num;
+};
+
 class Slot
 {
 private:
