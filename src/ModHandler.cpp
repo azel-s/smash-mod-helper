@@ -168,12 +168,6 @@ void ModHandler::wxLog(string message, bool debug)
 	}
 }
 
-/* --- TEST FUNCTIONS (WIP/DEBUG) --- */
-void ModHandler::test()
-{
-
-}
-
 /* --- CONSTRUCTORS (UNIVERSAL) --- */
 ModHandler::ModHandler(wxLogTextCtrl* log) : log(log)
 {

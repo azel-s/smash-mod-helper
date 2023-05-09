@@ -23,12 +23,10 @@ private:
 
 	/* --- Data Variables --- */
 	ModHandler mHandler;
-	VanillaHandler vHandler;
 	Settings settings;
 	string iPath;	// Initial Path
 
 	/* --- Helpers ---	*/
-	// ...
 	void resetFileTypeBoxes();
 	void resetButtons();
 
@@ -61,17 +59,13 @@ private:
 	void onDeskPressed(wxCommandEvent& evt);
 	void onPrcPressed(wxCommandEvent& evt);
 	void onMenuClose(wxCommandEvent& evt);
-	void onClose(wxCloseEvent& evt);
-	void onTestPressed(wxCommandEvent& evt);// Test Bound Function
+	// void onTestPressed(wxCommandEvent& evt);
 
 public:
 	/* --- Getters ---	*/
 	wxArrayString getSelectedCharCodes();
 	wxArrayString getSelectedFileTypes();
 	bool isFileTypeSelected();
-
-	// Destructor
-	~MainFrame();
 
 public:
 	// Constructor

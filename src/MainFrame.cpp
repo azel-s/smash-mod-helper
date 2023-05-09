@@ -24,24 +24,27 @@ MainFrame::MainFrame(const wxString& title) :
 	log(new wxLogTextCtrl(logWindow)),
 	mHandler(log)
 {
-	// Set Initial Path
+	/* --- Initial path --- */
 	iPath = fs::current_path().string();
 	replace(iPath.begin(), iPath.end(), '\\', '/');
 
-	// Set log window to be greyed out.
+	/* --- Log window --- */
 	logWindow->SetEditable(false);
 	logWindow->Show(false);
 
+	/* --- Settings --- */
 	readSettings();
 	updateSettings();
 
-	// Setup Menu
+	/* --- Menu bar--- */
 	wxMenuBar* menuBar = new wxMenuBar();
 
+	// File menu
 	wxMenu* fileMenu = new wxMenu();
 	this->Bind(wxEVT_MENU, &MainFrame::onBrowse, this, fileMenu->Append(wxID_ANY, "&Open Folder\tCtrl-O")->GetId());
 	this->Bind(wxEVT_MENU, &MainFrame::onMenuClose, this, fileMenu->Append(wxID_ANY, "Close\tAlt-F4")->GetId());
 
+	// Tools menu
 	wxMenu* toolsMenu = new wxMenu();
 	inkMenu = new wxMenuItem(fileMenu, wxID_ANY, "Edit Inkling Colors", "Open a directory to enable this feature.");
 	deskMenu = new wxMenuItem(fileMenu, wxID_ANY, "Delete Desktop.ini Files", "Open a directory to enable this feature.");
@@ -50,8 +53,9 @@ MainFrame::MainFrame(const wxString& title) :
 	inkMenu->Enable(false);
 	deskMenu->Enable(false);
 
-	this->Bind(wxEVT_MENU, &MainFrame::onTestPressed, this, toolsMenu->Append(wxID_ANY, "Test Function")->GetId());
+	// this->Bind(wxEVT_MENU, &MainFrame::onTestPressed, this, toolsMenu->Append(wxID_ANY, "Test Function")->GetId());
 
+	// Options Menu
 	wxMenu* optionsMenu = new wxMenu();
 
 	wxMenu* loadFromMod = new wxMenu();
@@ -81,17 +85,18 @@ MainFrame::MainFrame(const wxString& title) :
 
 	SetMenuBar(menuBar);
 
-	// Create browse button and text field
+	/* --- Browse --- */
 	browse.text = new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize);
+	browse.text->Bind(wxEVT_TEXT_ENTER, &MainFrame::onBrowse, this);
 	browse.button = new wxButton(panel, wxID_ANY, "Browse...", wxDefaultPosition, wxDefaultSize);
 	browse.button->SetToolTip("Open folder containing fighter/ui/effect/sound folder(s)");
 	browse.button->Bind(wxEVT_BUTTON, &MainFrame::onBrowse, this);
 
-	// Create characters List
+	/* --- Characters list --- */
 	charsList = new wxListBox(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxArrayString(), wxLB_MULTIPLE);
 	charsList->Bind(wxEVT_LISTBOX, &MainFrame::onCharSelect, this);
 
-	// Create file type checkboxes
+	/* --- File type boxes --- */
 	auto fTypes = mHandler.wxGetFileTypes();
 	for (int i = 0; i < fTypes.size(); i++)
 	{
@@ -100,64 +105,56 @@ MainFrame::MainFrame(const wxString& title) :
 		fileTypeBoxes[i]->Disable();
 	}
 
-	// Create mod slot list
+	/* --- Initial/Final list --- */
 	initSlots.text = new wxStaticText(panel, wxID_ANY, "Initial Slot: ", wxDefaultPosition, wxSize(55, -1));
 	initSlots.list = new wxChoice(panel, wxID_ANY, wxDefaultPosition, wxSize(50, -1));
 	initSlots.list->Bind(wxEVT_CHOICE, &MainFrame::onModSlotSelect, this);
 	initSlots.list->SetToolTip("Final Slot's source slot");
 
-	// Create user slot List
 	finalSlots.text = new wxStaticText(panel, wxID_ANY, "Final Slot: ", wxDefaultPosition, wxSize(55, -1));
 	finalSlots.list = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxSize(50, -1), wxSP_WRAP, 0, 255, 0);
 	finalSlots.list->Bind(wxEVT_SPINCTRL, &MainFrame::onUserSlotSelect, this);
 	finalSlots.list->SetToolTip("Initial Slot's target slot");
 
-	// Create Move Button
+	/* --- Buttons --- */
 	buttons.mov = new wxButton(panel, wxID_ANY, "Move", wxDefaultPosition, wxDefaultSize);
 	buttons.mov->Bind(wxEVT_BUTTON, &MainFrame::onMovePressed, this);
 	buttons.mov->SetToolTip("Initial Slot is moved to Final Slot");
 	buttons.mov->Disable();
 
-	// Create Duplicate Button
 	buttons.dup = new wxButton(panel, wxID_ANY, "Duplicate", wxDefaultPosition, wxDefaultSize);
 	buttons.dup->Bind(wxEVT_BUTTON, &MainFrame::onDuplicatePressed, this);
 	buttons.dup->SetToolTip("Initial Slot is duplicated to Final Slot");
 	buttons.dup->Disable();
 
-	// Create Delete Button
 	buttons.del = new wxButton(panel, wxID_ANY, "Delete", wxDefaultPosition, wxDefaultSize);
 	buttons.del->Bind(wxEVT_BUTTON, &MainFrame::onDeletePressed, this);
 	buttons.del->SetToolTip("Initial Slot is deleted");
 	buttons.del->Disable();
 
-	// Create Log Button
 	buttons.log = new wxButton(panel, wxID_ANY, "Show Log", wxDefaultPosition, wxDefaultSize);
 	buttons.log->Bind(wxEVT_BUTTON, &MainFrame::onLogPressed, this);
 	buttons.log->SetToolTip("Log Window can help debug issues.");
 
-	// Create Base Slots Button
 	buttons.base = new wxButton(panel, wxID_ANY, "Select Base Slots", wxDefaultPosition, wxDefaultSize);
 	buttons.base->Bind(wxEVT_BUTTON, &MainFrame::onBasePressed, this);
 	buttons.base->SetToolTip("Choose source slot(s) for each additional slot");
 	buttons.base->Hide();
 
-	// Create Config Button
 	buttons.config = new wxButton(panel, wxID_ANY, "Create Config", wxDefaultPosition, wxDefaultSize);
 	buttons.config->Bind(wxEVT_BUTTON, &MainFrame::onConfigPressed, this);
-	buttons.config->SetToolTip("Creata a config for any additionals costumes, extra textures, and/or effects");
+	buttons.config->SetToolTip("Create a config for any additionals costumes, extra textures, and/or effects");
 	buttons.config->Hide();
 
-	// Create prcx Buttons
 	buttons.prcxml = new wxButton(panel, wxID_ANY, "Create PRCXML", wxDefaultPosition, wxDefaultSize);
 	buttons.prcxml->Bind(wxEVT_BUTTON, &MainFrame::onPrcPressed, this);
 	buttons.prcxml->SetToolTip("Edit slot names or modify max slots for each character");
 	buttons.prcxml->Hide();
 
-	// Misc.
-	this->Bind(wxEVT_CLOSE_WINDOW, &MainFrame::onClose, this);
+	/* --- Misc. --- */
 	CreateStatusBar();
 
-	// Setup Sizer
+	/* --- Sizer setup --- */
 	wxBoxSizer* sizerM = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* sizerA = new wxBoxSizer(wxHORIZONTAL);
 	wxBoxSizer* sizerB = new wxBoxSizer(wxHORIZONTAL);
@@ -558,7 +555,7 @@ void MainFrame::onMovePressed(wxCommandEvent& evt)
 	Slot finalSlot = Slot(finalSlots.list->GetValue());
 
 	mHandler.adjustFiles("move", getSelectedCharCodes(), fileTypes, initSlot, finalSlot);
-	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), settings.selectionType));
+	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), fileTypes, settings.selectionType));
 	initSlots.list->SetStringSelection("c" + finalSlot.getString());
 
 	this->updateButtons();
@@ -590,7 +587,7 @@ void MainFrame::onDuplicatePressed(wxCommandEvent& evt)
 	Slot finalSlot = Slot(finalSlots.list->GetValue());
 
 	mHandler.adjustFiles("duplicate", getSelectedCharCodes(), fileTypes, initSlot, finalSlot);
-	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), getSelectedFileTypes(), settings.selectionType));
+	initSlots.list->Set(mHandler.wxGetSlots(getSelectedCharCodes(), fileTypes, settings.selectionType));
 	initSlots.list->SetStringSelection("c" + initSlot.getString());
 
 	this->updateButtons();
@@ -818,22 +815,12 @@ void MainFrame::onMenuClose(wxCommandEvent& evt)
 	Close(true);
 }
 
-void MainFrame::onClose(wxCloseEvent& evt)
-{
-	evt.Skip();
-}
-
-void MainFrame::onTestPressed(wxCommandEvent& evt)
-{
-	mHandler.test();
-}
+//void MainFrame::onTestPressed(wxCommandEvent& evt)
+//{
+//	mHandler.test();
+//}
 
 void MainFrame::onDeskPressed(wxCommandEvent& evt)
 {
 	mHandler.remove_desktop_ini();
-}
-
-MainFrame::~MainFrame()
-{
-	// Remove?
 }

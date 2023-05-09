@@ -33,9 +33,6 @@ private:
 	void wxLog(string message, bool debug = true);
 
 public:
-	/* --- TEST FUNCTIONS (WIP/DEBUG) --- */
-	void test();
-
 	/* --- CONSTRUCTORS --- */
 	ModHandler(wxLogTextCtrl* log = nullptr);
 
