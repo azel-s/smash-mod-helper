@@ -62,6 +62,7 @@ MainFrame::MainFrame(const wxString& title) :
 	deskMenu = new wxMenuItem(fileMenu, wxID_ANY, "Delete Desktop.ini Files", "Open a directory to enable this feature.");
 	this->Bind(wxEVT_MENU, &MainFrame::onInkPressed, this, toolsMenu->Append(inkMenu)->GetId());
 	this->Bind(wxEVT_MENU, &MainFrame::onDeskPressed, this, toolsMenu->Append(deskMenu)->GetId());
+	this->Bind(wxEVT_MENU, &MainFrame::onBatchPressed, this, toolsMenu->Append(wxID_ANY, "Batch Config/PRCXML")->GetId());
 	inkMenu->Enable(false);
 	deskMenu->Enable(false);
 
@@ -408,6 +409,85 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 	panel->SendSizeEvent();
 }
 
+void MainFrame::processPRCXML(ModHandler* mHandler)
+{
+	if (!mHandler)
+	{
+		mHandler = &(this->mHandler);
+	}
+
+	if (mHandler->hasChar())
+	{
+		PrcSelection dlg(this, wxID_ANY, "Make Selection", *mHandler, settings.readNames);
+		if (dlg.ShowModal() == wxID_OK)
+		{
+			auto finalSlots = dlg.getMaxSlots(mHandler);
+			auto finalNames = dlg.getNames();
+			auto finalAnnouncers = dlg.getAnnouncers();
+
+			wxArrayString exeLog;
+
+			if (!finalSlots.empty() || !finalNames.empty() || !finalAnnouncers.empty())
+			{
+				// Change working directory
+				wxSetWorkingDirectory("Files/prc/");
+
+				// Create XML
+				wxExecute("param-xml disasm vanilla.prc -o ui_chara_db.xml -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
+
+				mHandler->create_db_prcxml(finalNames, finalAnnouncers, finalSlots);
+				if (!finalNames.empty())
+				{
+					mHandler->create_message_xmsbt(finalNames);
+				}
+
+				if (exeLog.size() == 1 && exeLog[0].substr(0, 9) == "Completed")
+				{
+					log->LogText("> Success! ui_chara_db.prcxml was created!");
+
+					if (!finalNames.empty())
+					{
+						log->LogText("> Success! msg_name.xmsbt was created!");
+					}
+
+					fs::create_directories(mHandler->getPath() + "/ui/param/database/");
+					fs::rename(fs::current_path() / "ui_chara_db.prcxml", mHandler->getPath() + "/ui/param/database/ui_chara_db.prcxml");
+
+					if (fs::exists(mHandler->getPath() + "/ui/param/database/ui_chara_db.prcx"))
+					{
+						fs::remove(mHandler->getPath() + "/ui/param/database/ui_chara_db.prcx");
+					}
+				}
+				else
+				{
+					log->LogText("> Error: Something went wrong, possible issue below:");
+
+					for (int i = 0; i < exeLog.size(); i++)
+					{
+						log->LogText(">" + exeLog[i]);
+					}
+				}
+
+				// Restore working directory
+				wxSetWorkingDirectory("../../");
+			}
+			else if (fs::exists(mHandler->getPath() + "/ui/param/database/ui_chara_db.prcxml"))
+			{
+				fs::remove(mHandler->getPath() + "/ui/param/database/ui_chara_db.prcxml");
+				log->LogText("> NOTE: ui_chara_db.prcxml is not needed, previous one was deleted.");
+			}
+			else
+			{
+				log->LogText("> NOTE: ui_chara_db.prcxml is not needed.");
+			}
+		}
+	}
+	else
+	{
+		log->LogText("> N/A: Mod is empty, cannot create a prcx!");
+	}
+}
+
 void MainFrame::readSettings()
 {
 	ifstream settingsFile(iPath + "/Files/settings.data");
@@ -525,13 +605,13 @@ void MainFrame::onBrowse(wxCommandEvent& evt)
 		if (dialog.ShowModal() != wxID_CANCEL)
 		{
 			path = dialog.GetPath();
-			browse.text->SetValue(path);
 		}
 	}
 
 	if (!path.empty())
 	{
 		mHandler.readFiles(path);
+		browse.text->SetValue(mHandler.getPath());
 		updateControls(true, true, true, true, mHandler.hasAddSlot(), mHandler.hasAddSlot("inkling"));
 	}
 }
@@ -574,6 +654,42 @@ void MainFrame::onActionPressed(wxCommandEvent& evt)
 	else
 	{
 		updateControls(mHandler.getNumCharacters() != arg->num, true, true, true, false, false);
+	}
+}
+
+void MainFrame::onBatchPressed(wxCommandEvent& evt)
+{
+	wxDirDialog dialog(this, "Choose the directory containing multiple mod folders...", "", wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
+	if (dialog.ShowModal() != wxID_CANCEL)
+	{
+		for (const auto& modFolder : fs::directory_iterator(dialog.GetPath().ToStdString()))
+		{
+			ModHandler mod(log, modFolder.path().string());
+			if (mod.hasChar())
+			{
+				if (fs::exists(mod.getPath() + "/config.json"))
+				{
+					auto readSlots = mod.read_config_slots();
+
+					map<string, map<Slot, set<Slot>>> slots;
+					for (auto i = readSlots.begin(); i != readSlots.end(); i++)
+					{
+						for (auto j = i->second.begin(); j != i->second.end(); j++)
+						{
+							slots[i->first][j->second].insert(j->first);
+						}
+					}
+					mod.setBaseSlots(slots);
+				}
+
+				mod.create_config();
+				
+				if (wxMessageBox("Create PRCXML for " + modFolder.path().filename().string() + "? (Recommended)", "Create PRCXML?", wxYES_NO) == wxYES)
+				{
+					processPRCXML(&mod);
+				}
+			}
+		}
 	}
 }
 
@@ -623,84 +739,7 @@ void MainFrame::onConfigPressed(wxCommandEvent& evt)
 
 void MainFrame::onPrcPressed(wxCommandEvent& evt)
 {
-	bool hasAddSlots = mHandler.hasAddSlot();
-
-	if (hasAddSlots || mHandler.hasChar())
-	{
-		// Make character-slots map
-
-		PrcSelection dlg(this, wxID_ANY, "Make Selection", mHandler, settings.readNames);
-		if (dlg.ShowModal() == wxID_OK)
-		{
-			auto finalSlots = dlg.getMaxSlots(&mHandler);
-			auto finalNames = dlg.getNames();
-			auto finalAnnouncers = dlg.getAnnouncers();
-
-			wxArrayString exeLog;
-
-			if (hasAddSlots || !finalNames.empty() || !finalAnnouncers.empty())
-			{
-				// Change working directory
-				wxSetWorkingDirectory("Files/prc/");
-
-				// Create XML
-				wxExecute("param-xml disasm vanilla.prc -o ui_chara_db.xml -l ParamLabels.csv", exeLog, exeLog, wxEXEC_SYNC | wxEXEC_NODISABLE);
-
-				mHandler.create_db_prcxml(finalNames, finalAnnouncers, finalSlots);
-				if (!finalNames.empty())
-				{
-					mHandler.create_message_xmsbt(finalNames);
-				}
-
-				if (exeLog.size() == 1 && exeLog[0].substr(0, 9) == "Completed")
-				{
-					log->LogText("> Success! ui_chara_db.prcxml was created!");
-
-					if (!finalNames.empty())
-					{
-						log->LogText("> Success! msg_name.xmsbt was created!");
-					}
-
-					fs::create_directories(mHandler.getPath() + "/ui/param/database/");
-					fs::rename(fs::current_path() / "ui_chara_db.prcxml", mHandler.getPath() + "/ui/param/database/ui_chara_db.prcxml");
-
-					if (fs::exists(mHandler.getPath() + "/ui/param/database/ui_chara_db.prcx"))
-					{
-						fs::remove(mHandler.getPath() + "/ui/param/database/ui_chara_db.prcx");
-					}
-				}
-				else
-				{
-					log->LogText("> Error: Something went wrong, possible issue below:");
-
-					for (int i = 0; i < exeLog.size(); i++)
-					{
-						log->LogText(">" + exeLog[i]);
-					}
-				}
-
-				// Restore working directory
-				wxSetWorkingDirectory("../../");
-			}
-			else if (fs::exists(mHandler.getPath() + "/ui/param/database/ui_chara_db.prcxml"))
-			{
-				fs::remove(mHandler.getPath() + "/ui/param/database/ui_chara_db.prcxml");
-				log->LogText("> NOTE: ui_chara_db.prcxml is not needed, previous one was deleted.");
-			}
-			else
-			{
-				log->LogText("> NOTE: ui_chara_db.prcxml is not needed.");
-			}
-		}
-	}
-	else if (!mHandler.hasChar())
-	{
-		log->LogText("> N/A: Mod is empty, cannot create a prcx!");
-	}
-	else
-	{
-		log->LogText("> N/A: No additional slots detected.");
-	}
+	processPRCXML(&mHandler);
 }
 
 void MainFrame::onInkPressed(wxCommandEvent& evt)

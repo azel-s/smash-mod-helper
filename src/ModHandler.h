@@ -34,7 +34,7 @@ private:
 
 public:
 	/* --- CONSTRUCTORS --- */
-	ModHandler(wxLogTextCtrl* log = nullptr);
+	ModHandler(wxLogTextCtrl* log = nullptr, string path = "");
 
 	/* --- SETTERS (UNIVERSAL) --- */
 	void setBaseSlots(map<string, map<Slot, set<Slot>>> slots);

@@ -11,6 +11,16 @@ public:
 	bool OnInit();
 };
 
+class wxArgument : public wxObject
+{
+public:
+	wxArgument(string str = "", int num = 0, ModHandler* mHandler = nullptr) : str(str), num(num), mHandler(mHandler) {}
+
+	string str;
+	int num;
+	ModHandler* mHandler;
+};
+
 class MainFrame : public wxFrame
 {
 private:
@@ -35,6 +45,7 @@ private:
 	/* --- HELPER FUNCTIONS --- */
 	// Controls
 	void updateControls(bool character = true, bool fileType = true, bool initSlot = true, bool finalSlot = true, bool newAddSlot = false, bool newInkSlot = false);
+	void processPRCXML(ModHandler* mHandler);
 
 	// Settings
 	void readSettings();
@@ -45,6 +56,7 @@ private:
 	void onBrowse(wxCommandEvent& evt);
 	void onSelect(wxCommandEvent& evt);
 	void onActionPressed(wxCommandEvent& evt);
+	void onBatchPressed(wxCommandEvent& evt);
 	void onLogPressed(wxCommandEvent& evt);
 	void onBasePressed(wxCommandEvent& evt);
 	void onConfigPressed(wxCommandEvent& evt);

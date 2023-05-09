@@ -169,14 +169,17 @@ void ModHandler::wxLog(string message, bool debug)
 }
 
 /* --- CONSTRUCTORS (UNIVERSAL) --- */
-ModHandler::ModHandler(wxLogTextCtrl* log) : log(log)
+ModHandler::ModHandler(wxLogTextCtrl* log, string path) : log(log), path(path)
 {
-	path = "";
-
 	fileTypes.push_back("effect");
 	fileTypes.push_back("fighter");
 	fileTypes.push_back("sound");
 	fileTypes.push_back("ui");
+
+	if (!path.empty() && fs::is_directory(path))
+	{
+		readFiles(path);
+	}
 
 	debug = false;
 }

@@ -1,8 +1,8 @@
 #pragma once
 #include <wx/wx.h>
 #include <wx/spinctrl.h>
-#include <string>
 #include <vector>
+#include <string>
 #include <map>
 #include <set>
 using namespace std;
@@ -82,15 +82,6 @@ struct DBData
 	// Constructors
 	DBData();
 	DBData(string code);
-};
-
-class wxArgument : public wxObject
-{
-public:
-	wxArgument(string str = "", int num = 0) : str(str), num(num) {}
-
-	string str;
-	int num;
 };
 
 struct wxBrowse
