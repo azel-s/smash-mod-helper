@@ -662,34 +662,39 @@ void MainFrame::onBatchPressed(wxCommandEvent& evt)
 	wxDirDialog dialog(this, "Choose the directory containing multiple mod folders...", "", wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
 	if (dialog.ShowModal() != wxID_CANCEL)
 	{
+		int config = 0;
+		int prcxml = 0;
+
 		for (const auto& modFolder : fs::directory_iterator(dialog.GetPath().ToStdString()))
 		{
 			ModHandler mod(log, modFolder.path().string());
 			if (mod.hasChar())
 			{
-				if (fs::exists(mod.getPath() + "/config.json"))
+				if (wxMessageBox("Create Config for \"" + modFolder.path().filename().string() + "\"? (Recommended)", "Create Config?", wxYES_NO) == wxYES)
 				{
-					auto readSlots = mod.read_config_slots();
-
-					map<string, map<Slot, set<Slot>>> slots;
-					for (auto i = readSlots.begin(); i != readSlots.end(); i++)
+					if (mod.hasAddSlot())
 					{
-						for (auto j = i->second.begin(); j != i->second.end(); j++)
+						BaseSelection dlg(this, wxID_ANY, "Choose Base Slots for Config.json", mod, settings.readBase);
+
+						if (dlg.ShowModal() == wxID_OK)
 						{
-							slots[i->first][j->second].insert(j->first);
+							mHandler.setBaseSlots(dlg.getBaseSlots());
 						}
 					}
-					mod.setBaseSlots(slots);
+
+					mod.create_config();
+					config++;
 				}
 
-				mod.create_config();
-				
-				if (wxMessageBox("Create PRCXML for " + modFolder.path().filename().string() + "? (Recommended)", "Create PRCXML?", wxYES_NO) == wxYES)
+				if (wxMessageBox("Create PRCXML for \"" + modFolder.path().filename().string() + "\"? (Recommended)", "Create PRCXML?", wxYES_NO) == wxYES)
 				{
 					processPRCXML(&mod);
+					prcxml++;
 				}
 			}
 		}
+
+		wxMessageBox("Success! Created " + to_string(config) + " config.json and " + to_string(prcxml) + " ui_chara_db.prcxml.", "Finished", wxOK);
 	}
 }
 

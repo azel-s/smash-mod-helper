@@ -31,7 +31,7 @@ void ModHandler::addFile(string code, string fileType, int slot, string file)
 		replace(file.begin(), file.end(), '\\', '/');
 
 		files[code][fileType][Slot(slot)].insert(Path(file));
-		slots[code][Slot(slot)] = Slot(slot);
+		slots[code][Slot(slot)] = Slot(slot > 7 ? 0 : slot);
 	}
 	else
 	{

@@ -85,7 +85,7 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
         int index = 0;
         for (auto j = i->second.begin(); j != i->second.end(); j++)
         {
-            if (hasChar && prevBaseSlots[i->first].find(*j) != prevBaseSlots[i->first].end())
+            if (hasChar && prevBaseSlots.find(i->first) != prevBaseSlots.end() && prevBaseSlots.find(i->first)->second.find(*j) != prevBaseSlots.find(i->first)->second.end())
             {
                 hasSlot = true;
             }
