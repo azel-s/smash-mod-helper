@@ -14,8 +14,8 @@ bool App::OnInit()
 {
 	MainFrame* mainFrame = new MainFrame("Smash Ultimate Mod Helper");
 	mainFrame->SetIcons(wxICON(SMASH_ICON));
-	mainFrame->SetClientSize(400, 300);
-	mainFrame->SetMinSize(mainFrame->GetSize());
+	mainFrame->SetClientSize(mainFrame->FromDIP(wxSize(400, 300)));
+	mainFrame->SetMinSize(mainFrame->FromDIP(mainFrame->GetSize()));
 	mainFrame->Show();
 
 	return true;
