@@ -676,6 +676,9 @@ void MainFrame::onPrcPressed(wxCommandEvent& evt)
 
 			if (!finalSlots.empty() || !finalNames.empty() || !finalAnnouncers.empty())
 			{
+				auto tempNames = dlg.getNames(true);
+				mHandler.create_db_prcxml(tempNames, finalAnnouncers, finalSlots);
+
 				if (!finalNames.empty())
 				{
 					mHandler.create_message_xmsbt(finalNames);
@@ -685,9 +688,6 @@ void MainFrame::onPrcPressed(wxCommandEvent& evt)
 					fs::remove(mHandler.getPath() + "/ui/message/msg_name.xmsbt");
 					log->LogText("> WARN: msg_name.xmsbt is not needed, previous one was deleted to avoid issues.");
 				}
-
-				auto tempNames = dlg.getNames(true);
-				mHandler.create_db_prcxml(tempNames, finalAnnouncers, finalSlots);
 			}
 			else if (fs::exists(mHandler.getPath() + "/ui/param/database/ui_chara_db.prcxml"))
 			{

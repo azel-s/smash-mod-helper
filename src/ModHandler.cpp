@@ -2248,6 +2248,17 @@ void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<strin
 
 						// Add cIndex/cGroup info
 						auto charLter = slots.find(code);
+
+						if (charLter == slots.end() && (code == "elight_only" || "elight_first"))
+						{
+							charLter = slots.find("elight");
+						}
+
+						if (charLter == slots.end() && (code == "eflame_only" || "eflame_first"))
+						{
+							charLter = slots.find("eflame");
+						}
+
 						if (charLter != slots.end())
 						{
 							for (int i = 8; i < charIter->second.getInt(); i++)
@@ -2292,6 +2303,17 @@ void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<strin
 							else
 							{
 								auto charKter = slots.find(code);
+
+								if (charKter == slots.end() && (code == "elight_only" || "elight_first"))
+								{
+									charKter = slots.find("elight");
+								}
+
+								if (charKter == slots.end() && (code == "eflame_only" || "eflame_first"))
+								{
+									charKter = slots.find("eflame");
+								}
+
 								if (charKter != slots.end())
 								{
 									auto slotIter = charKter->second.find(i->first);
