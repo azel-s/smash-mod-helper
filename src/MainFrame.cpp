@@ -279,6 +279,7 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 	if (fileType)
 	{
 		codes = getSelectedCharCodes();
+		codesFilled = true;
 
 		// Enable or disable file type checkbox based on whether or not it exists in character's map
 		wxArrayString selectablefileTypes = mHandler.wxGetFileTypes(codes, settings.selectionType);
@@ -297,9 +298,6 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 			}
 		}
 
-		fileTypes = getSelectedFileTypes();
-		fileTypesFilled = true;
-
 		initSlot = true;
 	}
 
@@ -308,15 +306,21 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 		if (!codesFilled)
 		{
 			codes = getSelectedCharCodes();
+			codesFilled = true;
 		}
 		if (!fileTypesFilled)
 		{
 			fileTypes = getSelectedFileTypes();
+			fileTypesFilled = true;
 		}
 
 		string oldSlot = (initSlots.list->GetSelection() != wxNOT_FOUND) ? initSlots.list->GetStringSelection().ToStdString() : "";
 
-		initSlots.list->Set(mHandler.wxGetSlots(codes, fileTypes, settings.selectionType));
+		if (!fileTypes.empty())
+		{
+			initSlots.list->Set(mHandler.wxGetSlots(codes, fileTypes, settings.selectionType));
+		}
+
 		if (!initSlots.list->IsEmpty())
 		{
 			if (oldSlot.empty())
@@ -344,10 +348,12 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 		if (!codesFilled)
 		{
 			codes = getSelectedCharCodes();
+			codesFilled = true;
 		}
 		if (!fileTypesFilled)
 		{
 			fileTypes = getSelectedFileTypes();
+			fileTypesFilled = true;
 		}
 
 		if (initSlots.list->GetSelection() != wxNOT_FOUND)

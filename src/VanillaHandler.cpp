@@ -276,7 +276,7 @@ int VanillaHandler::getFiles(string code, Slot slot, map<string, set<Path>>& fil
 							}
 						}
 					}
-					else if (code != "element" && code != "ptrainer")
+					else if (code != "element" && code != "ptrainer" && code != "ptrainer_low")
 					{
 						return -1;
 					}

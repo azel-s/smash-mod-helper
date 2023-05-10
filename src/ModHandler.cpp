@@ -1245,6 +1245,17 @@ Config ModHandler::getNewDirSlots()
 				getNewDirSlots("popo", j->first, config);
 				getNewDirSlots("nana", j->first, config);
 			}
+			else if (i->first == "ptrainer")
+			{
+				getNewDirSlots("ptrainer", j->first, config);
+				
+				if (slots.find("ptrainer_low") == slots.end())
+				{
+					slots["ptrainer_low"][j->first] = j->second;
+					getNewDirSlots("ptrainer_low", j->first, config);
+					slots.extract("ptrainer_low");
+				}
+			}
 			else
 			{
 				getNewDirSlots(i->first, j->first, config);
