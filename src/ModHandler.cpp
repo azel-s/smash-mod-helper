@@ -4,8 +4,8 @@
 #include "ModHandler.h"
 #include <filesystem>
 #include <fstream>
-#include <string>
 #include <codecvt>
+#include <string>
 #include <queue>
 #include <cmath>
 namespace fs = std::filesystem;
@@ -69,6 +69,7 @@ void ModHandler::outputUTF(wofstream& file, wxString str, bool parse)
 			}
 			else if (*i == '|')
 			{
+				result += '\r';
 				result += '\n';
 			}
 			else
@@ -237,6 +238,41 @@ InklingColor ModHandler::getInklingColor(Slot slot)
 	}
 
 	return VanillaHandler::getInklingColor(slot);
+}
+
+Name ModHandler::getMessage(string code, Slot slot) const
+{
+	Name message;
+
+	if (slot.getInt() > 7)
+	{
+		auto charIter = slots.find(code);
+
+		if (charIter == slots.end() && (code == "eflame_only" || code == "eflame_first"))
+		{
+			charIter = slots.find("eflame");
+		}
+
+		if (charIter == slots.end() && (code == "elight_only" || code == "elight_first"))
+		{
+			charIter = slots.find("elight");
+		}
+
+		if (charIter != slots.end())
+		{
+			auto slotIter = charIter->second.find(slot);
+			if (slotIter != charIter->second.end())
+			{
+				message = VanillaHandler::getMessage(code, slotIter->second);
+			}
+		}
+	}
+	else
+	{
+		message = VanillaHandler::getMessage(code, slot);
+	}
+
+	return message;
 }
 
 int ModHandler::getNumCharacters()
@@ -1248,7 +1284,7 @@ Config ModHandler::getNewDirSlots()
 			else if (i->first == "ptrainer")
 			{
 				getNewDirSlots("ptrainer", j->first, config);
-				
+
 				if (slots.find("ptrainer_low") == slots.end())
 				{
 					slots["ptrainer_low"][j->first] = j->second;
@@ -2153,6 +2189,8 @@ void ModHandler::create_message_xmsbt(map<string, map<Slot, Name>>& names)
 
 				outputUTF(msgUTF, "\n</xmsbt>");
 				msgUTF.close();
+
+				wxLog("> Success: msg_name.xmsbt was created!");
 			}
 			else
 			{
@@ -2170,11 +2208,6 @@ void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<strin
 {
 	if (!maxSlots.empty() || !announcers.empty() || !names.empty())
 	{
-		if (!names.empty())
-		{
-			create_message_xmsbt(names);
-		}
-
 		fs::create_directories(path + "/ui/param/database");
 
 		ifstream uiVanilla("Files/prc/ui_chara_db.xml");
@@ -2250,7 +2283,25 @@ void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<strin
 						auto i = charJter->second.begin();
 						while (i != charJter->second.end())
 						{
-							string nameSlot = Slot(i->first.getInt() + 8).getString();
+							string nameSlot;
+
+							if (i->second.cspName != "><ABC><")
+							{
+								nameSlot = Slot(i->first.getInt() + 8).getString();
+							}
+							else
+							{
+								auto charKter = slots.find(code);
+								if (charKter != slots.end())
+								{
+									auto slotIter = charKter->second.find(i->first);
+									if (slotIter != charKter->second.end())
+									{
+										nameSlot = to_string(VanillaHandler::getXMLData(code, slotIter->second).nIndex);
+									}
+								}
+							}
+
 							uiEdit << "\n\t\t\t<byte hash=\"n" << i->first.getString() << "_index\">" << nameSlot << "</byte>";
 							i++;
 						}
@@ -2275,19 +2326,27 @@ void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<strin
 								if (slotIter != charLter->second.end())
 								{
 									auto db = VanillaHandler::getXMLData(code, slotIter->second);
+
 									string slot = Slot(i->first.getInt() + 8).getString();
 
 									if (i->second == "Default")
 									{
-										uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_c" + slot + "\">" + db.label << "</hash40>";
-										if (!db.article.empty())
+										if (names.find(code) != names.end() && names.find(code)->second.find(i->first) != names.find(code)->second.end())
 										{
-											uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_article_c" + slot + "\">" + db.article << "</hash40>";
+											uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_c" + slot + "\">" + db.label << "</hash40>";
+											if (!db.article.empty())
+											{
+												uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_article_c" + slot + "\">" + db.article << "</hash40>";
+											}
 										}
 									}
 									else
 									{
-										uiEdit << "<hash40 hash=\"characall_label_article_c" + slot + "\">" + i->second << "</hash40>";
+										uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_c" + slot + "\">" + i->second << "</hash40>";
+										if (!db.article.empty())
+										{
+											uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_article_c" + slot + "\">" + i->second << "</hash40>";
+										}
 									}
 								}
 							}
@@ -2524,105 +2583,10 @@ map<string, map<Slot, Slot>> ModHandler::read_config_slots()
 map<string, map<Slot, Name>> ModHandler::read_message_names()
 {
 	map<string, map<Slot, Name>> names;
-	int count = 0;
 
 	if (fs::exists(path + "/ui/message/msg_name.xmsbt"))
 	{
-		wifstream inFile(this->path + "/ui/message/msg_name.xmsbt", ios::binary);
-		inFile.imbue(std::locale(inFile.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::consume_header>));
-
-		if (inFile.is_open())
-		{
-			vector<string> lines;
-			int count = -2;
-
-			// Read Header
-			for (wchar_t c; inFile.get(c) && count < 0; )
-			{
-				if ((char(c)) == '>')
-				{
-					count++;
-				}
-			}
-
-			lines.push_back("");
-
-			for (wchar_t c; inFile.get(c); )
-			{
-				lines[count] += (char)c;
-
-				if ((char(c)) == '>')
-				{
-					lines.push_back("");
-					count++;
-				}
-			}
-
-			char type;
-			bool action = false;
-			size_t beg;
-			size_t end;
-
-			// Interpret Data
-			for (int i = 0; i < lines.size(); i++)
-			{
-				// CSS/CSP/VS
-				if (lines[i].find("nam_chr") != string::npos)
-				{
-					beg = lines[i].find("nam_chr") + 9;
-					end = lines[i].find("_", beg);
-					type = lines[i][beg - 2];
-
-					action = true;
-				}
-				// Stage_Name
-				else if (lines[i].find("nam_stage") != string::npos)
-				{
-					beg = lines[i].find("nam_stage") + 15;
-					end = lines[i].find("_", beg + 1);
-					type = 's';
-
-					action = true;
-				}
-
-				if (action)
-				{
-					Slot slot = Slot(stoi(lines[i].substr(beg, end - beg)) - 8);
-					string code = lines[i].substr(end + 1, lines[i].find("\"", end + 1) - end - 1);
-					string name = lines[i + 2].substr(0, lines[i + 2].find("<"));
-
-					if (type == '1')
-					{
-						names[code][slot].cspName = name;
-					}
-					else if (type == '2')
-					{
-						names[code][slot].vsName = name;
-					}
-					else if (type == '3')
-					{
-						names[code][slot].cssName = name;
-					}
-					else if (type == 's')
-					{
-						names[code][slot].stageName = name;
-					}
-					else
-					{
-						wxLog("> ERROR: Unable to correctly read names from msg_name.xmsbt!");
-					}
-
-					action = false;
-					i += 2;
-				}
-			}
-
-			inFile.close();
-		}
-		else
-		{
-			wxLog("> ERROR: " + path + "/ui/message/msg_name.xmsbt" + "could not be opened!");
-		}
+		names = VanillaHandler::read_message_names(path + "/ui/message/msg_name.xmsbt");
 	}
 
 	return names;

@@ -1,8 +1,10 @@
 #include "VanillaHandler.h"
 #include <filesystem>
 #include <fstream>
+#include <codecvt>
 #include <string>
 #include <queue>
+#include <regex>
 namespace fs = std::filesystem;
 using std::string, std::queue, std::ifstream;
 
@@ -51,6 +53,9 @@ VanillaHandler::VanillaHandler(string filePath)
 		}
 	}
 	nFile.close();
+
+	// Read message names
+	messages = read_message_names(filePath + "messages.data");
 
 	// Read DB
 	ifstream dFile(filePath + "db.data");
@@ -171,6 +176,21 @@ string VanillaHandler::getCode(string name) const
 	{
 		return "";
 	}
+}
+
+Name VanillaHandler::getMessage(string code, Slot slot) const
+{
+	auto charIter = messages.find(code);
+	if (charIter != messages.end())
+	{
+		auto slotIter = charIter->second.find(slot);
+		if (slotIter != charIter->second.end())
+		{
+			return slotIter->second;
+		}
+	}
+
+	return Name();
 }
 
 void VanillaHandler::insertFiles(const json& tJson, map<string, set<Path>>& files, string type) const
@@ -342,6 +362,130 @@ vector<InklingColor> VanillaHandler::getInklingColors() const
 {
 	return inklingColors;
 }
+
+map<string, map<Slot, Name>> VanillaHandler::read_message_names(string path)
+{
+	map<string, map<Slot, Name>> names;
+	int count = 0;
+
+	if (fs::exists(path))
+	{
+		wifstream inFile(path, ios::binary);
+		inFile.imbue(std::locale(inFile.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::consume_header>));
+
+		if (inFile.is_open())
+		{
+			vector<string> lines;
+			int count = -2;
+
+			// Read Header
+			for (wchar_t c; inFile.get(c) && count < 0; )
+			{
+				if ((char(c)) == '>')
+				{
+					count++;
+				}
+			}
+
+			lines.push_back("");
+
+			for (wchar_t c; inFile.get(c); )
+			{
+				lines[count] += (char)c;
+
+				if ((char(c)) == '>')
+				{
+					lines.push_back("");
+					count++;
+				}
+			}
+
+			char type;
+			bool action = false;
+			size_t beg;
+			size_t end;
+
+			// Interpret Data
+			for (int i = 0; i < lines.size(); i++)
+			{
+				// CSS/CSP/VS
+				if (lines[i].find("nam_chr") != string::npos)
+				{
+					beg = lines[i].find("nam_chr") + 9;
+					end = lines[i].find("_", beg);
+					type = lines[i][beg - 2];
+
+					action = true;
+				}
+				// Stage_Name
+				else if (lines[i].find("nam_stage") != string::npos)
+				{
+					beg = lines[i].find("nam_stage") + 15;
+					end = lines[i].find("_", beg + 1);
+					type = 's';
+
+					action = true;
+				}
+
+				if (action)
+				{
+					try
+					{
+						Slot slot = Slot(stoi(lines[i].substr(beg, end - beg)) - 8);
+						//Slot slot = Slot(stoi(lines[i].substr(beg, end - beg)));
+						string code = lines[i].substr(end + 1, lines[i].find("\"", end + 1) - end - 1);
+						string name = lines[i + 2].substr(0, lines[i + 2].find("<"));
+
+						name = regex_replace(name, regex("&quot;"), "\"");
+						name = regex_replace(name, regex("&apos;"), "'");
+						name = regex_replace(name, regex("&amp;"), "&");
+						name = regex_replace(name, regex("&lt;"), "<");
+						name = regex_replace(name, regex("&gt;"), ">");
+						name = regex_replace(name, regex("\n"), "|");
+						name = regex_replace(name, regex("\r"), "");
+
+						if (type == '1')
+						{
+							names[code][slot].cspName = name;
+						}
+						else if (type == '2')
+						{
+							names[code][slot].vsName = name;
+						}
+						else if (type == '3')
+						{
+							names[code][slot].cssName = name;
+						}
+						else if (type == 's')
+						{
+							names[code][slot].stageName = name;
+						}
+						else
+						{
+							okay = false;
+						}
+					}
+					catch (...)
+					{
+
+					}
+
+					action = false;
+					i += 2;
+				}
+			}
+
+			inFile.close();
+		}
+		else
+		{
+			okay = false;
+		}
+	}
+
+	return names;
+}
+
 
 bool VanillaHandler::isOkay() const
 {

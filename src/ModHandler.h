@@ -48,6 +48,7 @@ public:
 	map<string, set<Slot>> getAddSlots() const;
 	Slot getBaseSlot(string code, Slot slot) const;
 	InklingColor getInklingColor(Slot slot);
+	Name getMessage(string code, Slot slot) const;
 
 	/* --- GETTERS (WX) --- */
 	wxArrayString wxGetCharacterNames(string fileType = "") const;

@@ -181,6 +181,8 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 
 			for (auto j = i->second.begin(); j != i->second.end(); j++)
 			{
+				auto message = mHandler->getMessage(charcode, *j);
+
 				if (hasChar && prevNames[charcode].find(*j) != prevNames[charcode].end())
 				{
 					hasSlot = true;
@@ -198,7 +200,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 					}
 					else
 					{
-						fieldName = "Name";
+						fieldName = message.cssName;
 					}
 
 					textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
@@ -217,7 +219,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 				}
 				else
 				{
-					fieldName = "Name";
+					fieldName = message.cspName;
 				}
 
 				textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
@@ -231,7 +233,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 				}
 				else
 				{
-					fieldName = "NAME";
+					fieldName = message.vsName;
 				}
 
 				textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
@@ -239,18 +241,21 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 				gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 				currCol++;
 
-				if (hasSlot)
+				if (charcode != "pzenigame" && charcode != "plizardon" && charcode != "pfushigisou")
 				{
-					fieldName = prevNames[charcode][*j].stageName;
-				}
-				else
-				{
-					fieldName = "Stage Name";
-				}
+					if (hasSlot)
+					{
+						fieldName = prevNames[charcode][*j].stageName;
+					}
+					else
+					{
+						fieldName = message.stageName;
+					}
 
-				textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
-				slotNames[charcode][*j].stageName = textCtrl;
-				gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
+					textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
+					slotNames[charcode][*j].stageName = textCtrl;
+					gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
+				}
 				currCol++;
 
 				textCtrl = new wxTextCtrl(panel, wxID_ANY, "Default", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
@@ -305,6 +310,9 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 
 					for (auto j = slotUnion.begin(); j != slotUnion.end(); j++)
 					{
+						auto messageF = mHandler->getMessage("eflame_first", *j);
+						auto messageL = mHandler->getMessage("elight_first", *j);
+
 						bool hasFlameSlot = false;
 
 						if (hasFlame && prevNames["eflame_first"].find(*j) != prevNames["eflame_first"].end())
@@ -324,7 +332,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 							}
 							else
 							{
-								fieldName = "Name";
+								fieldName = messageF.cssName;
 							}
 
 							textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
@@ -343,7 +351,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 						}
 						else
 						{
-							fieldName = "Name";
+							fieldName = messageF.cspName;
 						}
 
 						textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
@@ -357,7 +365,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 						}
 						else
 						{
-							fieldName = "NAME";
+							fieldName = messageF.vsName;
 						}
 
 						textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
@@ -391,7 +399,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 							}
 							else
 							{
-								fieldName = "Name";
+								fieldName = messageL.cssName;
 							}
 
 							textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
@@ -406,11 +414,11 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 
 						if (hasLightSlot)
 						{
-							fieldName = prevNames["elight_first"][*j].cssName;
+							fieldName = prevNames["elight_first"][*j].cspName;
 						}
 						else
 						{
-							fieldName = "Name";
+							fieldName = messageL.cspName;
 						}
 
 						textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
@@ -424,7 +432,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 						}
 						else
 						{
-							fieldName = "NAME";
+							fieldName = messageL.vsName;
 						}
 
 						textCtrl = new wxTextCtrl(panel, wxID_ANY, fieldName, wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
@@ -467,13 +475,72 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 	auto sizer = new wxBoxSizer(wxVERTICAL);
 
 	sizer->Add(panel, 1, wxEXPAND);
-	sizer->Add(CreateButtonSizer(wxOK | wxCANCEL), 0, wxALIGN_RIGHT | wxALL, FromDIP(20));
+
+	wxButton* loadDefault = new wxButton(this, wxID_ANY, "Load Default");
+	loadDefault->Bind(wxEVT_BUTTON, &PrcSelection::onLoadPressed, this);
+
+	wxButton* okay = new wxButton(this, wxID_ANY, "Okay");
+	okay->Bind(wxEVT_BUTTON, &PrcSelection::onClosePressed, this, wxID_ANY, wxID_ANY, new wxArgument("okay"));
+
+	wxButton* cancel = new wxButton(this, wxID_ANY, "Cancel");
+	cancel->Bind(wxEVT_BUTTON, &PrcSelection::onClosePressed, this, wxID_ANY, wxID_ANY, new wxArgument("cancel"));
+
+	wxBoxSizer* h = new wxBoxSizer(wxHORIZONTAL);
+
+	h->Add(loadDefault, 0);
+	h->AddStretchSpacer();
+	h->Add(okay, 0, wxLEFT, FromDIP(20));
+	h->Add(cancel, 0, wxLEFT, FromDIP(10));
+
+	sizer->Add(h, 0, wxEXPAND | wxALL, FromDIP(20));
 
 	this->SetSizerAndFit(sizer);
 
 	if (sizer->GetMinSize().y > 600)
 	{
 		this->SetMinSize(FromDIP(wxSize(sizer->GetMinSize().x, 600)));
+	}
+}
+
+void PrcSelection::onLoadPressed(wxCommandEvent& evt)
+{
+	for (auto i = slotNames.begin(); i != slotNames.end(); i++)
+	{
+		for (auto j = i->second.begin(); j != i->second.end(); j++)
+		{
+			auto message = mHandler->getMessage(i->first, j->first);
+
+			j->second.cspName->SetValue(message.cspName);
+			j->second.vsName->SetValue(message.vsName);
+
+			if (
+				i->first != "eflame_first"
+				&& i->first != "elight_first"
+				&& i->first != "pzenigame"
+				&& i->first != "plizardon"
+				&& i->first != "pfushigisou"
+				)
+			{
+				j->second.stageName->SetValue(message.stageName);
+			}
+
+			if (j->first.getInt() == 0)
+			{
+				j->second.cssName->SetValue(message.cssName);
+			}
+		}
+	}
+}
+
+void PrcSelection::onClosePressed(wxCommandEvent& evt)
+{
+	if (static_cast<wxArgument*>(evt.GetEventUserData())->str == "okay")
+	{
+		EndModal(wxID_OK);
+	}
+	else
+	{
+		EndModal(wxID_CANCEL);
 	}
 }
 
@@ -525,7 +592,7 @@ map<string, Slot> PrcSelection::getMaxSlots()
 	return result;
 }
 
-map<string, map<Slot, Name>> PrcSelection::getNames()
+map<string, map<Slot, Name>> PrcSelection::getNames(bool prcxml)
 {
 	map<string, map<Slot, Name>> result;
 
@@ -534,13 +601,32 @@ map<string, map<Slot, Name>> PrcSelection::getNames()
 	{
 		for (auto j = i->second.begin(); j != i->second.end(); j++)
 		{
+			auto message = mHandler->getMessage(i->first, j->first);
 			// TODO: Clean up big statement
-			if ((j->first.getInt() == 0 && j->second.cssName->GetValue() != "Name") || j->second.cspName->GetValue() != "Name" || j->second.vsName->GetValue() != "NAME" || (i->first != "elight_first" && i->first != "eflame_first" && j->second.stageName->GetValue() != "Stage Name"))
+			if (
+				(j->first.getInt() == 0 && j->second.cssName->GetValue() != message.cssName)
+				|| j->second.cspName->GetValue() != message.cspName
+				|| j->second.vsName->GetValue() != message.vsName
+				|| (
+					i->first != "elight_first"
+					&& i->first != "eflame_first"
+					&& i->first != "pzenigame"
+					&& i->first != "plizardon"
+					&& i->first != "pfushigisou"
+					&& j->second.stageName->GetValue() != message.stageName
+					)
+				)
 			{
 				result[i->first][j->first].cspName = j->second.cspName->GetValue();
 				result[i->first][j->first].vsName = j->second.vsName->GetValue();
 
-				if (i->first != "eflame_first" && i->first != "elight_first")
+				if (
+					i->first != "elight_first"
+					&& i->first != "eflame_first"
+					&& i->first != "pzenigame"
+					&& i->first != "plizardon"
+					&& i->first != "pfushigisou"
+					)
 				{
 					result[i->first][j->first].stageName = j->second.stageName->GetValue();
 				}
@@ -549,6 +635,10 @@ map<string, map<Slot, Name>> PrcSelection::getNames()
 				{
 					result[i->first][j->first].cssName = j->second.cssName->GetValue();
 				}
+			}
+			else if(prcxml && j->first.getInt() > 7)
+			{
+				result[i->first][j->first].cspName = "><ABC><";
 			}
 		}
 	}
@@ -565,7 +655,21 @@ map<string, map<Slot, string>> PrcSelection::getAnnouncers()
 	{
 		for (auto j = i->second.begin(); j != i->second.end(); j++)
 		{
-			if (j->second.cspName->GetValue() != "Name" || j->second.vsName->GetValue() != "NAME" || (i->first != "elight_first" && i->first != "eflame_first" && j->second.stageName->GetValue() != "Stage Name") || j->second.announcer->GetValue() != "Default" || j->first.getInt() > 7)
+			auto message = mHandler->getMessage(i->first, j->first);
+
+			if (
+				(j->first.getInt() == 0 && j->second.cssName->GetValue() != message.cssName)
+				|| j->second.cspName->GetValue() != message.cspName
+				|| j->second.vsName->GetValue() != message.vsName
+				|| (
+					i->first != "elight_first"
+					&& i->first != "eflame_first"
+					&& i->first != "pzenigame"
+					&& i->first != "plizardon"
+					&& i->first != "pfushigisou"
+					&& j->second.stageName->GetValue() != message.stageName
+					)
+				)
 			{
 				result[i->first][j->first] = j->second.announcer->GetValue();
 			}

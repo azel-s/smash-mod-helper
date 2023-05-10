@@ -21,6 +21,9 @@ private:
 	// Key: Character name, Value: Character code
 	unordered_map<string, string*> name_code;
 
+	// Key: Character code, Value: (Key: Slot, Value: Name)
+	map<string, map<Slot, Name>> messages;
+
 	// Key: Character code, Value: Set(Path)
 	unordered_map<string, set<Path>> effectFiles;
 
@@ -35,16 +38,17 @@ private:
 	void insertCodeName(string code, string name);
 
 public:
-	/* --- Constructor/Destructor --- */
+	/* --- CONSTRUCTOR/DESTRUCTOR --- */
 	VanillaHandler(string filePath = "Files/");
 	// INFO: Deletes dynamic strings for code/name.
 	~VanillaHandler();
 
-	/* --- Getters --- */
-	// Character code/name
+	/* --- GETTERS --- */
+	// Character code/name/message
 	string getName(string code) const;
 	string getCode(string name) const;
-	
+	Name getMessage(string code, Slot slot) const;
+
 	// JSON (and effect.data) Info
 	int getFiles(string code, Slot slot, map<string, set<Path>>& files) const;
 
@@ -55,6 +59,9 @@ public:
 	InklingColor getInklingColor(Slot slot) const;
 	vector<InklingColor> getInklingColors() const;
 
-	/* --- Verifiers --- */
+	/* --- VERIFIERS --- */
 	bool isOkay() const;
+
+	/* --- READERS --- */
+	map<string, map<Slot, Name>> read_message_names(string path);
 };

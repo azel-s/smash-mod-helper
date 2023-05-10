@@ -11,16 +11,6 @@ public:
 	bool OnInit();
 };
 
-class wxArgument : public wxObject
-{
-public:
-	wxArgument(string str = "", int num = 0, ModHandler* mHandler = nullptr) : str(str), num(num), mHandler(mHandler) {}
-
-	string str;
-	int num;
-	ModHandler* mHandler;
-};
-
 class MainFrame : public wxFrame
 {
 private:
