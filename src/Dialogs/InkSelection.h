@@ -29,8 +29,8 @@ class InkSelection : public wxDialog
     public:
         InkSelection(wxWindow* parent, wxWindowID id,
             const wxString& title,
-            ModHandler& mHandler,
-            bool readPrevInk,
+            ModHandler* mHandler,
+            Settings settings,
             const wxPoint& pos = wxDefaultPosition,
             const wxSize& size = wxDefaultSize,
             long style = wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER,

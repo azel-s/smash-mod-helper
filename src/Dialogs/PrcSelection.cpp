@@ -3,14 +3,16 @@
 
 PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 	const wxString& title,
-	ModHandler& mHandler,
-	bool readPrevNames,
+	ModHandler* mHandler,
+	Settings settings,
 	const wxPoint& pos,
 	const wxSize& size,
 	long style,
 	const wxString& name) :
 	wxDialog(parent, id, title, pos, size, style, name)
 {
+	this->mHandler = mHandler;
+
 	auto panel = new wxScrolled<wxPanel>(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
 	panel->SetScrollRate(0, 10);
 
@@ -24,16 +26,16 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 
 	gridSizer->SetFlexibleDirection(wxBOTH);
 
-	auto allSlots = mHandler.getAllSlots(false);
+	auto allSlots = mHandler->getAllSlots(false);
 
-	auto prevNames = mHandler.read_message_names();
-	bool slots = mHandler.hasAddSlot();
+	auto prevNames = mHandler->read_message_names();
+	bool slots = mHandler->hasAddSlot();
 
 	int rpm; // Aegis max slot.
 	{
-		bool hasRex = mHandler.hasChar("element");
-		bool hasPyra = mHandler.hasChar("eflame");
-		bool hasMythra = mHandler.hasChar("elight");
+		bool hasRex = mHandler->hasChar("element");
+		bool hasPyra = mHandler->hasChar("eflame");
+		bool hasMythra = mHandler->hasChar("elight");
 
 		int r = hasRex ? allSlots.find("element")->second.rbegin()->getInt() + 1 : 0;
 		int p = hasRex ? allSlots.find("eflame")->second.rbegin()->getInt() + 1 : 0;
@@ -121,7 +123,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 	// Create fields
 	for (auto i = allSlots.begin(); i != allSlots.end(); i++)
 	{
-		text = new wxStaticText(panel, wxID_ANY, mHandler.getName(i->first));
+		text = new wxStaticText(panel, wxID_ANY, mHandler->getName(i->first));
 
 		if (i->first != "element")
 		{
@@ -172,7 +174,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 				charcode = "elight_only";
 			}
 
-			if (readPrevNames && prevNames.find(charcode) != prevNames.end())
+			if (settings.readNames && prevNames.find(charcode) != prevNames.end())
 			{
 				hasChar = true;
 			}
@@ -284,7 +286,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 				{
 					bool hasFlame = false;
 					bool hasLight = false;
-					if (readPrevNames && prevNames.find("eflame_first") != prevNames.end())
+					if (settings.readNames && prevNames.find("eflame_first") != prevNames.end())
 					{
 						hasFlame = true;
 					}
@@ -475,7 +477,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 	}
 }
 
-map<string, Slot> PrcSelection::getMaxSlots(ModHandler* mHandler)
+map<string, Slot> PrcSelection::getMaxSlots()
 {
 	auto allSlots = mHandler->getAllSlots(false);
 	map<string, Slot> result;

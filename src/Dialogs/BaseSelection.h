@@ -11,7 +11,7 @@ private:
 public:
     BaseSelection(wxWindow* parent, wxWindowID id,
         const wxString& title,
-        ModHandler& mHandler,
+        ModHandler* mHandler,
         bool readPrevBase,
         const wxPoint& pos = wxDefaultPosition,
         const wxSize& size = wxDefaultSize,

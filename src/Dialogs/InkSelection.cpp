@@ -1,16 +1,18 @@
 #include "InkSelection.h"
 
-InkSelection::InkSelection(wxWindow* parent, wxWindowID id,
+InkSelection::InkSelection
+(
+    wxWindow* parent, wxWindowID id,
     const wxString& title,
-    ModHandler& mHandler,
-    bool readPrevInk,
+    ModHandler* mHandler,
+    Settings settings,
     const wxPoint& pos,
     const wxSize& size,
     long style,
-    const wxString& name) :
-    wxDialog(parent, id, title, pos, size, style, name)
+    const wxString& name
+) : wxDialog(parent, id, title, pos, size, style, name)
 {
-    this->mHandler = &mHandler;
+    this->mHandler = mHandler;
 
     list.Add("c00");
     list.Add("c01");
@@ -23,9 +25,9 @@ InkSelection::InkSelection(wxWindow* parent, wxWindowID id,
 
     map<Slot, InklingColor> inklingColors;
 
-    if (readPrevInk)
+    if (settings.readInk)
     {
-        inklingColors = mHandler.read_ink_colors();
+        inklingColors = mHandler->read_ink_colors();
     }
 
     sizerM = new wxBoxSizer(wxVERTICAL);
@@ -45,7 +47,7 @@ InkSelection::InkSelection(wxWindow* parent, wxWindowID id,
 
     int index = 0;
 
-    if (readPrevInk)
+    if (settings.readInk)
     {
         for (auto i = inklingColors.begin(); i != inklingColors.end(); i++)
         {

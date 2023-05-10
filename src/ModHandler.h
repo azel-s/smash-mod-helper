@@ -29,9 +29,6 @@ private:
 	void outputUTF(wofstream& file, wxString str, bool parse = false);
 	void deleteEmptyDirs(string path);
 
-	/* --- HELPERS (WX) --- */
-	void wxLog(string message, bool debug = true);
-
 public:
 	/* --- CONSTRUCTORS --- */
 	ModHandler(wxLogTextCtrl* log = nullptr, string path = "");
@@ -73,6 +70,7 @@ public:
 	void remove_desktop_ini();
 
 	/* --- FUNCTIONS (WX) --- */
+	void wxLog(string message, bool debug = true);
 	void adjustFiles(string action, string code, wxArrayString fileTypes, Slot iSlot, Slot fSlot);
 	void adjustFiles(string action, wxArrayString codes, wxArrayString fileTypes, Slot iSlot, Slot fSlot);
 

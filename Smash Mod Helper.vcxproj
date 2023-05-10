@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Dialogs\BaseSelection.h" />
+    <ClInclude Include="src\Dialogs\BatchSelection.h" />
     <ClInclude Include="src\Dialogs\InkSelection.h" />
     <ClInclude Include="src\Dialogs\PrcSelection.h" />
     <ClInclude Include="src\HelperStructures.h" />
@@ -29,6 +30,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Dialogs\BaseSelection.cpp" />
+    <ClCompile Include="src\Dialogs\BatchSelection.cpp" />
     <ClCompile Include="src\Dialogs\InkSelection.cpp" />
     <ClCompile Include="src\Dialogs\PrcSelection.cpp" />
     <ClCompile Include="src\HelperStructures.cpp" />

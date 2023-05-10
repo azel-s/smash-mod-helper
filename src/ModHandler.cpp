@@ -1085,6 +1085,7 @@ void ModHandler::adjustFiles(string action, string code, wxArrayString fileTypes
 				if (fileTypeIter != charIter->second.end())
 				{
 					auto slotIter = fileTypeIter->second.find(iSlot);
+					Slot slotToRemove;
 					if (slotIter == fileTypeIter->second.end() && fileTypes[i] == "effect")
 					{
 						slotIter = fileTypeIter->second.find(Slot(999));
@@ -1092,6 +1093,7 @@ void ModHandler::adjustFiles(string action, string code, wxArrayString fileTypes
 
 					if (slotIter != fileTypeIter->second.end())
 					{
+						slotToRemove = slotIter->first;
 						for (auto j = slotIter->second.begin(); j != slotIter->second.end(); j++)
 						{
 							Path fPath = Path(j->getPath().substr(path.size() + 1));
@@ -1147,17 +1149,30 @@ void ModHandler::adjustFiles(string action, string code, wxArrayString fileTypes
 							}
 						}
 
-						if (action == "move")
+						if (action == "move" || action == "delete")
 						{
-							slots[code].extract(slotIter->first);
-							files[code][fileTypes[i].ToStdString()].extract(slotIter->first);
-						}
-						else if (action == "delete")
-						{
-							slots[code].extract(slotIter->first);
-							files[code][fileTypes[i].ToStdString()].extract(slotIter->first);
+							files[code][fileTypes[i].ToStdString()].extract(slotToRemove);
 
-							if (files[code][fileTypes[i].ToStdString()].empty())
+							// Remove old slot from slots map if it does not exist in any other fileType map.
+							bool slotFound = false;
+							for (auto& fType : this->fileTypes)
+							{
+								auto tIter = files[code].find(fType);
+								if (tIter != files[code].end())
+								{
+									if (tIter->second.find(slotToRemove) != tIter->second.end())
+									{
+										slotFound = true;
+										break;
+									}
+								}
+							}
+							if (!slotFound)
+							{
+								slots[code].extract(slotToRemove);
+							}
+
+							if (action == "delete" && files[code][fileTypes[i].ToStdString()].empty())
 							{
 								files[code].extract(fileTypes[i].ToStdString());
 							}
@@ -1701,7 +1716,7 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 							}
 							else
 							{
-								wxLog("> WARN: Ignored " + l->getPath(), true);
+								wxLog("> WARN: Ignored " + l->getPath(), debug);
 							}
 						}
 					}
@@ -2045,7 +2060,7 @@ void ModHandler::create_config()
 			file << "\n}";
 
 			file.close();
-			wxLog("> Success: Config file was created!");
+			wxLog("> Success: config.json file was created!");
 		}
 		else
 		{
@@ -2068,7 +2083,8 @@ void ModHandler::create_message_xmsbt(map<string, map<Slot, Name>>& names)
 	ofstream msg;
 	if (!names.empty())
 	{
-		msg.open("msg_name.xmsbt", ios::out | ios::binary);
+		fs::create_directories(path + "/ui/message/");
+		msg.open(path + "/ui/message/msg_name.xmsbt", ios::out | ios::binary);
 
 		if (msg.is_open())
 		{
@@ -2126,18 +2142,15 @@ void ModHandler::create_message_xmsbt(map<string, map<Slot, Name>>& names)
 
 				outputUTF(msgUTF, "\n</xmsbt>");
 				msgUTF.close();
-
-				fs::create_directories(path + "/ui/message/");
-				fs::rename(fs::current_path() / "msg_name.xmsbt", path + "/ui/message/msg_name.xmsbt");
 			}
 			else
 			{
-				wxLog("> " + fs::current_path().string() + "/msg_name.xmsbt could not be opened!");
+				wxLog("> Error:" + path + "/ui/message/msg_name.xmsbt could not be opened!");
 			}
 		}
 		else
 		{
-			wxLog("> Error: " + fs::current_path().string() + "/msg_name.xmsbt could not be opened!");
+			wxLog("> Error:" + path + "/ui/message/msg_name.xmsbt could not be opened!");
 		}
 	}
 }
@@ -2146,8 +2159,15 @@ void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<strin
 {
 	if (!maxSlots.empty() || !announcers.empty() || !names.empty())
 	{
-		ifstream uiVanilla("ui_chara_db.xml");
-		ofstream uiEdit("ui_chara_db.prcxml");
+		if (!names.empty())
+		{
+			create_message_xmsbt(names);
+		}
+
+		fs::create_directories(path + "/ui/param/database");
+
+		ifstream uiVanilla("Files/prc/ui_chara_db.xml");
+		ofstream uiEdit(path + "/ui/param/database/ui_chara_db.prcxml");
 
 		if (uiVanilla.is_open() && uiEdit.is_open())
 		{
@@ -2293,15 +2313,23 @@ void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<strin
 			uiVanilla.close();
 			uiEdit.close();
 
-			fs::remove(fs::current_path() / "ui_chara_db.xml");
+			if (fs::exists(path + "/ui/param/database/ui_chara_db.prcx"))
+			{
+				fs::remove(path + "/ui/param/database/ui_chara_db.prcx");
+				wxLog("> WARN: ui_chara_db.prcx was deleted as it would conflict with the ui_chara_db.prcxml.");
+			}
+			else
+			{
+				wxLog("> Success: ui_chara_db.prcx was created!");
+			}
 		}
 		else if (!uiVanilla.is_open())
 		{
-			wxLog("> Error: " + fs::current_path().string() + "/ui_chara_db.xml could not be opened!");
+			wxLog("> Error: " + fs::current_path().string() + "\\Files\\prc\\ui_chara_db.xml could not be opened!");
 		}
 		else
 		{
-			wxLog("> Error: " + fs::current_path().string() + "/ui_chara_db_EDIT.xml could not be opened!");
+			wxLog("> Error: " + path + "/ui/param/database/ui_chara_db.prcxml could not be opened!");
 		}
 	}
 }
@@ -2310,8 +2338,10 @@ void ModHandler::create_ink_prcxml(map<Slot, InklingColor>& inklingColors)
 {
 	if (!inklingColors.empty())
 	{
-		ifstream effectVanilla("effect.prcxml");
-		ofstream effectEdit("effect_EDIT.prcxml");
+		fs::create_directories(path + "/fighter/common/param");
+
+		ifstream effectVanilla("Files/prc/effect.prcxml");
+		ofstream effectEdit(path + "/fighter/common/param/effect.prcxml");
 
 		if (effectVanilla.is_open() && effectEdit.is_open())
 		{
@@ -2400,12 +2430,22 @@ void ModHandler::create_ink_prcxml(map<Slot, InklingColor>& inklingColors)
 
 			effectVanilla.close();
 			effectEdit.close();
+
+			if (fs::exists(path + "/fighter/common/param/effect.prcx"))
+			{
+				fs::remove(path + "/fighter/common/param/effect.prcx");
+				wxLog("> WARN: effect.prcx was deleted as it would conflict with the effect.prcxml.");
+			}
+			else
+			{
+				wxLog("> Success: effect.prcxml was created!");
+			}
 		}
 		else
 		{
 			if (!effectVanilla.is_open())
 			{
-				wxLog("> Error: " + fs::current_path().string() + "/effect.prcxml could not be opened!");
+				wxLog("> Error: " + fs::current_path().string() + "\\Files\\prc\\effect.prcxml could not be opened!");
 			}
 
 			if (!effectEdit.is_open())
@@ -2451,7 +2491,13 @@ map<string, map<Slot, Slot>> ModHandler::read_config_slots()
 						end = line.find("/camera", camPos + 7) - 1;
 						beg = line.find(code + "/c", camPos + 7) + 2 + code.size();
 
-						slots[code][newSlot] = Slot(line.substr(beg, end - beg + 1));
+						Slot oldSlot = Slot(line.substr(beg, end - beg + 1));
+						if (oldSlot.getInt() > 7)
+						{
+							oldSlot = Slot(0);
+						}
+
+						slots[code][newSlot] = oldSlot;
 					}
 				}
 			}

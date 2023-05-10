@@ -2,7 +2,7 @@
 
 BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
     const wxString& title,
-    ModHandler& mHandler,
+    ModHandler* mHandler,
     bool readPrevBase,
     const wxPoint& pos,
     const wxSize& size,
@@ -10,7 +10,7 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
     const wxString& name) :
     wxDialog(parent, id, title, pos, size, style, name)
 {
-    this->mHandler = &mHandler;
+    this->mHandler = mHandler;
 
     wxArrayString slotList;
     slotList.Add("c00");
@@ -22,7 +22,7 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
     slotList.Add("c06");
     slotList.Add("c07");
 
-    auto addSlots = mHandler.getAddSlots();
+    auto addSlots = mHandler->getAddSlots();
 
     map<string, map<Slot, Slot>> prevBaseSlots;
     bool hasChar = false;
@@ -30,7 +30,7 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
 
     if (readPrevBase)
     {
-        prevBaseSlots = mHandler.read_config_slots();
+        prevBaseSlots = mHandler->read_config_slots();
     }
 
     auto panel = new wxScrolled<wxPanel>(this, wxID_ANY, wxDefaultPosition, wxDefaultSize);
@@ -77,7 +77,7 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
 
         sizerM->Add(sizerA, proportion, wxEXPAND | wxLEFT | wxRIGHT, FromDIP(20));
 
-        wxStaticText* charName = new wxStaticText(panel, wxID_ANY, mHandler.getName(i->first));
+        wxStaticText* charName = new wxStaticText(panel, wxID_ANY, mHandler->getName(i->first));
         sizerA1->Add(charName, proportion, wxALIGN_CENTER_HORIZONTAL);
         sizerA->Add(sizerA1, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(20));
 

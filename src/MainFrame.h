@@ -45,7 +45,6 @@ private:
 	/* --- HELPER FUNCTIONS --- */
 	// Controls
 	void updateControls(bool character = true, bool fileType = true, bool initSlot = true, bool finalSlot = true, bool newAddSlot = false, bool newInkSlot = false);
-	void processPRCXML(ModHandler* mHandler);
 
 	// Settings
 	void readSettings();
