@@ -300,7 +300,7 @@ int VanillaHandler::getFiles(string code, Slot slot, map<string, set<Path>>& fil
 				files["effect"].insert(Path(*i));
 			}
 		}
-		else if (code != "element")
+		else if (code != "element" && code != "nana")
 		{
 			return -1;
 		}

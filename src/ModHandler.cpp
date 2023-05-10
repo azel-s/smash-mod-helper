@@ -2094,7 +2094,7 @@ void ModHandler::create_message_xmsbt(map<string, map<Slot, Name>>& names)
 			msg.close();
 
 			wofstream msgUTF;
-			msgUTF.open("msg_name.xmsbt", ios::binary | ios::app);
+			msgUTF.open(path + "/ui/message/msg_name.xmsbt", ios::binary | ios::app);
 			msgUTF.imbue(std::locale(msgUTF.getloc(), new std::codecvt_utf16<wchar_t, 0x10ffff, std::little_endian>));
 
 			if (msgUTF.is_open())
