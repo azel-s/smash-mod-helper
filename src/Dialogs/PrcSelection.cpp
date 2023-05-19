@@ -551,6 +551,11 @@ void PrcSelection::onClosePressed(wxCommandEvent& evt)
 map<string, Slot> PrcSelection::getMaxSlots()
 {
 	auto allSlots = mHandler->getAllSlots(false);
+	if (allSlots.find("kirby") != allSlots.end() && mHandler->isKirbyCopyOnly())
+	{
+		allSlots.extract("kirby");
+	}
+
 	map<string, Slot> result;
 
 	if (!maxSlots.empty())
