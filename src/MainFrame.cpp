@@ -2,6 +2,7 @@
 #include "Dialogs/BaseSelection.h"
 #include "Dialogs/PrcSelection.h"
 #include "Dialogs/InkSelection.h"
+#include "Dialogs/RenameSelection.h"
 #include "Dialogs/BatchSelection.h"
 #include <filesystem>
 #include <fstream>
@@ -59,13 +60,16 @@ MainFrame::MainFrame(const wxString& title) :
 
 	// Tools menu
 	wxMenu* toolsMenu = new wxMenu();
-	inkMenu = new wxMenuItem(fileMenu, wxID_ANY, "Edit Inkling Colors", "Open a directory to enable this feature.");
-	deskMenu = new wxMenuItem(fileMenu, wxID_ANY, "Delete Desktop.ini Files", "Open a directory to enable this feature.");
+	inkMenu = new wxMenuItem(toolsMenu, wxID_ANY, "Edit Inkling Colors", "Open a directory to enable this feature.");
+	deskMenu = new wxMenuItem(toolsMenu, wxID_ANY, "Delete Desktop.ini Files", "Open a directory to enable this feature.");
+	/*renameMenu = new wxMenuItem(toolsMenu, wxID_ANY, "Rename UI Character Code", "Open a directory to enable this feature.");*/
 	this->Bind(wxEVT_MENU, &MainFrame::onInkPressed, this, toolsMenu->Append(inkMenu)->GetId());
 	this->Bind(wxEVT_MENU, &MainFrame::onDeskPressed, this, toolsMenu->Append(deskMenu)->GetId());
+	/*this->Bind(wxEVT_MENU, &MainFrame::onRenamePressed, this, toolsMenu->Append(renameMenu)->GetId());*/
 	this->Bind(wxEVT_MENU, &MainFrame::onBatchPressed, this, toolsMenu->Append(wxID_ANY, "Batch Config/PRCXML")->GetId());
 	inkMenu->Enable(false);
 	deskMenu->Enable(false);
+	/*renameMenu->Enable(false);*/
 
 	// Options Menu
 	wxMenu* optionsMenu = new wxMenu();
@@ -84,12 +88,16 @@ MainFrame::MainFrame(const wxString& title) :
 
 	wxMenu* selectionType = new wxMenu();
 	optionsMenu->AppendSubMenu(selectionType, "Selection type");
-	auto selectUnionID = selectionType->AppendRadioItem(wxID_ANY, "Union", "Mario [c00 & c02] + Luigi [c00 + c03]-> [c01, c02, c03]")->GetId();
+	auto selectUnionID = selectionType->AppendRadioItem(wxID_ANY, "Union", "Mario [c00 & c02] + Luigi [c00 + c03] -> [c01, c02, c03]")->GetId();
 	auto selectIntersectID = selectionType->AppendRadioItem(wxID_ANY, "Intersect", "Mario [c00 & c02] + Luigi [c00 + c03] -> [c00]")->GetId();
 	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, selectUnionID, wxID_ANY, new wxArgument("select"));
 	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, selectIntersectID, wxID_ANY, new wxArgument("select"));
 	selectionType->Check(selectUnionID, !settings.selectionType);
 	selectionType->Check(selectIntersectID, settings.selectionType);
+
+	auto baseSouceID = optionsMenu->AppendCheckItem(wxID_ANY, "Base Slots for c00-c07", "Adjusts ui-info of base slots (e.g. Align Kazuya suit correctly on non-suit)")->GetId();
+	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, baseSouceID, wxID_ANY, new wxArgument("baseSource"));
+	optionsMenu->Check(baseSouceID, settings.baseSource);
 
 	menuBar->Append(fileMenu, "&File");
 	menuBar->Append(toolsMenu, "&Tools");
@@ -105,7 +113,7 @@ MainFrame::MainFrame(const wxString& title) :
 	browse.button->Bind(wxEVT_BUTTON, &MainFrame::onBrowse, this, wxID_ANY, wxID_ANY, new wxArgument("button"));
 
 	/* --- Characters list --- */
-	charsList = new wxListBox(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxArrayString(), wxLB_MULTIPLE);
+	charsList = new wxListBox(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxArrayString(), wxLB_MULTIPLE | wxLB_SORT);
 	charsList->Bind(wxEVT_LISTBOX, &MainFrame::onSelect, this, wxID_ANY, wxID_ANY, new wxArgument("char"));
 
 	/* --- File type boxes --- */
@@ -234,7 +242,7 @@ MainFrame::MainFrame(const wxString& title) :
 }
 
 /* --- HELPER FUNCTIONS --- */
-void MainFrame::updateControls(bool character, bool fileType, bool initSlot, bool finalSlot, bool newAddSlot, bool newInkSlot)
+void MainFrame::updateControls(bool character, bool fileType, bool initSlot, bool finalSlot,bool newInkSlot)
 {
 	wxArrayString codes;
 	wxArrayString fileTypes;
@@ -379,13 +387,13 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 		}
 	}
 
-	if (newAddSlot)
+	if (!baseUpToDate)
 	{
 		buttons.base->Show();
 		buttons.config->Hide();
 		buttons.prcxml->Hide();
 	}
-	else if (!mHandler.hasAddSlot())
+	else
 	{
 		buttons.base->Hide();
 		buttons.config->Show();
@@ -399,7 +407,7 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 			inkMenu->Enable(false);
 			inkMenu->SetHelp("Select base slots to enable this feature.");
 		}
-		else if(!mHandler.hasAddSlot("inkling"))
+		else if (!mHandler.hasAddSlot("inkling"))
 		{
 			inkMenu->Enable();
 			inkMenu->SetHelp("Add or modify colors. Required for additional slots.");
@@ -407,6 +415,17 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 
 		deskMenu->Enable();
 		deskMenu->SetHelp("desktop.ini files can cause file-conflict issues.");
+
+		/*if (mHandler.hasFileType("ui"))
+		{
+			renameMenu->Enable();
+			renameMenu->SetHelp("Renames ui files' character code to selected code. Useful for CSS Addition.");
+		}
+		else
+		{
+			renameMenu->Enable(false);
+			renameMenu->SetHelp("Mod directory contains no ui folder.");
+		}*/
 	}
 	else
 	{
@@ -432,6 +451,8 @@ void MainFrame::readSettings()
 		int bit;
 
 		settingsFile >> bit;
+		settings.baseSource = (bit == 1) ? true : false;
+		settingsFile >> bit;
 		settings.selectionType = (bit == 1) ? true : false;
 		settingsFile >> bit;
 		settings.readBase = (bit == 1) ? true : false;
@@ -453,6 +474,7 @@ void MainFrame::updateSettings()
 	ofstream settingsFile(iPath + "/Files/settings.data");
 	if (settingsFile.is_open())
 	{
+		settingsFile << settings.baseSource << ' ';
 		settingsFile << settings.selectionType << ' ';
 		settingsFile << settings.readBase << ' ';
 		settingsFile << settings.readNames << ' ';
@@ -520,6 +542,21 @@ void MainFrame::toggleSetting(wxCommandEvent& evt)
 		}
 		updateControls();
 	}
+	else if (setting == "baseSource")
+	{
+		settings.baseSource = !settings.baseSource;
+		if (settings.baseSource)
+		{
+			log->LogText("> Base Slots for c00-c07 are selectable.");
+			baseUpToDate = false;
+		}
+		else
+		{
+			log->LogText("> Base Slots for c00-c07 are NOT selectable.");
+			baseUpToDate = !mHandler.hasAddSlot();
+		}
+		updateControls();
+	}
 
 	updateSettings();
 }
@@ -548,7 +585,15 @@ void MainFrame::onBrowse(wxCommandEvent& evt)
 	{
 		mHandler.readFiles(path);
 		browse.text->SetValue(mHandler.getPath());
-		updateControls(true, true, true, true, mHandler.hasAddSlot(), mHandler.hasAddSlot("inkling"));
+		if (settings.baseSource)
+		{
+			baseUpToDate = false;
+		}
+		else
+		{
+			baseUpToDate = !mHandler.hasAddSlot();
+		}
+		updateControls(true, true, true, true, mHandler.hasAddSlot("inkling"));
 	}
 }
 
@@ -585,11 +630,19 @@ void MainFrame::onActionPressed(wxCommandEvent& evt)
 
 	if (arg->str != "delete")
 	{
-		updateControls(false, false, true, true, finalSlots.list->GetValue() > 7, finalSlots.list->GetValue() > 7 && inkHasSlot);
+		if (settings.baseSource)
+		{
+			baseUpToDate = false;
+		}
+		else
+		{
+			baseUpToDate = !mHandler.hasAddSlot();
+		}
+		updateControls(false, false, true, true, finalSlots.list->GetValue() > 7 && inkHasSlot);
 	}
 	else
 	{
-		updateControls(mHandler.getNumCharacters() != arg->num, true, true, true, false, false);
+		updateControls(mHandler.getNumCharacters() != arg->num, true, true, true);
 	}
 }
 
@@ -641,7 +694,7 @@ void MainFrame::onLogPressed(wxCommandEvent& evt)
 
 void MainFrame::onBasePressed(wxCommandEvent& evt)
 {
-	BaseSelection dlg(this, wxID_ANY, "Choose Base Slots", &mHandler, settings.readBase);
+	BaseSelection dlg(this, wxID_ANY, "Choose Base Slots", &mHandler, settings);
 
 	if (dlg.ShowModal() == wxID_OK)
 	{
@@ -653,6 +706,8 @@ void MainFrame::onBasePressed(wxCommandEvent& evt)
 
 		inkMenu->Enable();
 		inkMenu->SetHelp("Add or modify colors. Required for additional slots.");
+
+		baseUpToDate = true;
 
 		panel->SendSizeEvent();
 	}
@@ -670,24 +725,15 @@ void MainFrame::onPrcPressed(wxCommandEvent& evt)
 		PrcSelection dlg(this, wxID_ANY, "Make Selection", &mHandler, settings);
 		if (dlg.ShowModal() == wxID_OK)
 		{
-			auto finalSlots = dlg.getMaxSlots();
-			auto finalNames = dlg.getNames();
+			auto maxSlots = dlg.getMaxSlots();
+			auto cIndex = dlg.getDB("cIndex");
+			auto nIndex = dlg.getDB("nIndex");
+			auto cGroup = dlg.getDB("cGroup");
 			auto finalAnnouncers = dlg.getAnnouncers();
 
-			if (!finalSlots.empty() || !finalNames.empty() || !finalAnnouncers.empty())
+			if (!maxSlots.empty() || !cIndex.empty() || !nIndex.empty() || !cGroup.empty() || !finalAnnouncers.empty())
 			{
-				auto tempNames = dlg.getNames(true);
-				mHandler.create_db_prcxml(tempNames, finalAnnouncers, finalSlots);
-
-				if (!finalNames.empty())
-				{
-					mHandler.create_message_xmsbt(finalNames);
-				}
-				else if (fs::exists(mHandler.getPath() + "/ui/message/msg_name.xmsbt"))
-				{
-					fs::remove(mHandler.getPath() + "/ui/message/msg_name.xmsbt");
-					log->LogText("> WARN: msg_name.xmsbt is not needed, previous one was deleted to avoid issues.");
-				}
+				mHandler.create_db_prcxml(cIndex, nIndex, cGroup, maxSlots, finalAnnouncers);
 			}
 			else if (fs::exists(mHandler.getPath() + "/ui/param/database/ui_chara_db.prcxml"))
 			{
@@ -697,6 +743,22 @@ void MainFrame::onPrcPressed(wxCommandEvent& evt)
 			else
 			{
 				log->LogText("> NOTE: ui_chara_db.prcxml is not needed.");
+			}
+
+			auto finalNames = dlg.getNames();
+			if (!finalNames.empty())
+			{
+				mHandler.create_message_xmsbt(finalNames);
+			}
+			else if (fs::exists(mHandler.getPath() + "/ui/message/msg_name.xmsbt"))
+			{
+				fs::remove(mHandler.getPath() + "/ui/message/msg_name.xmsbt");
+				if (fs::is_empty(mHandler.getPath() + "/ui/message"))
+				{
+					fs::remove(mHandler.getPath() + "/ui/message");
+				}
+
+				log->LogText("> WARN: msg_name.xmsbt is not needed, previous one was deleted to avoid issues.");
 			}
 		}
 	}
@@ -727,6 +789,20 @@ void MainFrame::onInkPressed(wxCommandEvent& evt)
 void MainFrame::onDeskPressed(wxCommandEvent& evt)
 {
 	mHandler.remove_desktop_ini();
+}
+
+void MainFrame::onRenamePressed(wxCommandEvent& evt)
+{
+	RenameSelection dlg(this, wxID_ANY, "Rename character codes", &mHandler);
+	if (dlg.ShowModal() == wxID_OK)
+	{
+		auto names = dlg.getNames();
+
+		for (auto name : names)
+		{
+			log->LogText(name.first + " was changed to " + name.second);
+		}
+	}
 }
 
 void MainFrame::onMenuClose(wxCommandEvent& evt)

@@ -18,6 +18,7 @@ private:
 	wxPanel* panel;
 	wxMenuItem* inkMenu;
 	wxMenuItem* deskMenu;
+	wxMenuItem* renameMenu;
 	wxBrowse browse;
 	wxListBox* charsList;
 	vector<wxCheckBox*> fileTypeBoxes;
@@ -31,10 +32,11 @@ private:
 	ModHandler mHandler;
 	Settings settings;
 	string iPath;
+	bool baseUpToDate;
 
 	/* --- HELPER FUNCTIONS --- */
 	// Controls
-	void updateControls(bool character = true, bool fileType = true, bool initSlot = true, bool finalSlot = true, bool newAddSlot = false, bool newInkSlot = false);
+	void updateControls(bool character = true, bool fileType = true, bool initSlot = true, bool finalSlot = true, bool newInkSlot = false);
 
 	// Settings
 	void readSettings();
@@ -52,6 +54,7 @@ private:
 	void onPrcPressed(wxCommandEvent& evt);
 	void onInkPressed(wxCommandEvent& evt);
 	void onDeskPressed(wxCommandEvent& evt);
+	void onRenamePressed(wxCommandEvent& evt);
 	void onMenuClose(wxCommandEvent& evt);
 
 public:

@@ -58,6 +58,7 @@ public:
 
 struct Settings
 {
+	bool baseSource = true;
 	bool selectionType = false;
 
 	bool readBase = true;
@@ -130,6 +131,7 @@ struct Name
 	wxString vsName;
 	wxString stageName;
 	wxString announcer;
+	wxString article;
 };
 
 struct wxName

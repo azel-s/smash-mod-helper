@@ -209,72 +209,50 @@ Path::Path(string path)
 			this->type = "movie";
 		}
 
-		int index = 0;
-		while (index < path.size() - 1)
+		// Path is to file, grab last folder name
+		if (path.find('.') != string::npos)
 		{
-			auto cPos = path.find("/c", index);
-			if (cPos != string::npos)
+			size_t* temp = new size_t;
+			try
 			{
-				auto endPos = path.find('/', cPos + 1);
-				if (endPos != string::npos && cPos < endPos)
-				{
-					try
-					{
-						size_t* temp = new size_t;
-						this->slot = stoi(path.substr(cPos + 2, endPos - cPos - 2), temp);
+				auto end = path.rfind('/');
+				auto beg = path.rfind('/', end - 1);
 
-						if (*temp != endPos - cPos - 2)
-						{
-							this->slot = Slot();
-						}
-						else
-						{
-							delete temp;
-							break;
-						}
-
-						delete temp;
-					}
-					catch (...)
-					{
-						index = endPos;
-						continue;
-					}
-				}
-				else
+				this->slot = stoi(path.substr(beg + 2, end - (beg + 2)), temp);
+				if (*temp != end - (beg + 2))
 				{
-					break;
+					this->slot = Slot();
 				}
 			}
-			else
+			catch (...)
 			{
-				break;
+				// Invalid slot
 			}
-
-			index++;
+			delete temp;
 		}
-
-		if (slot.getInt() == -1)
+		else
 		{
-			auto endPos = path.rfind('c');
-			if (endPos != string::npos)
+			if (!path.empty() && path[path.size() - 1] == '/')
 			{
-				try
-				{
-					size_t* temp = new size_t;
-					this->slot = stoi(path.substr(endPos + 1, path.size() - endPos - 1), temp);
+				path = path.substr(0, path.size() - 1);
+			}
 
-					if (*temp != path.size() - endPos - 1)
-					{
-						this->slot = Slot();
-					}
-					delete temp;
-				}
-				catch (...)
+			size_t* temp = new size_t;
+			try
+			{
+				auto beg = path.rfind('c');
+
+				this->slot = stoi(path.substr(beg + 1, path.size() - (beg + 1)), temp);
+				if (*temp != path.size() - (beg + 1))
 				{
-					// Invalid slot
+					this->slot = Slot();
 				}
 			}
+			catch(...)
+			{
+				// Invalid slot
+			}
+			delete temp;
 		}
 	}
 	else if (path.find("sound") == 0)

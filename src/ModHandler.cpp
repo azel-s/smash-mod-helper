@@ -88,24 +88,31 @@ void ModHandler::outputUTF(wofstream& file, wxString str, bool parse)
 
 void ModHandler::deleteEmptyDirs(string path)
 {
-	for (const auto& i : fs::directory_iterator(path))
+	try
 	{
-		if (fs::is_directory(i))
+		for (const auto& i : fs::directory_iterator(path))
 		{
-			if (fs::is_empty(i))
+			if (fs::is_directory(i))
 			{
-				fs::remove(i);
-			}
-			else
-			{
-				deleteEmptyDirs(i.path().string());
-
 				if (fs::is_empty(i))
 				{
 					fs::remove(i);
 				}
+				else
+				{
+					deleteEmptyDirs(i.path().string());
+
+					if (fs::is_empty(i))
+					{
+						fs::remove(i);
+					}
+				}
 			}
 		}
+	}
+	catch (...)
+	{
+		// Permission issue
 	}
 }
 
@@ -244,27 +251,28 @@ Name ModHandler::getMessage(string code, Slot slot) const
 {
 	Name message;
 
-	if (slot.getInt() > 7)
+	auto charIter = slots.find(code);
+
+	if (charIter == slots.end() && (code == "eflame_only" || code == "eflame_first"))
 	{
-		auto charIter = slots.find(code);
+		charIter = slots.find("eflame");
+	}
 
-		if (charIter == slots.end() && (code == "eflame_only" || code == "eflame_first"))
+	if (charIter == slots.end() && (code == "elight_only" || code == "elight_first"))
+	{
+		charIter = slots.find("elight");
+	}
+
+	if (charIter != slots.end())
+	{
+		auto slotIter = charIter->second.find(slot);
+		if (slotIter != charIter->second.end())
 		{
-			charIter = slots.find("eflame");
+			message = VanillaHandler::getMessage(code, slotIter->second);
 		}
-
-		if (charIter == slots.end() && (code == "elight_only" || code == "elight_first"))
+		else
 		{
-			charIter = slots.find("elight");
-		}
-
-		if (charIter != slots.end())
-		{
-			auto slotIter = charIter->second.find(slot);
-			if (slotIter != charIter->second.end())
-			{
-				message = VanillaHandler::getMessage(code, slotIter->second);
-			}
+			message = VanillaHandler::getMessage(code, slot);
 		}
 	}
 	else
@@ -302,11 +310,11 @@ set<Slot> ModHandler::getAddSlots(string code) const
 					{
 						// Check if only fighter file type exists
 						auto fighterIter = kirbyIter->second.find("fighter");
-						if (kirbyIter->second.size() == 1 && fighterIter != kirbyIter->second.end())
+						if (fighterIter != kirbyIter->second.end() && kirbyIter->second.size() == 1)
 						{
 							// Check if slot exists (safety measure)
 							auto slotIter = fighterIter->second.find(i->first);
-							if (slotIter != fighterIter->second.begin())
+							if (slotIter != fighterIter->second.end())
 							{
 								// Go through files to check if a non-copy file exists.
 								bool copy = true;
@@ -706,7 +714,7 @@ bool ModHandler::hasAddSlot(string code) const
 {
 	if (code.empty())
 	{
-		for (auto i = files.begin(); i != files.end(); i++)
+		for (auto i = slots.begin(); i != slots.end(); i++)
 		{
 			if (hasAddSlot(i->first))
 			{
@@ -716,16 +724,42 @@ bool ModHandler::hasAddSlot(string code) const
 	}
 	else
 	{
-		auto cIter = files.find(code);
-		if (cIter != files.end())
+		auto cIter = slots.find(code);
+		if (cIter != slots.end())
 		{
-			// Navigate file types
+			// Navigate slots
 			for (auto i = cIter->second.begin(); i != cIter->second.end(); i++)
 			{
-				// Navigate slots
-				for (auto j = i->second.begin(); j != i->second.end(); j++)
+				if (i->first.getInt() > 7 && i->first.getInt() != 999)
 				{
-					if (j->first.getInt() > 7 && j->first.getInt() != 999)
+					// Ignore kirby slots that only contain copy files.
+					if (code == "kirby")
+					{
+						auto kirbyIter = files.find("kirby");
+						if (kirbyIter != files.end())
+						{
+							auto fighterIter = kirbyIter->second.find("fighter");
+							if (fighterIter != kirbyIter->second.end() && kirbyIter->second.size() == 1)
+							{
+								auto slotIter = fighterIter->second.find(i->first);
+								if (slotIter != fighterIter->second.end())
+								{
+									for (auto j = slotIter->second.begin(); j != slotIter->second.end(); j++)
+									{
+										if (j->getPath().find("copy_") == string::npos)
+										{
+											return true;
+										}
+									}
+								}
+							}
+							else
+							{
+								return true;
+							}
+						}
+					}
+					else
 					{
 						return true;
 					}
@@ -1429,47 +1463,16 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 	}
 	else
 	{
-		string charcode;
+		string charcode = code;
 		if (code == "popo" || code == "nana")
 		{
-			charcode = code;
 			code = "ice_climber";
-		}
-		else
-		{
-			charcode = code;
 		}
 
 		auto charIter = slots.find(code);
 		if (charIter != slots.end())
 		{
 			auto slotIter = charIter->second.find(slot);
-
-			// Kirby stuff
-			bool hasKirby = hasChar("kirby");
-			map<Slot, set<Path>> kirbyFiles;
-			if (hasKirby)
-			{
-				auto kirbIter = files.find("kirby");
-				auto fightIter = kirbIter->second.find("fighter");
-
-				if (fightIter != kirbIter->second.end())
-				{
-					for (auto k = fightIter->second.begin(); k != fightIter->second.end(); k++)
-					{
-						for (auto l = k->second.begin(); l != k->second.end(); l++)
-						{
-							if (l->getPath().find("/copy_") != string::npos)
-							{
-								for (const auto& m : fs::directory_iterator(l->getPath()))
-								{
-									kirbyFiles[k->first].insert(Path(m.path().string().substr(path.size() + 1)));
-								}
-							}
-						}
-					}
-				}
-			}
 
 			auto charJter = files.find(code);
 			bool hasChar = charJter != files.end();
@@ -1485,7 +1488,7 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 			bool additionalSlot = slot.getInt() > 7;
 
 			// If kirby has only copy abilities in it's additional slot, then mark his slot as non-additional
-			if (charcode == "kirby" && slotHasFighter && charIter->second.size() == 1)
+			if (additionalSlot && charcode == "kirby" && slotHasFighter && charIter->second.size() == 1)
 			{
 				bool copyOnly = true;
 
@@ -1599,7 +1602,6 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 			// newDirInfos, newDirInfosBase, shareToVanilla, shareToAdded, and newDirFiles
 			if (additionalSlot)
 			{
-				// TODO: Verify with popo/nana
 				if (VanillaHandler::getFiles(charcode, slotIter->second, baseFiles) != 0)
 				{
 					wxLog("> Error: Unknown error encountered while gathering files from vanilla JSON.");
@@ -1617,7 +1619,7 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 					"\"fighter/" + charcode + "/c" + slot.getString() + "/camera\": \"fighter/" +
 					charcode + "/c" + slotIter->second.getString() + "/camera\""
 				);
-				// TODO: Not sure why I added nana and kirby as a check here, possible issue?
+
 				if (charcode != "nana" && charcode != "kirby" && baseFiles.find("kirbycopy") != baseFiles.end())
 				{
 					config.newDirInfos.push_back("\"fighter/" + charcode + "/kirbycopy/c" + slot.getString() + "\"");
@@ -1739,7 +1741,7 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 							{
 								label = "\"fighter/" + charcode + "/kirbycopy/c" + slot.getString() + "\"";
 
-								if (!hasKirby || kirbyFiles.empty() || kirbyFiles.find(slot) == kirbyFiles.end() || kirbyFiles[slot].find(path) == kirbyFiles[slot].end())
+								if (!fs::exists(this->path + "/" + path.getPath()))
 								{
 									if (path.getPath().find("/motion/") == string::npos)
 									{
@@ -1750,6 +1752,11 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 										config.shareToAdded[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
 									}
 								}
+							}
+							else
+							{
+								wxLog("> WARN: Ignoring [" + k->first + "]: " + l->getPath());
+								continue;
 							}
 
 							config.newDirFiles[code][slot][label].insert("\"" + path.getPath() + "\"");
@@ -1780,7 +1787,7 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 				{
 					(*temp)["\"fighter/" + charcode + "/camera/c" + slot.getString() + "\""];
 				}
-				if (temp->find("\"fighter/" + charcode + "/kirbycopy/c" + slot.getString() + "\"") == temp->end())
+				if (charcode != "kirby" && temp->find("\"fighter/" + charcode + "/kirbycopy/c" + slot.getString() + "\"") == temp->end())
 				{
 					(*temp)["\"fighter/" + charcode + "/kirbycopy/c" + slot.getString() + "\""];
 				}
@@ -1792,60 +1799,6 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 				{
 					(*temp)["\"fighter/" + charcode + "/result/c" + slot.getString() + "\""];
 				}
-
-				/* Adds NEW kirby copy files
-				// Special Case for kirby
-				if (i->first == "kirby" && slotHasFighter)
-				{
-					for (auto k = vanillaKirbyFiles.begin(); k != vanillaKirbyFiles.end(); k++)
-					{
-						if (k->second.find(baseSlot) != k->second.end())
-						{
-							for (auto l = k->second[baseSlot].begin(); l != k->second[baseSlot].end(); l++)
-							{
-								string path = *l;
-								int cPos = path.find("/c" + baseSlot);
-
-								if (cPos != string::npos)
-								{
-									path.replace(cPos, 2 + baseSlot.size(), "/c" + *j);
-
-									if (kirbyFiles[j->ToStdString()].find(path) == kirbyFiles[j->ToStdString()].end())
-									{
-										shareToVanilla[i->first][baseSlot]["\"" + *l + "\""].insert("\"" + path + "\"");
-									}
-								}
-
-								newDirFiles[i->first][j->ToStdString()]["\"fighter/" + k->first + "/kirbycopy/c" + j->ToStdString() + "\""].insert("\"" + path + "\"");
-							}
-						}
-					}
-
-					for (auto k = addedKirbyFiles.begin(); k != addedKirbyFiles.end(); k++)
-					{
-						if (k->second.find(baseSlot) != k->second.end())
-						{
-							for (auto l = k->second[baseSlot].begin(); l != k->second[baseSlot].end(); l++)
-							{
-								string path = *l;
-								int cPos = path.find("/c" + baseSlot);
-
-								if (cPos != string::npos)
-								{
-									path.replace(cPos, 2 + baseSlot.size(), "/c" + *j);
-
-									if (kirbyFiles[j->ToStdString()].find(path) == kirbyFiles[j->ToStdString()].end())
-									{
-										shareToAdded[i->first][baseSlot]["\"" + *l + "\""].insert("\"" + path + "\"");
-									}
-								}
-
-								newDirFiles[i->first][j->ToStdString()]["\"fighter/" + k->first + "/kirbycopy/c" + j->ToStdString() + "\""].insert("\"" + path + "\"");
-							}
-						}
-					}
-				}
-				*/
 			}
 
 			// Add NEW fighter files to newDirFiles
@@ -1858,83 +1811,29 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 
 				for (auto k = fighterFiles.begin(); k != fighterFiles.end(); k++)
 				{
+					Path path = Path(*k);
 					if (additionalSlot)
 					{
-						Path basePath = Path(*k);
-						basePath.setSlot(slotIter->second);
+						path.setSlot(slotIter->second);
+					}
 
-						bool found = false;
-						for (auto l = baseFiles.begin(); l != baseFiles.end(); l++)
+					bool found = false;
+					for (auto l = baseFiles.begin(); l != baseFiles.end(); l++)
+					{
+						if (l->second.find(path) != l->second.end())
 						{
-							if (l->second.find(basePath) != l->second.end())
-							{
-								found = true;
-								break;
-							}
-						}
-
-						if (!found)
-						{
-							if (false)
-							{
-								//TODO: Check if exists in Kirby Vanilla files.)
-							}
-							else
-							{
-								config.newDirFiles[code][slot]["\"fighter/" + charcode + "/c" + slot.getString() + "\""].insert("\"" + k->getPath() + "\"");
-							}
+							found = true;
+							break;
 						}
 					}
-					else
+
+					if (!found)
 					{
-						bool found = false;
-						for (auto l = baseFiles.begin(); l != baseFiles.end(); l++)
+						// TODO: Do a getFiles(code of path, slot, kirbyCopyFiles) and check exsistence in there.
+						//       Might be too much work for little gain.
+						if (charcode != "kirby" || path.getPath().find("copy_") == string::npos)
 						{
-							if (l->second.find(*k) != l->second.end())
-							{
-								found = true;
-								break;
-							}
-						}
-
-						if (!found)
-						{
-							if (false)
-							{
-								//TODO: Check if exists in Kirby Vanilla files.)
-							}
-							else
-							{
-								if (charcode == "kirby")
-								{
-									size_t copyPos = k->getPath().find("copy_");
-									if (copyPos != string::npos)
-									{
-										// fighter/kirby/[motion/body]/copy_[charcode]_[...]/c[slot]/...
-										string charCopy = k->getPath().substr(copyPos + 5, k->getPath().find("_", copyPos + 5) - copyPos - 5);
-										size_t slotPos = k->getPath().find("/c", copyPos);
-
-										if (slotPos != string::npos)
-										{
-											string charSlot = k->getPath().substr(slotPos + 2, k->getPath().find('/', slotPos + 1) - slotPos - 2);
-
-											if (false) // TODO: kirby check: vanillaKirbyFiles[charCopy][charSlot].find(*k) != vanillaKirbyFiles[charCopy][charSlot].end())
-											{
-												found = true;
-											}
-										}
-									}
-
-									if (!found)
-									{
-
-									}
-								}
-								else
-								{
-									config.newDirFiles[code][slot]["\"fighter/" + charcode + "/c" + slot.getString() + "\""].insert("\"" + k->getPath() + "\"");
-								}
-							}
+							config.newDirFiles[code][slot]["\"fighter/" + charcode + "/c" + slot.getString() + "\""].insert("\"" + k->getPath() + "\"");
 						}
 					}
 				}
@@ -2204,9 +2103,16 @@ void ModHandler::create_message_xmsbt(map<string, map<Slot, Name>>& names)
 	}
 }
 
-void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<string, map<Slot, string>>& announcers, map<string, Slot>& maxSlots)
+void ModHandler::create_db_prcxml
+(
+	map<string, map<Slot, int>>& cIndex,
+	map<string, map<Slot, int>>& nIndex,
+	map<string, map<Slot, int>>& cGroup,
+	map<string, Slot>& maxSlots,
+	map<string, map<int, Name>>& announcers
+)
 {
-	if (!maxSlots.empty() || !announcers.empty() || !names.empty())
+	if (!cGroup.empty() || !cIndex.empty() || !nIndex.empty() || !maxSlots.empty() || !announcers.empty())
 	{
 		fs::create_directories(path + "/ui/param/database");
 
@@ -2245,45 +2151,11 @@ void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<strin
 						status = 1;
 						uiEdit << "\n\t\t<struct index=\"" << currIndex << "\">";
 						uiEdit << "\n\t\t\t<byte hash=\"color_num\">" << to_string(charIter->second.getInt()) << "</byte>";
-
-						// Add cIndex/cGroup info
-						auto charLter = slots.find(code);
-
-						if (charLter == slots.end() && (code == "elight_only" || "elight_first"))
-						{
-							charLter = slots.find("elight");
-						}
-
-						if (charLter == slots.end() && (code == "eflame_only" || "eflame_first"))
-						{
-							charLter = slots.find("eflame");
-						}
-
-						if (charLter != slots.end())
-						{
-							for (int i = 8; i < charIter->second.getInt(); i++)
-							{
-								auto slotIter = charLter->second.find(Slot(i));
-								if (slotIter != charLter->second.end())
-								{
-									auto db = VanillaHandler::getXMLData(code, slotIter->second);
-
-									if (db.cIndex != 0)
-									{
-										uiEdit << "\n\t\t\t<byte hash=\"c" + Slot(i).getString() + "_index\">" << to_string(db.cIndex) << "</byte>";
-									}
-									if (db.cGroup != 0)
-									{
-										uiEdit << "\n\t\t\t<byte hash=\"c" + Slot(i).getString() + "_index\">" << to_string(db.cGroup) << "</byte>";
-									}
-								}
-							}
-						}
 					}
 
-					// Deal with names second
-					auto charJter = names.find(code);
-					if (!names.empty() && charJter != names.end())
+					// Add cIndex
+					auto charJter = cIndex.find(code);
+					if (charJter != cIndex.end())
 					{
 						if (status != 1)
 						{
@@ -2291,47 +2163,15 @@ void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<strin
 							status = 1;
 						}
 
-						auto i = charJter->second.begin();
-						while (i != charJter->second.end())
+						for (auto i = charJter->second.begin(); i != charJter->second.end(); i++)
 						{
-							string nameSlot;
-
-							if (i->second.cspName != "><ABC><")
-							{
-								nameSlot = Slot(i->first.getInt() + 8).getString();
-							}
-							else
-							{
-								auto charKter = slots.find(code);
-
-								if (charKter == slots.end() && (code == "elight_only" || "elight_first"))
-								{
-									charKter = slots.find("elight");
-								}
-
-								if (charKter == slots.end() && (code == "eflame_only" || "eflame_first"))
-								{
-									charKter = slots.find("eflame");
-								}
-
-								if (charKter != slots.end())
-								{
-									auto slotIter = charKter->second.find(i->first);
-									if (slotIter != charKter->second.end())
-									{
-										nameSlot = to_string(VanillaHandler::getXMLData(code, slotIter->second).nIndex);
-									}
-								}
-							}
-
-							uiEdit << "\n\t\t\t<byte hash=\"n" << i->first.getString() << "_index\">" << nameSlot << "</byte>";
-							i++;
+							uiEdit << "\n\t\t\t<byte hash=\"c" + i->first.getString() + "_index\">" << to_string(i->second) << "</byte>";
 						}
 					}
 
-					// Deal with announcers third
-					auto charKter = announcers.find(code);
-					if (!announcers.empty() && charKter != announcers.end())
+					// Add nIndex
+					auto charKter = nIndex.find(code);
+					if (charKter != nIndex.end())
 					{
 						if (status != 1)
 						{
@@ -2339,38 +2179,44 @@ void ModHandler::create_db_prcxml(map<string, map<Slot, Name>>& names, map<strin
 							status = 1;
 						}
 
-						auto charLter = slots.find(code);
-						if (charLter != slots.end())
+						for (auto i = charKter->second.begin(); i != charKter->second.end(); i++)
 						{
-							for (auto i = charKter->second.begin(); i != charKter->second.end(); i++)
+							uiEdit << "\n\t\t\t<byte hash=\"n" << i->first.getString() << "_index\">" << to_string(i->second) << "</byte>";
+						}
+					}
+
+					// Add cGroup
+					auto charLter = cGroup.find(code);
+					if (charLter != cGroup.end())
+					{
+						if (status != 1)
+						{
+							uiEdit << "\n\t\t<struct index=\"" << currIndex << "\">";
+							status = 1;
+						}
+
+						for (auto i = charLter->second.begin(); i != charLter->second.end(); i++)
+						{
+							uiEdit << "\n\t\t\t<byte hash=\"c" + i->first.getString() + "_group\">" << to_string(i->second) << "</byte>";
+						}
+					}
+
+					// Add announcers
+					auto charMter = announcers.find(code);
+					if (!announcers.empty() && charMter != announcers.end())
+					{
+						if (status != 1)
+						{
+							uiEdit << "\n\t\t<struct index=\"" << currIndex << "\">";
+							status = 1;
+						}
+
+						for (auto i = charMter->second.begin(); i != charMter->second.end(); i++)
+						{
+							uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_c" + Slot(i->first).getString() + "\">" + i->second.announcer << "</hash40>";
+							if (!i->second.article.empty())
 							{
-								auto slotIter = charLter->second.find(i->first);
-								if (slotIter != charLter->second.end())
-								{
-									auto db = VanillaHandler::getXMLData(code, slotIter->second);
-
-									string slot = Slot(i->first.getInt() + 8).getString();
-
-									if (i->second == "Default")
-									{
-										if (names.find(code) != names.end() && names.find(code)->second.find(i->first) != names.find(code)->second.end())
-										{
-											uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_c" + slot + "\">" + db.label << "</hash40>";
-											if (!db.article.empty())
-											{
-												uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_article_c" + slot + "\">" + db.article << "</hash40>";
-											}
-										}
-									}
-									else
-									{
-										uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_c" + slot + "\">" + i->second << "</hash40>";
-										if (!db.article.empty())
-										{
-											uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_article_c" + slot + "\">" + i->second << "</hash40>";
-										}
-									}
-								}
+								uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_article_c" + Slot(i->first).getString() + "\">" + i->second.article << "</hash40>";
 							}
 						}
 					}

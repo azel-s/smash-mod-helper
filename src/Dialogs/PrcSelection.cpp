@@ -592,11 +592,10 @@ map<string, Slot> PrcSelection::getMaxSlots()
 	return result;
 }
 
-map<string, map<Slot, Name>> PrcSelection::getNames(bool prcxml)
+map<string, map<Slot, Name>> PrcSelection::getNames()
 {
 	map<string, map<Slot, Name>> result;
 
-	int index = 0;
 	for (auto i = slotNames.begin(); i != slotNames.end(); i++)
 	{
 		for (auto j = i->second.begin(); j != i->second.end(); j++)
@@ -615,6 +614,7 @@ map<string, map<Slot, Name>> PrcSelection::getNames(bool prcxml)
 					&& i->first != "pfushigisou"
 					&& j->second.stageName->GetValue() != message.stageName
 					)
+				|| j->second.announcer->GetValue() != "Default"
 				)
 			{
 				result[i->first][j->first].cspName = j->second.cspName->GetValue();
@@ -636,9 +636,83 @@ map<string, map<Slot, Name>> PrcSelection::getNames(bool prcxml)
 					result[i->first][j->first].cssName = j->second.cssName->GetValue();
 				}
 			}
-			else if(prcxml && j->first.getInt() > 7)
+		}
+	}
+
+	return result;
+}
+
+map<string, map<Slot, int>> PrcSelection::getDB(string type)
+{
+	map<string, map<Slot, int>> result;
+
+	for (auto i = slotNames.begin(); i != slotNames.end(); i++)
+	{
+		for (auto j = i->second.begin(); j != i->second.end(); j++)
+		{
+			auto dbInit = mHandler->getXMLData(i->first, j->first);
+			auto dbFinal = mHandler->getXMLData(i->first, mHandler->getBaseSlot(i->first, j->first));
+
+			if (type == "cGroup")
 			{
-				result[i->first][j->first].cspName = "><ABC><";
+				if (j->first.getInt() > 7)
+				{
+					if (dbFinal.cGroup != 0)
+					{
+						result[i->first][j->first] = dbFinal.cGroup;
+					}
+				}
+				else if (dbInit.cGroup != dbFinal.cGroup)
+				{
+					result[i->first][j->first] = dbFinal.cGroup;
+				}
+			}
+			else if (type == "cIndex")
+			{
+				if (j->first.getInt() > 7)
+				{
+					if (dbFinal.cIndex != 0)
+					{
+						result[i->first][j->first] = dbFinal.cIndex;
+					}
+				}
+				else if (dbInit.cIndex != dbFinal.cIndex)
+				{
+					result[i->first][j->first] = dbFinal.cIndex;
+				}
+			}
+			else if (type == "nIndex")
+			{
+				auto message = mHandler->getMessage(i->first, j->first);
+
+				if (
+					(j->first.getInt() == 0 && j->second.cssName->GetValue() != message.cssName)
+					|| j->second.cspName->GetValue() != message.cspName
+					|| j->second.vsName->GetValue() != message.vsName
+					|| (
+						i->first != "elight_first"
+						&& i->first != "eflame_first"
+						&& i->first != "pzenigame"
+						&& i->first != "plizardon"
+						&& i->first != "pfushigisou"
+						&& j->second.stageName->GetValue() != message.stageName
+						)
+					|| j->second.announcer->GetValue() != "Default"
+					)
+				{
+					result[i->first][j->first] = j->first.getInt() + 8;
+				}
+				else
+				{
+					if (j->first.getInt() > 7)
+					{
+						result[i->first][j->first] = dbFinal.nIndex;
+					}
+					else if (dbInit.nIndex != dbFinal.nIndex)
+					{
+						result[i->first][j->first] = dbFinal.nIndex;
+					}
+				}
 			}
 		}
 	}
@@ -646,32 +720,63 @@ map<string, map<Slot, Name>> PrcSelection::getNames(bool prcxml)
 	return result;
 }
 
-map<string, map<Slot, string>> PrcSelection::getAnnouncers()
+map<string, map<int, Name>> PrcSelection::getAnnouncers()
 {
-	map<string, map<Slot, string>> result;
+	map<string, map<int, Name>> result;
 
-	int index = 0;
 	for (auto i = slotNames.begin(); i != slotNames.end(); i++)
 	{
 		for (auto j = i->second.begin(); j != i->second.end(); j++)
 		{
-			auto message = mHandler->getMessage(i->first, j->first);
+			Slot baseSlot = mHandler->getBaseSlot(i->first, j->first);
 
-			if (
-				(j->first.getInt() == 0 && j->second.cssName->GetValue() != message.cssName)
-				|| j->second.cspName->GetValue() != message.cspName
-				|| j->second.vsName->GetValue() != message.vsName
-				|| (
-					i->first != "elight_first"
-					&& i->first != "eflame_first"
-					&& i->first != "pzenigame"
-					&& i->first != "plizardon"
-					&& i->first != "pfushigisou"
-					&& j->second.stageName->GetValue() != message.stageName
-					)
-				)
+			if (baseSlot.getInt() == -1 && (i->first == "elight_only" || i->first == "elight_first"))
 			{
-				result[i->first][j->first] = j->second.announcer->GetValue();
+				baseSlot = mHandler->getBaseSlot("elight", j->first);
+			}
+
+			if (baseSlot.getInt() == -1 && (i->first == "eflame_only" || i->first == "eflame_first"))
+			{
+				baseSlot = mHandler->getBaseSlot("eflame", j->first);
+			}
+
+			if (baseSlot.getInt() != -1)
+			{
+				auto message = mHandler->getMessage(i->first, j->first);
+				auto db = mHandler->getXMLData(i->first, baseSlot);
+
+				if (
+					(j->first.getInt() == 0 && j->second.cssName->GetValue() != message.cssName)
+					|| j->second.cspName->GetValue() != message.cspName
+					|| j->second.vsName->GetValue() != message.vsName
+					|| (
+						i->first != "elight_first"
+						&& i->first != "eflame_first"
+						&& i->first != "pzenigame"
+						&& i->first != "plizardon"
+						&& i->first != "pfushigisou"
+						&& j->second.stageName->GetValue() != message.stageName
+						)
+					|| j->second.announcer->GetValue() != "Default"
+					)
+				{
+					if (j->second.announcer->GetValue() == "Default")
+					{
+						result[i->first][j->first.getInt() + 8].announcer = db.label;
+						if (!db.article.empty())
+						{
+							result[i->first][j->first.getInt() + 8].article = db.article;
+						}
+					}
+					else
+					{
+						result[i->first][j->first.getInt() + 8].announcer = j->second.announcer->GetValue();
+						if (!db.article.empty())
+						{
+							result[i->first][j->first.getInt() + 8].article = j->second.announcer->GetValue();
+						}
+					}
+				}
 			}
 		}
 	}

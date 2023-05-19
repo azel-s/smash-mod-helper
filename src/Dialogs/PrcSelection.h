@@ -30,6 +30,7 @@ public:
 
 	// Getters
 	map<string, Slot> getMaxSlots();
-	map<string, map<Slot, Name>> getNames(bool prcxml = false);
-	map <string, map<Slot, string>> getAnnouncers();
+	map<string, map<Slot, Name>> getNames();
+	map<string, map<Slot, int>> getDB(string type);
+	map <string, map<int, Name>> getAnnouncers();
 };

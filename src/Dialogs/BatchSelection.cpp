@@ -28,7 +28,7 @@ BatchSelection::BatchSelection
 
 	bool hasAddSlot = mHandler->hasAddSlot();
 
-	if (hasAddSlot)
+	if (hasAddSlot || settings.baseSource)
 	{
 		base = new wxButton(this, wxID_ANY, "Select Base Slots", wxDefaultPosition, wxDefaultSize);
 		base->Bind(wxEVT_BUTTON, &BatchSelection::onBasePressed, this);
@@ -54,7 +54,7 @@ BatchSelection::BatchSelection
 	sizerM->Add(sizerH, 0, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxTOP | wxRIGHT, FromDIP(20));
 	sizerM->Add(finish, 0, wxEXPAND | wxALL, FromDIP(20));
 
-	if (hasAddSlot)
+	if (hasAddSlot || settings.baseSource)
 	{
 		base->Hide();
 		this->SetSizerAndFit(sizerM);
@@ -71,7 +71,7 @@ BatchSelection::BatchSelection
 
 void BatchSelection::onBasePressed(wxCommandEvent& evt)
 {
-	BaseSelection dlg(this, wxID_ANY, "Choose Base Slots", mHandler, settings.readBase);
+	BaseSelection dlg(this, wxID_ANY, "Choose Base Slots", mHandler, settings);
 
 	if (dlg.ShowModal() == wxID_OK)
 	{
@@ -94,24 +94,15 @@ void BatchSelection::onPrcPressed(wxCommandEvent& evt)
 	PrcSelection dlg(this, wxID_ANY, "Make Selection", mHandler, settings);
 	if (dlg.ShowModal() == wxID_OK)
 	{
-		auto finalSlots = dlg.getMaxSlots();
-		auto finalNames = dlg.getNames();
+		auto maxSlots = dlg.getMaxSlots();
+		auto cIndex = dlg.getDB("cIndex");
+		auto nIndex = dlg.getDB("nIndex");
+		auto cGroup = dlg.getDB("cGroup");
 		auto finalAnnouncers = dlg.getAnnouncers();
 
-		if (!finalSlots.empty() || !finalNames.empty() || !finalAnnouncers.empty())
+		if (!maxSlots.empty() || !cIndex.empty() || !nIndex.empty() || !cGroup.empty() || !finalAnnouncers.empty())
 		{
-			auto tempNames = dlg.getNames(true);
-			mHandler->create_db_prcxml(finalNames, finalAnnouncers, finalSlots);
-
-			if (!finalNames.empty())
-			{
-				mHandler->create_message_xmsbt(finalNames);
-			}
-			else if (fs::exists(mHandler->getPath() + "/ui/message/msg_name.xmsbt"))
-			{
-				fs::remove(mHandler->getPath() + "/ui/message/msg_name.xmsbt");
-				mHandler->wxLog("> WARN: msg_name.xmsbt is not needed, previous one was deleted to avoid issues.");
-			}
+			mHandler->create_db_prcxml(cGroup, cIndex, nIndex, maxSlots, finalAnnouncers);
 		}
 		else if (fs::exists(mHandler->getPath() + "/ui/param/database/ui_chara_db.prcxml"))
 		{
@@ -121,6 +112,17 @@ void BatchSelection::onPrcPressed(wxCommandEvent& evt)
 		else
 		{
 			mHandler->wxLog("> NOTE: ui_chara_db.prcxml is not needed.");
+		}
+
+		auto finalNames = dlg.getNames();
+		if (!finalNames.empty())
+		{
+			mHandler->create_message_xmsbt(finalNames);
+		}
+		else if (fs::exists(mHandler->getPath() + "/ui/message/msg_name.xmsbt"))
+		{
+			fs::remove(mHandler->getPath() + "/ui/message/msg_name.xmsbt");
+			mHandler->wxLog("> WARN: msg_name.xmsbt is not needed, previous one was deleted to avoid issues.");
 		}
 	}
 }

@@ -3,7 +3,7 @@
 BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
     const wxString& title,
     ModHandler* mHandler,
-    bool readPrevBase,
+    Settings settings,
     const wxPoint& pos,
     const wxSize& size,
     long style,
@@ -11,6 +11,7 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
     wxDialog(parent, id, title, pos, size, style, name)
 {
     this->mHandler = mHandler;
+    this->settings = settings;
 
     wxArrayString slotList;
     slotList.Add("c00");
@@ -22,13 +23,13 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
     slotList.Add("c06");
     slotList.Add("c07");
 
-    auto addSlots = mHandler->getAddSlots();
+    auto slots = settings.baseSource ? mHandler->getAllSlots(false) : mHandler->getAddSlots();
 
     map<string, map<Slot, Slot>> prevBaseSlots;
     bool hasChar = false;
     bool hasSlot = false;
 
-    if (readPrevBase)
+    if (settings.readBase)
     {
         prevBaseSlots = mHandler->read_config_slots();
     }
@@ -40,7 +41,7 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
 
     // Max number of listboxes for a character
     int maxSlotBoxes = 0;
-    for (auto i = addSlots.begin(); i != addSlots.end(); i++)
+    for (auto i = slots.begin(); i != slots.end(); i++)
     {
         if (i->second.size() > maxSlotBoxes)
         {
@@ -56,7 +57,7 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
     }
 
     // Create Dialog
-    for (auto i = addSlots.begin(); i != addSlots.end(); i++)
+    for (auto i = slots.begin(); i != slots.end(); i++)
     {
         if (prevBaseSlots.find(i->first) != prevBaseSlots.end())
         {
@@ -140,18 +141,18 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
 
 map<string, map<Slot, set<Slot>>> BaseSelection::getBaseSlots()
 {
-    map<string, map<Slot, set<Slot>>> slots;
-    auto addSlots = mHandler->getAddSlots();
+    map<string, map<Slot, set<Slot>>> result;
+    auto slots = settings.baseSource ? mHandler->getAllSlots(false) : mHandler->getAddSlots();
 
     int index = 0;
-    for (auto i = addSlots.begin(); i != addSlots.end(); i++)
+    for (auto i = slots.begin(); i != slots.end(); i++)
     {
         for (auto j = i->second.begin(); j != i->second.end(); j++)
         {
-            slots[i->first][Slot(baseSlots[index]->GetStringSelection().ToStdString())].insert(*j);
+            result[i->first][Slot(baseSlots[index]->GetStringSelection().ToStdString())].insert(*j);
             index++;
         }
     }
 
-    return slots;
+    return result;
 }

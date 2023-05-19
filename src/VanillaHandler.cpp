@@ -205,7 +205,21 @@ void VanillaHandler::insertFiles(const json& tJson, map<string, set<Path>>& file
 
 			if (type != "kirbycopy" || path.getPath().find("/copy_") != string::npos)
 			{
-				files[type].insert(path);
+				if (type == "cmn")
+				{
+					if (path.getPath().find("/motion/") != string::npos)
+					{
+						files["added"].insert(path);
+					}
+					else
+					{
+						files["vanilla"].insert(path);
+					}
+				}
+				else
+				{
+					files[type].insert(path);
+				}
 			}
 		}
 	}
@@ -296,7 +310,7 @@ int VanillaHandler::getFiles(string code, Slot slot, map<string, set<Path>>& fil
 							}
 						}
 					}
-					else if (code != "element" && code != "ptrainer" && code != "ptrainer_low")
+					else if (code != "element" && code != "ptrainer" && code != "ptrainer_low" && code != "kirby")
 					{
 						return -1;
 					}

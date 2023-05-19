@@ -82,7 +82,14 @@ public:
 	// Creators
 	void create_config();
 	void create_message_xmsbt(map<string, map<Slot, Name>>& names);
-	void create_db_prcxml(map<string, map<Slot, Name>>& names, map<string, map<Slot, string>>& announcers, map<string, Slot>& maxSlots);
+	void create_db_prcxml
+	(
+		map<string, map<Slot, int>>& cIndex,
+		map<string, map<Slot, int>>& nIndex,
+		map<string, map<Slot, int>>& cGroup,
+		map<string, Slot>& maxSlots,
+		map<string, map<int, Name>>& announcers
+	);
 	void create_ink_prcxml(map<Slot, InklingColor>& inklingColors);
 
 	// Readers
