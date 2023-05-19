@@ -27,6 +27,10 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 	gridSizer->SetFlexibleDirection(wxBOTH);
 
 	auto allSlots = mHandler->getAllSlots(false);
+	if (allSlots.find("kirby") != allSlots.end() && mHandler->isKirbyCopyOnly())
+	{
+		allSlots.extract("kirby");
+	}
 
 	auto prevNames = mHandler->read_message_names();
 	bool slots = mHandler->hasAddSlot();

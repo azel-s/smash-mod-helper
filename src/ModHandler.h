@@ -61,6 +61,8 @@ public:
 	bool hasChar(string code = "") const;
 	bool hasFileType(string fileType = "") const;
 	bool hasAddSlot(string code = "") const;
+	bool isKirbyCopyOnly() const;
+	bool isKirbyCopyOnly(Slot slot) const;
 
 	/* --- VERIFIERS (WX) --- */
 	bool wxHasSlot(string code, Slot slot, wxArrayString fileTypes = {}, bool findInAll = false) const;

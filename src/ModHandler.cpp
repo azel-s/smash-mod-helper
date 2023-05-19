@@ -302,39 +302,9 @@ set<Slot> ModHandler::getAddSlots(string code) const
 			if (i->first.getInt() > 7 && i->first.getInt() != 999)
 			{
 				// Ignore kirby slots that only contain copy files.
-				if (charIter->first == "kirby")
+				if (charIter->first == "kirby" && isKirbyCopyOnly(i->first))
 				{
-					// Check if kirby exists in files map (safety measure)
-					auto kirbyIter = files.find("kirby");
-					if (kirbyIter != files.end())
-					{
-						// Check if only fighter file type exists
-						auto fighterIter = kirbyIter->second.find("fighter");
-						if (fighterIter != kirbyIter->second.end() && kirbyIter->second.size() == 1)
-						{
-							// Check if slot exists (safety measure)
-							auto slotIter = fighterIter->second.find(i->first);
-							if (slotIter != fighterIter->second.end())
-							{
-								// Go through files to check if a non-copy file exists.
-								bool copy = true;
-								for (auto j = slotIter->second.begin(); j != slotIter->second.end(); j++)
-								{
-									if (j->getPath().find("copy_") == string::npos)
-									{
-										copy = false;
-										break;
-									}
-								}
-
-								// Only copy files exist, thus a non-additional slot.
-								if (copy)
-								{
-									continue;
-								}
-							}
-						}
-					}
+					continue;
 				}
 
 				addSlots.insert(i->first);
@@ -615,6 +585,60 @@ wxArrayString ModHandler::wxGetSlots(string code, wxArrayString fileTypes, bool 
 	return slotsArray;
 }
 
+bool ModHandler::isKirbyCopyOnly() const
+{
+	auto charIter = files.find("kirby");
+	if (charIter != files.end())
+	{
+		auto fighterIter = charIter->second.find("fighter");
+		if (charIter->second.size() == 1 && fighterIter != charIter->second.end())
+		{
+			for (auto i = fighterIter->second.begin(); i != fighterIter->second.end(); i++)
+			{
+				if (!isKirbyCopyOnly(i->first))
+				{
+					return false;
+				}
+			}
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool ModHandler::isKirbyCopyOnly(Slot slot) const
+{
+	auto charIter = files.find("kirby");
+	if (charIter != files.end())
+	{
+		auto fighterIter = charIter->second.find("fighter");
+		if (charIter->second.size() == 1 && fighterIter != charIter->second.end())
+		{
+			auto slotIter = fighterIter->second.find(slot);
+			if (slotIter != fighterIter->second.end())
+			{
+				for (auto k = slotIter->second.begin(); k != slotIter->second.end(); k++)
+				{
+					if (k->getPath().find("copy_") == string::npos)
+					{
+						return false;
+					}
+				}
+			}
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 wxArrayString ModHandler::wxGetSlots(wxArrayString codes, wxArrayString fileTypes, bool findInAll) const
 {
 	set<string> slotsSet;
@@ -732,34 +756,7 @@ bool ModHandler::hasAddSlot(string code) const
 			{
 				if (i->first.getInt() > 7 && i->first.getInt() != 999)
 				{
-					// Ignore kirby slots that only contain copy files.
-					if (code == "kirby")
-					{
-						auto kirbyIter = files.find("kirby");
-						if (kirbyIter != files.end())
-						{
-							auto fighterIter = kirbyIter->second.find("fighter");
-							if (fighterIter != kirbyIter->second.end() && kirbyIter->second.size() == 1)
-							{
-								auto slotIter = fighterIter->second.find(i->first);
-								if (slotIter != fighterIter->second.end())
-								{
-									for (auto j = slotIter->second.begin(); j != slotIter->second.end(); j++)
-									{
-										if (j->getPath().find("copy_") == string::npos)
-										{
-											return true;
-										}
-									}
-								}
-							}
-							else
-							{
-								return true;
-							}
-						}
-					}
-					else
+					if (code != "kirby" || !isKirbyCopyOnly(i->first))
 					{
 						return true;
 					}
@@ -1326,6 +1323,13 @@ Config ModHandler::getNewDirSlots()
 					slots.extract("ptrainer_low");
 				}
 			}
+			else if(i->first == "kirby")
+			{
+				if (!isKirbyCopyOnly(j->first))
+				{
+					getNewDirSlots(i->first, j->first, config);
+				}
+			}
 			else
 			{
 				getNewDirSlots(i->first, j->first, config);
@@ -1490,19 +1494,7 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 			// If kirby has only copy abilities in it's additional slot, then mark his slot as non-additional
 			if (additionalSlot && charcode == "kirby" && slotHasFighter && charIter->second.size() == 1)
 			{
-				bool copyOnly = true;
-
-				auto slotIter = charJter->second.find("fighter")->second.find(slot);
-				for (auto k = slotIter->second.begin(); k != slotIter->second.end(); k++)
-				{
-					if (k->getPath().find("copy_") == string::npos)
-					{
-						copyOnly = false;
-						break;
-					}
-				}
-
-				additionalSlot = !copyOnly;
+				additionalSlot = !isKirbyCopyOnly(slot);
 			}
 
 			map<string, set<Path>> baseFiles;	// Base files
