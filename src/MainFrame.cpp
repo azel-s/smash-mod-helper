@@ -14,10 +14,12 @@ wxIMPLEMENT_APP(App);
 
 bool App::OnInit()
 {
+	wxImage::AddHandler(new wxPNGHandler);
+
 	MainFrame* mainFrame = new MainFrame("Smash Ultimate Mod Helper");
 	mainFrame->SetIcons(wxICON(SMASH_ICON));
-	mainFrame->SetClientSize(mainFrame->FromDIP(wxSize(mainFrame->GetBestSize().x, mainFrame->GetBestSize().y * 14.0 / 24)));
-	mainFrame->SetMinSize(mainFrame->FromDIP(mainFrame->GetSize()));
+	mainFrame->SetSize(mainFrame->FromDIP(wxSize(mainFrame->GetBestSize().x, mainFrame->GetBestSize().y * 14.0 / 24)));
+	//mainFrame->SetMinSize(mainFrame->FromDIP(mainFrame->GetSize()));
 	mainFrame->Show();
 
 	return true;
@@ -238,7 +240,16 @@ MainFrame::MainFrame(const wxString& title) :
 	// D
 	sizerD->Add(logWindow, 1, wxEXPAND);
 
+
+	///* TEST */
+	//wxPNGHandler* handler = new wxPNGHandler;
+	//wxImage::AddHandler(handler);
+	//wxStaticBitmap* image = new wxStaticBitmap(panel, wxID_ANY, wxBitmap("Files/textures/test.png", wxBITMAP_TYPE_PNG));
+
+	//sizerD->Add(image, 1);
+
 	panel->SetSizerAndFit(sizerM);
+	
 }
 
 /* --- HELPER FUNCTIONS --- */
@@ -677,15 +688,11 @@ void MainFrame::onLogPressed(wxCommandEvent& evt)
 	if (logWindow->IsShown())
 	{
 		logWindow->Show(false);
-		this->SetSize(FromDIP(wxSize(this->GetSize().x, this->GetSize().y * 14.0 / 24)));
-		// this->SetSize(FromDIP(wxSize(this->GetSize().x, this->GetSize().y - 200)));
 		buttons.log->SetLabel("Show Log");
 	}
 	else
 	{
 		logWindow->Show(true);
-		this->SetSize(FromDIP(wxSize(this->GetSize().x, this->GetSize().y * 24.0 / 14)));
-		//this->SetSize(FromDIP(wxSize(this->GetSize().x, this->GetSize().y + 200)));
 		buttons.log->SetLabel("Hide Log");
 	}
 

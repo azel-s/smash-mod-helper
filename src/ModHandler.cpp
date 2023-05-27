@@ -1796,9 +1796,12 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 			// Add NEW fighter files to newDirFiles
 			if (slotHasFighter)
 			{
-				if (!additionalSlot && VanillaHandler::getFiles(code, slot, baseFiles) != 0)
+				if (!additionalSlot)
 				{
-					wxLog("> Error: Unknown error encountered while gathering files from vanilla JSON.");
+					if (VanillaHandler::getFiles(code, slot, baseFiles) != 0)
+					{
+						wxLog("> Error: Unknown error encountered while gathering files from vanilla JSON.");
+					}
 				}
 
 				for (auto k = fighterFiles.begin(); k != fighterFiles.end(); k++)
@@ -1834,6 +1837,14 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 			// Add One-Slot effect files
 			if (slotHasEffect)
 			{
+				if (!additionalSlot && !slotHasFighter)
+				{
+					if(VanillaHandler::getFiles(code, slot, baseFiles) != 0)
+					{
+						wxLog("> Error: Unknown error encountered while gathering files from vanilla JSON.");
+					}
+				}
+
 				auto effIter = baseFiles.find("effect");
 				if (effIter != baseFiles.end())
 				{
