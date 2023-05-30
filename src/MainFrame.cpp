@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <wx/wx.h>
+#include <wx/gbsizer.h>
 namespace fs = std::filesystem;
 using std::ofstream, std::string;
 
@@ -14,11 +15,9 @@ wxIMPLEMENT_APP(App);
 
 bool App::OnInit()
 {
-	wxImage::AddHandler(new wxPNGHandler);
-
 	MainFrame* mainFrame = new MainFrame("Smash Ultimate Mod Helper");
 	mainFrame->SetIcons(wxICON(SMASH_ICON));
-	mainFrame->SetSize(mainFrame->FromDIP(wxSize(mainFrame->GetBestSize().x, mainFrame->GetBestSize().y * 14.0 / 24)));
+	//mainFrame->SetSize(mainFrame->FromDIP(wxSize(mainFrame->GetBestSize().x, mainFrame->GetBestSize().y * 14.0 / 24)));
 	//mainFrame->SetMinSize(mainFrame->FromDIP(mainFrame->GetSize()));
 	mainFrame->Show();
 
@@ -33,13 +32,18 @@ MainFrame::MainFrame(const wxString& title) :
 		title,
 		wxDefaultPosition,
 		wxDefaultSize,
-		wxDEFAULT_FRAME_STYLE & ~wxMAXIMIZE_BOX
+		wxDEFAULT_FRAME_STYLE
 	),
-	panel(new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize)),
-	logWindow(new wxTextCtrl(panel, wxID_ANY, "Log Window:\n", wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE)),
+	splitter(new wxSplitterWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_BORDER | wxSP_LIVE_UPDATE)),
+	lPanel(new wxPanel(splitter)),
+	rPanel(new wxPanel(splitter)),
+	logWindow(new wxTextCtrl(lPanel, wxID_ANY, "Log Window:\n", wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE)),
 	log(new wxLogTextCtrl(logWindow)),
 	mHandler(log)
 {
+	lPanel->SetBackgroundColour(wxColour(200, 100, 100));
+	rPanel->SetBackgroundColour(wxColour(100, 200, 100));
+
 	/* --- Initial path --- */
 	iPath = fs::current_path().string();
 	replace(iPath.begin(), iPath.end(), '\\', '/');
@@ -108,66 +112,66 @@ MainFrame::MainFrame(const wxString& title) :
 	SetMenuBar(menuBar);
 
 	/* --- Browse --- */
-	browse.text = new wxTextCtrl(panel, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER);
+	browse.text = new wxTextCtrl(lPanel, wxID_ANY, "", wxDefaultPosition, wxSize(250, -1), wxTE_PROCESS_ENTER);
 	browse.text->Bind(wxEVT_TEXT_ENTER, &MainFrame::onBrowse, this, wxID_ANY, wxID_ANY, new wxArgument("text"));
-	browse.button = new wxButton(panel, wxID_ANY, "Browse...", wxDefaultPosition, wxDefaultSize);
+	browse.button = new wxButton(lPanel, wxID_ANY, "Browse...", wxDefaultPosition, wxDefaultSize);
 	browse.button->SetToolTip("Open folder containing fighter/ui/effect/sound folder(s)");
 	browse.button->Bind(wxEVT_BUTTON, &MainFrame::onBrowse, this, wxID_ANY, wxID_ANY, new wxArgument("button"));
 
 	/* --- Characters list --- */
-	charsList = new wxListBox(panel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxArrayString(), wxLB_MULTIPLE | wxLB_SORT);
+	charsList = new wxListBox(lPanel, wxID_ANY, wxDefaultPosition, wxSize(200, -1), wxArrayString(), wxLB_MULTIPLE | wxLB_SORT);
 	charsList->Bind(wxEVT_LISTBOX, &MainFrame::onSelect, this, wxID_ANY, wxID_ANY, new wxArgument("char"));
 
 	/* --- File type boxes --- */
 	auto fTypes = mHandler.wxGetFileTypes();
 	for (int i = 0; i < fTypes.size(); i++)
 	{
-		fileTypeBoxes.push_back(new wxCheckBox(panel, wxID_ANY, fTypes[i], wxDefaultPosition, wxDefaultSize));
+		fileTypeBoxes.push_back(new wxCheckBox(lPanel, wxID_ANY, fTypes[i], wxDefaultPosition, wxDefaultSize));
 		fileTypeBoxes[i]->Bind(wxEVT_CHECKBOX, &MainFrame::onSelect, this, wxID_ANY, wxID_ANY, new wxArgument("fileType"));
 		fileTypeBoxes[i]->Disable();
 	}
 
 	/* --- Initial/Final list --- */
-	initSlots.text = new wxStaticText(panel, wxID_ANY, "Initial Slot: ", wxDefaultPosition, FromDIP(wxSize(55, -1)));
-	initSlots.list = new wxChoice(panel, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(50), -1));
+	initSlots.text = new wxStaticText(lPanel, wxID_ANY, "Initial Slot: ", wxDefaultPosition, FromDIP(wxSize(55, -1)));
+	initSlots.list = new wxChoice(lPanel, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(50, -1)));
 	initSlots.list->SetToolTip("Final Slot's source slot");
 
-	finalSlots.text = new wxStaticText(panel, wxID_ANY, "Final Slot: ", wxDefaultPosition, FromDIP(wxSize(55, -1)));
-	finalSlots.list = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, FromDIP(wxSize(50, -1)), wxSP_WRAP, 0, 255, 0);
+	finalSlots.text = new wxStaticText(lPanel, wxID_ANY, "Final Slot: ", wxDefaultPosition, FromDIP(wxSize(55, -1)));
+	finalSlots.list = new wxSpinCtrl(lPanel, wxID_ANY, "", wxDefaultPosition, FromDIP(wxSize(50, -1)), wxSP_WRAP, 0, 255, 0);
 	finalSlots.list->Bind(wxEVT_SPINCTRL, &MainFrame::onSelect, this, wxID_ANY, wxID_ANY, new wxArgument("finalSlot"));
 	finalSlots.list->SetToolTip("Initial Slot's target slot");
 
 	/* --- Buttons --- */
-	buttons.mov = new wxButton(panel, wxID_ANY, "Move", wxDefaultPosition, wxDefaultSize);
+	buttons.mov = new wxButton(lPanel, wxID_ANY, "Move", wxDefaultPosition, wxDefaultSize);
 	buttons.mov->Bind(wxEVT_BUTTON, &MainFrame::onActionPressed, this, wxID_ANY, wxID_ANY, new wxArgument("move"));
 	buttons.mov->SetToolTip("Initial Slot is moved to Final Slot");
 	buttons.mov->Disable();
 
-	buttons.dup = new wxButton(panel, wxID_ANY, "Duplicate", wxDefaultPosition, wxDefaultSize);
+	buttons.dup = new wxButton(lPanel, wxID_ANY, "Duplicate", wxDefaultPosition, wxDefaultSize);
 	buttons.dup->Bind(wxEVT_BUTTON, &MainFrame::onActionPressed, this, wxID_ANY, wxID_ANY, new wxArgument("duplicate"));
 	buttons.dup->SetToolTip("Initial Slot is duplicated to Final Slot");
 	buttons.dup->Disable();
 
-	buttons.del = new wxButton(panel, wxID_ANY, "Delete", wxDefaultPosition, wxDefaultSize);
+	buttons.del = new wxButton(lPanel, wxID_ANY, "Delete", wxDefaultPosition, wxDefaultSize);
 	buttons.del->Bind(wxEVT_BUTTON, &MainFrame::onActionPressed, this, wxID_ANY, wxID_ANY, new wxArgument("delete"));
 	buttons.del->SetToolTip("Initial Slot is deleted");
 	buttons.del->Disable();
 
-	buttons.log = new wxButton(panel, wxID_ANY, "Show Log", wxDefaultPosition, wxDefaultSize);
+	buttons.log = new wxButton(lPanel, wxID_ANY, "Show Log", wxDefaultPosition, wxDefaultSize);
 	buttons.log->Bind(wxEVT_BUTTON, &MainFrame::onLogPressed, this);
 	buttons.log->SetToolTip("Log Window can help debug issues.");
 
-	buttons.base = new wxButton(panel, wxID_ANY, "Select Base Slots", wxDefaultPosition, wxDefaultSize);
+	buttons.base = new wxButton(lPanel, wxID_ANY, "Select Base Slots", wxDefaultPosition, wxDefaultSize);
 	buttons.base->Bind(wxEVT_BUTTON, &MainFrame::onBasePressed, this);
 	buttons.base->SetToolTip("Choose source slot(s) for each additional slot");
 	buttons.base->Hide();
 
-	buttons.config = new wxButton(panel, wxID_ANY, "Create Config", wxDefaultPosition, wxDefaultSize);
+	buttons.config = new wxButton(lPanel, wxID_ANY, "Create Config", wxDefaultPosition, wxDefaultSize);
 	buttons.config->Bind(wxEVT_BUTTON, &MainFrame::onConfigPressed, this);
 	buttons.config->SetToolTip("Create a config for any additionals costumes, extra textures, and/or effects");
 	buttons.config->Hide();
 
-	buttons.prcxml = new wxButton(panel, wxID_ANY, "Create PRCXML", wxDefaultPosition, wxDefaultSize);
+	buttons.prcxml = new wxButton(lPanel, wxID_ANY, "Create PRCXML", wxDefaultPosition, wxDefaultSize);
 	buttons.prcxml->Bind(wxEVT_BUTTON, &MainFrame::onPrcPressed, this);
 	buttons.prcxml->SetToolTip("Edit slot names or modify max slots for each character");
 	buttons.prcxml->Hide();
@@ -176,80 +180,69 @@ MainFrame::MainFrame(const wxString& title) :
 	CreateStatusBar();
 
 	/* --- Sizer setup --- */
+	wxGridBagSizer* lBagSizer = new wxGridBagSizer(10, 10);
+	wxGridBagSizer* rBagSizer = new wxGridBagSizer(10, 10);
+
+	lBagSizer->Add(browse.text, wxGBPosition(0, 0), wxGBSpan(1, 5), wxEXPAND);
+	lBagSizer->Add(browse.button, wxGBPosition(0, 5), wxGBSpan(1, 1), wxEXPAND);
+
+	lBagSizer->Add(charsList, wxGBPosition(1, 0), wxGBSpan(6, 3), wxEXPAND);
+
+	lBagSizer->Add(fileTypeBoxes[0], wxGBPosition(2, 3), wxGBSpan(1, 1));
+	lBagSizer->Add(fileTypeBoxes[1], wxGBPosition(3, 3), wxGBSpan(1, 1));
+	lBagSizer->Add(fileTypeBoxes[2], wxGBPosition(4, 3), wxGBSpan(1, 1));
+	lBagSizer->Add(fileTypeBoxes[3], wxGBPosition(5, 3), wxGBSpan(1, 1));
+
+	lBagSizer->Add(initSlots.text, wxGBPosition(1, 4), wxGBSpan(1, 1), wxALIGN_CENTER_VERTICAL);
+	lBagSizer->Add(initSlots.list, wxGBPosition(1, 5), wxGBSpan(1, 1), wxEXPAND);
+
+	lBagSizer->Add(finalSlots.text, wxGBPosition(2, 4), wxGBSpan(1, 1), wxALIGN_CENTER_VERTICAL);
+	lBagSizer->Add(finalSlots.list, wxGBPosition(2, 5), wxGBSpan(1, 1), wxEXPAND);
+
+	lBagSizer->Add(buttons.mov, wxGBPosition(4, 4), wxGBSpan(1, 2), wxEXPAND);
+	lBagSizer->Add(buttons.dup, wxGBPosition(5, 4), wxGBSpan(1, 2), wxEXPAND);
+	lBagSizer->Add(buttons.del, wxGBPosition(6, 4), wxGBSpan(1, 2), wxEXPAND);
+
+	wxBoxSizer* sizer = new wxBoxSizer(wxHORIZONTAL);
+	sizer->Add(buttons.log, 1, wxEXPAND);
+	sizer->Add(buttons.base, 1, wxEXPAND);
+	sizer->Add(buttons.config, 1, wxEXPAND);
+	sizer->Add(buttons.prcxml, 1, wxEXPAND);
+	lBagSizer->Add(sizer, wxGBPosition(7, 0), wxGBSpan(1, 6), wxEXPAND);
+
+	lBagSizer->Add(logWindow, wxGBPosition(8, 0), wxGBSpan(4, 6), wxEXPAND);
+
+	//// Image Stuff
+	handler = new wxPNGHandler;
+	wxImage::AddHandler(handler);
+
+	wxStaticBitmap* image1 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap("Files/textures/vanilla/chara_1/chara_1_ike_00.png", wxBITMAP_TYPE_PNG));
+	//wxStaticBitmap* image2 = new wxStaticBitmap(lPanel, wxID_ANY, wxBitmap("Files/textures/vanilla/chara_2/chara_2_ike_00.png", wxBITMAP_TYPE_PNG));
+	//wxStaticBitmap* image4 = new wxStaticBitmap(lPanel, wxID_ANY, wxBitmap("Files/textures/vanilla/chara_4/chara_4_ike_00.png", wxBITMAP_TYPE_PNG));
+	//wxStaticBitmap* image7 = new wxStaticBitmap(lPanel, wxID_ANY, wxBitmap("Files/textures/vanilla/chara_7/chara_7_ike_00.png", wxBITMAP_TYPE_PNG));
+
+	rBagSizer->Add(image1, wxGBPosition(0, 0), wxGBSpan(1, 1));
+
+	splitter->SplitVertically(lPanel, rPanel);
+	splitter->SetMinimumPaneSize(FromDIP(200));
+	splitter->SetSashGravity(0.5);
+
+	wxBoxSizer* lVSizer = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* lHSizer = new wxBoxSizer(wxHORIZONTAL);
+	wxBoxSizer* rVSizer = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* rHSizer = new wxBoxSizer(wxHORIZONTAL);
+
+	lVSizer->Add(lHSizer, 1, wxALIGN_CENTER_HORIZONTAL | wxALL, 20);
+	lHSizer->Add(lBagSizer, 1, wxALIGN_CENTER_VERTICAL);
+	rVSizer->Add(rHSizer, 1, wxALIGN_CENTER_HORIZONTAL | wxALL, 20);
+	rHSizer->Add(rBagSizer, 1, wxALIGN_CENTER_VERTICAL);
+
+	lPanel->SetSizerAndFit(lVSizer);
+	rPanel->SetSizerAndFit(rVSizer);
+
 	wxBoxSizer* sizerM = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* sizerA = new wxBoxSizer(wxHORIZONTAL);
-	wxBoxSizer* sizerB = new wxBoxSizer(wxHORIZONTAL);
-	wxBoxSizer* sizerB1 = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* sizerB2 = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* sizerB3 = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* sizerB3A = new wxBoxSizer(wxHORIZONTAL);
-	wxBoxSizer* sizerB3B = new wxBoxSizer(wxHORIZONTAL);
-	wxBoxSizer* sizerC = new wxBoxSizer(wxHORIZONTAL);
-	wxBoxSizer* sizerC1 = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* sizerC2 = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* sizerC3 = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* sizerD = new wxBoxSizer(wxHORIZONTAL);
-
-	// Main Sizer
-	sizerM->Add(sizerA, 1, wxEXPAND | wxALL, FromDIP(20));
-	sizerM->Add(sizerB, 10, wxALIGN_CENTER_HORIZONTAL | wxLEFT | wxBOTTOM | wxRIGHT, FromDIP(20));
-	sizerM->Add(sizerC, 1, wxEXPAND | wxLEFT | wxBOTTOM | wxRIGHT, FromDIP(20));
-	sizerM->Add(sizerD, 10, wxEXPAND | wxLEFT | wxBOTTOM | wxRIGHT, FromDIP(20));
-
-	// A
-	sizerA->Add(browse.text, 1, wxRIGHT, FromDIP(10));
-	sizerA->Add(browse.button, 0);
-
-	// B1
-	sizerB->Add(sizerB1, 3, wxEXPAND | wxRIGHT, FromDIP(20));
-	sizerB1->Add(charsList, 1, wxEXPAND);
-
-	// B2
-	sizerB->Add(sizerB2, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(20));
-	for (int i = 0; i < fileTypeBoxes.size() - 1; i++)
-	{
-		sizerB2->Add(fileTypeBoxes[i], 1);
-		sizerB2->AddSpacer(FromDIP(20));
-	}
-	sizerB2->Add(fileTypeBoxes[fTypes.size() - 1], 1);
-
-	// B3
-	sizerB->Add(sizerB3, 1, wxALIGN_CENTER_VERTICAL);
-
-	// B3A
-	sizerB3->Add(sizerB3A, 1, wxBOTTOM, FromDIP(10));
-	sizerB3A->Add(initSlots.text, 0, wxALIGN_CENTER_VERTICAL);
-	sizerB3A->Add(initSlots.list, 1, wxALIGN_CENTER_VERTICAL);
-
-	// B3B
-	sizerB3->Add(sizerB3B, 1, wxBOTTOM, FromDIP(10));
-	sizerB3B->Add(finalSlots.text, 0, wxALIGN_CENTER_VERTICAL);
-	sizerB3B->Add(finalSlots.list, 1, wxALIGN_CENTER_VERTICAL);
-
-	// B3(C)
-	sizerB3->Add(buttons.mov, 1, wxEXPAND);
-	sizerB3->Add(buttons.dup, 1, wxEXPAND);
-	sizerB3->Add(buttons.del, 1, wxEXPAND);
-
-	// C
-	sizerC->Add(buttons.log, 1);
-	sizerC->Add(buttons.base, 1);
-	sizerC->Add(buttons.config, 1);
-	sizerC->Add(buttons.prcxml, 1);
-
-	// D
-	sizerD->Add(logWindow, 1, wxEXPAND);
-
-
-	///* TEST */
-	//wxPNGHandler* handler = new wxPNGHandler;
-	//wxImage::AddHandler(handler);
-	//wxStaticBitmap* image = new wxStaticBitmap(panel, wxID_ANY, wxBitmap("Files/textures/test.png", wxBITMAP_TYPE_PNG));
-
-	//sizerD->Add(image, 1);
-
-	panel->SetSizerAndFit(sizerM);
-	
+	sizerM->Add(splitter, 1, wxEXPAND);
+	this->SetSizerAndFit(sizerM);
 }
 
 /* --- HELPER FUNCTIONS --- */
@@ -451,7 +444,7 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 		deskMenu->SetHelp("Open a directory to enable this feature.");
 	}
 
-	panel->SendSizeEvent();
+	lPanel->SendSizeEvent();
 }
 
 void MainFrame::readSettings()
@@ -696,7 +689,7 @@ void MainFrame::onLogPressed(wxCommandEvent& evt)
 		buttons.log->SetLabel("Hide Log");
 	}
 
-	panel->SendSizeEvent();
+	lPanel->SendSizeEvent();
 }
 
 void MainFrame::onBasePressed(wxCommandEvent& evt)
@@ -716,7 +709,7 @@ void MainFrame::onBasePressed(wxCommandEvent& evt)
 
 		baseUpToDate = true;
 
-		panel->SendSizeEvent();
+		lPanel->SendSizeEvent();
 	}
 }
 

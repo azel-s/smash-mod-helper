@@ -2,6 +2,7 @@
 #include "ModHandler.h"
 #include "HelperStructures.h"
 #include <wx/wx.h>
+#include <wx/splitter.h>
 #include <wx/spinctrl.h>
 using std::vector;
 
@@ -15,7 +16,9 @@ class MainFrame : public wxFrame
 {
 private:
 	/* --- GUI Parts --- */
-	wxPanel* panel;
+	wxSplitterWindow* splitter;
+	wxPanel* lPanel;
+	wxPanel* rPanel;
 	wxMenuItem* inkMenu;
 	wxMenuItem* deskMenu;
 	wxMenuItem* renameMenu;
@@ -27,6 +30,7 @@ private:
 	wxButtons buttons;
 	wxTextCtrl* logWindow;
 	wxLogTextCtrl* log;
+	wxPNGHandler* handler;
 
 	/* --- Data Variables --- */
 	ModHandler mHandler;
