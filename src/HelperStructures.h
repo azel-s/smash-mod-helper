@@ -58,6 +58,7 @@ public:
 
 struct Settings
 {
+	bool preview = true;
 	bool baseSource = true;
 	bool selectionType = false;
 
@@ -122,6 +123,14 @@ struct wxButtons
 	wxButton* base;
 	wxButton* config;
 	wxButton* prcxml;
+};
+
+struct wxPreview
+{
+	wxStaticBitmap* chara_1;
+	wxStaticBitmap* chara_2;
+	wxStaticBitmap* chara_4;
+	wxStaticBitmap* chara_7;
 };
 
 struct Name

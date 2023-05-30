@@ -15,6 +15,8 @@ wxIMPLEMENT_APP(App);
 
 bool App::OnInit()
 {
+	wxImage::AddHandler(new wxPNGHandler);
+
 	MainFrame* mainFrame = new MainFrame("Smash Ultimate Mod Helper");
 	mainFrame->SetIcons(wxICON(SMASH_ICON));
 	//mainFrame->SetSize(mainFrame->FromDIP(wxSize(mainFrame->GetBestSize().x, mainFrame->GetBestSize().y * 14.0 / 24)));
@@ -41,8 +43,8 @@ MainFrame::MainFrame(const wxString& title) :
 	log(new wxLogTextCtrl(logWindow)),
 	mHandler(log)
 {
-	lPanel->SetBackgroundColour(wxColour(200, 100, 100));
-	rPanel->SetBackgroundColour(wxColour(100, 200, 100));
+	//lPanel->SetBackgroundColour(wxColour(200, 100, 100));
+	rPanel->SetBackgroundColour(wxColour(245, 245, 245));
 
 	/* --- Initial path --- */
 	iPath = fs::current_path().string();
@@ -105,6 +107,10 @@ MainFrame::MainFrame(const wxString& title) :
 	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, baseSouceID, wxID_ANY, new wxArgument("baseSource"));
 	optionsMenu->Check(baseSouceID, settings.baseSource);
 
+	auto previewID = optionsMenu->AppendCheckItem(wxID_ANY, "Enable UI Preview", "Shows a preview panel to the right.")->GetId();
+	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, previewID, wxID_ANY, new wxArgument("preview"));
+	optionsMenu->Check(previewID, settings.preview);
+
 	menuBar->Append(fileMenu, "&File");
 	menuBar->Append(toolsMenu, "&Tools");
 	menuBar->Append(optionsMenu, "&Options");
@@ -134,6 +140,7 @@ MainFrame::MainFrame(const wxString& title) :
 	/* --- Initial/Final list --- */
 	initSlots.text = new wxStaticText(lPanel, wxID_ANY, "Initial Slot: ", wxDefaultPosition, FromDIP(wxSize(55, -1)));
 	initSlots.list = new wxChoice(lPanel, wxID_ANY, wxDefaultPosition, FromDIP(wxSize(50, -1)));
+	initSlots.list->Bind(wxEVT_CHOICE, &MainFrame::onSelect, this, wxID_ANY, wxID_ANY, new wxArgument("fileType"));
 	initSlots.list->SetToolTip("Final Slot's source slot");
 
 	finalSlots.text = new wxStaticText(lPanel, wxID_ANY, "Final Slot: ", wxDefaultPosition, FromDIP(wxSize(55, -1)));
@@ -181,7 +188,7 @@ MainFrame::MainFrame(const wxString& title) :
 
 	/* --- Sizer setup --- */
 	wxGridBagSizer* lBagSizer = new wxGridBagSizer(10, 10);
-	wxGridBagSizer* rBagSizer = new wxGridBagSizer(10, 10);
+	wxGridBagSizer* rBagSizer = new wxGridBagSizer(0, 0);
 
 	lBagSizer->Add(browse.text, wxGBPosition(0, 0), wxGBSpan(1, 5), wxEXPAND);
 	lBagSizer->Add(browse.button, wxGBPosition(0, 5), wxGBSpan(1, 1), wxEXPAND);
@@ -212,20 +219,52 @@ MainFrame::MainFrame(const wxString& title) :
 
 	lBagSizer->Add(logWindow, wxGBPosition(8, 0), wxGBSpan(4, 6), wxEXPAND);
 
-	//// Image Stuff
-	handler = new wxPNGHandler;
-	wxImage::AddHandler(handler);
+	// Image Stuff
+	initPreview.chara_1 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
+	initPreview.chara_2 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
+	initPreview.chara_4 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
+	initPreview.chara_7 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
 
-	wxStaticBitmap* image1 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap("Files/textures/vanilla/chara_1/chara_1_ike_00.png", wxBITMAP_TYPE_PNG));
-	//wxStaticBitmap* image2 = new wxStaticBitmap(lPanel, wxID_ANY, wxBitmap("Files/textures/vanilla/chara_2/chara_2_ike_00.png", wxBITMAP_TYPE_PNG));
-	//wxStaticBitmap* image4 = new wxStaticBitmap(lPanel, wxID_ANY, wxBitmap("Files/textures/vanilla/chara_4/chara_4_ike_00.png", wxBITMAP_TYPE_PNG));
-	//wxStaticBitmap* image7 = new wxStaticBitmap(lPanel, wxID_ANY, wxBitmap("Files/textures/vanilla/chara_7/chara_7_ike_00.png", wxBITMAP_TYPE_PNG));
+	finalPreview.chara_1 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
+	finalPreview.chara_2 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
+	finalPreview.chara_4 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
+	finalPreview.chara_7 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
 
-	rBagSizer->Add(image1, wxGBPosition(0, 0), wxGBSpan(1, 1));
+	if (settings.preview)
+	{
+		updateBitmap(initPreview.chara_1, "Files/textures/vanilla/chara_1/chara_1_random_00.png", 345, 345);
+		updateBitmap(initPreview.chara_2, "Files/textures/vanilla/chara_2/chara_2_random_00.png", 64, 64);
+		updateBitmap(initPreview.chara_4, "Files/textures/vanilla/chara_4/chara_4_random_00.png", 100, 100);
+		updateBitmap(initPreview.chara_7, "Files/textures/vanilla/chara_7/chara_7_random_00.png", 176, 117);
+
+		updateBitmap(finalPreview.chara_1, "Files/textures/vanilla/chara_1/chara_1_random_00.png", 345, 345);
+		updateBitmap(finalPreview.chara_2, "Files/textures/vanilla/chara_2/chara_2_random_00.png", 64, 64);
+		updateBitmap(finalPreview.chara_4, "Files/textures/vanilla/chara_4/chara_4_random_00.png", 100, 100);
+		updateBitmap(finalPreview.chara_7, "Files/textures/vanilla/chara_7/chara_7_random_00.png", 176, 117);
+	}
+
+	rBagSizer->Add(initPreview.chara_7, wxGBPosition(0, 0), wxGBSpan(1, 1), wxEXPAND);
+	rBagSizer->Add(initPreview.chara_4, wxGBPosition(0, 1), wxGBSpan(1, 1), wxEXPAND);
+	rBagSizer->Add(initPreview.chara_2, wxGBPosition(0, 2), wxGBSpan(1, 1), wxEXPAND);
+	rBagSizer->Add(initPreview.chara_1, wxGBPosition(1, 0), wxGBSpan(1, 3), wxEXPAND);
+
+	rBagSizer->Add(finalPreview.chara_7, wxGBPosition(0, 3), wxGBSpan(1, 1), wxEXPAND);
+	rBagSizer->Add(finalPreview.chara_4, wxGBPosition(0, 4), wxGBSpan(1, 1), wxEXPAND);
+	rBagSizer->Add(finalPreview.chara_2, wxGBPosition(0, 5), wxGBSpan(1, 1), wxEXPAND);
+	rBagSizer->Add(finalPreview.chara_1, wxGBPosition(1, 3), wxGBSpan(1, 3), wxEXPAND);
 
 	splitter->SplitVertically(lPanel, rPanel);
-	splitter->SetMinimumPaneSize(FromDIP(200));
+	// splitter->SetMinimumPaneSize(0);
 	splitter->SetSashGravity(0.5);
+
+	lBagSizer->AddGrowableCol(0);
+	lBagSizer->AddGrowableCol(1);
+	lBagSizer->AddGrowableCol(2);
+	lBagSizer->AddGrowableCol(3);
+	lBagSizer->AddGrowableCol(4);
+	lBagSizer->AddGrowableCol(5);
+
+	lBagSizer->AddGrowableRow(8);
 
 	wxBoxSizer* lVSizer = new wxBoxSizer(wxVERTICAL);
 	wxBoxSizer* lHSizer = new wxBoxSizer(wxHORIZONTAL);
@@ -240,13 +279,29 @@ MainFrame::MainFrame(const wxString& title) :
 	lPanel->SetSizerAndFit(lVSizer);
 	rPanel->SetSizerAndFit(rVSizer);
 
-	wxBoxSizer* sizerM = new wxBoxSizer(wxVERTICAL);
+	if (!settings.preview)
+	{
+		rPanel->Hide();
+		initPreview.chara_1->Hide();
+		initPreview.chara_2->Hide();
+		initPreview.chara_4->Hide();
+		initPreview.chara_7->Hide();
+
+		finalPreview.chara_1->Hide();
+		finalPreview.chara_2->Hide();
+		finalPreview.chara_4->Hide();
+		finalPreview.chara_7->Hide();
+
+		splitter->Unsplit();
+	}
+
+	sizerM = new wxBoxSizer(wxVERTICAL);
 	sizerM->Add(splitter, 1, wxEXPAND);
 	this->SetSizerAndFit(sizerM);
 }
 
 /* --- HELPER FUNCTIONS --- */
-void MainFrame::updateControls(bool character, bool fileType, bool initSlot, bool finalSlot,bool newInkSlot)
+void MainFrame::updateControls(bool character, bool fileType, bool initSlot, bool finalSlot, bool newInkSlot)
 {
 	wxArrayString codes;
 	wxArrayString fileTypes;
@@ -332,6 +387,10 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 		{
 			initSlots.list->Set(mHandler.wxGetSlots(codes, fileTypes, settings.selectionType));
 		}
+		else
+		{
+			initSlots.list->Clear();
+		}
 
 		if (!initSlots.list->IsEmpty())
 		{
@@ -344,9 +403,76 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 			{
 				initSlots.list->SetSelection(0);
 			}
+
+			Slot slot(initSlots.list->GetStringSelection().ToStdString());
+
+			if (settings.preview)
+			{
+				if (!codes.empty() && slot.getInt() != 999)
+				{
+					string arr[] = { "1", "2", "4", "7" };
+					for (int i = 0; i < 4; i++)
+					{
+						string path1 = mHandler.getPath() + "/ui/replace/chara/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() + "_" + (i == 3 ? "00" : slot.getString());
+						string path2 = mHandler.getPath() + "/ui/replace_patch/chara/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() + "_" + (i == 3 ? "00" : slot.getString());
+						string command;
+
+						if (fs::exists(path1 + ".bntx"))
+						{
+							wxSetWorkingDirectory("Files/textures");
+
+							wxExecute("ultimate_tex_cli.exe \"" + path1 + ".bntx\" " +
+								"\"" + fs::current_path().string() + "/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() +
+								"_" + (i == 3 ? "00" : slot.getString()) + ".png\"", wxEXEC_SYNC | wxEXEC_NODISABLE | wxEXEC_HIDE_CONSOLE);
+
+							wxSetWorkingDirectory("../..");
+						}
+						else if (fs::exists(path2 + ".bntx"))
+						{
+							wxSetWorkingDirectory("Files/textures");
+
+							wxExecute("ultimate_tex_cli.exe \"" + path1 + ".bntx\" " +
+								"\"" + fs::current_path().string() + "/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() +
+								"_" + (i == 3 ? "00" : slot.getString()) + ".png\"", wxEXEC_SYNC | wxEXEC_NODISABLE);
+
+							wxSetWorkingDirectory("../..");
+						}
+						else
+						{
+							if (fs::exists("Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() + "_" + (i == 3 ? "00" : slot.getString()) + ".png"))
+							{
+								fs::remove("Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() + "_" + (i == 3 ? "00" : slot.getString()) + ".png");
+							}
+
+							fs::copy("Files/textures/vanilla/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() + "_" + (i == 3 ? "00" : slot.getString()) + ".png",
+								"Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() + "_" + (i == 3 ? "00" : slot.getString()) + ".png");
+						}
+					}
+
+					updateBitmap(finalPreview.chara_1, "Files/textures/modded/chara_1/chara_1_" + codes[0].ToStdString() + "_" + slot.getString() + ".png", 345, 345);
+					updateBitmap(finalPreview.chara_2, "Files/textures/modded/chara_2/chara_2_" + codes[0].ToStdString() + "_" + slot.getString() + ".png", 64, 64);
+					updateBitmap(finalPreview.chara_4, "Files/textures/modded/chara_4/chara_4_" + codes[0].ToStdString() + "_" + slot.getString() + ".png", 100, 100);
+					updateBitmap(finalPreview.chara_7, "Files/textures/modded/chara_7/chara_7_" + codes[0].ToStdString() + "_00.png", 176, 117);
+				}
+				else
+				{
+					updateBitmap(finalPreview.chara_1, "Files/textures/vanilla/chara_1/chara_1_random_00.png", 345, 345);
+					updateBitmap(finalPreview.chara_2, "Files/textures/vanilla/chara_2/chara_2_random_00.png", 64, 64);
+					updateBitmap(finalPreview.chara_4, "Files/textures/vanilla/chara_4/chara_4_random_00.png", 100, 100);
+					updateBitmap(finalPreview.chara_7, "Files/textures/vanilla/chara_7/chara_7_random_00.png", 176, 117);
+				}
+			}
 		}
 		else
 		{
+			if (settings.preview)
+			{
+				updateBitmap(finalPreview.chara_1, "Files/textures/vanilla/chara_1/chara_1_random_00.png", 345, 345);
+				updateBitmap(finalPreview.chara_2, "Files/textures/vanilla/chara_2/chara_2_random_00.png", 64, 64);
+				updateBitmap(finalPreview.chara_4, "Files/textures/vanilla/chara_4/chara_4_random_00.png", 100, 100);
+				updateBitmap(finalPreview.chara_7, "Files/textures/vanilla/chara_7/chara_7_random_00.png", 176, 117);
+			}
+
 			buttons.mov->Disable();
 			buttons.dup->Disable();
 			buttons.del->Disable();
@@ -388,6 +514,26 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 			buttons.mov->Disable();
 			buttons.dup->Disable();
 			buttons.del->Disable();
+		}
+
+		Slot slot(finalSlots.list->GetValue());
+
+		if (settings.preview)
+		{
+			if (!codes.empty() && slot.getInt() <= 7)
+			{
+				updateBitmap(initPreview.chara_1, "Files/textures/vanilla/chara_1/chara_1_" + codes[0].ToStdString() + "_" + slot.getString() + ".png", 345, 345);
+				updateBitmap(initPreview.chara_2, "Files/textures/vanilla/chara_2/chara_2_" + codes[0].ToStdString() + "_" + slot.getString() + ".png", 64, 64);
+				updateBitmap(initPreview.chara_4, "Files/textures/vanilla/chara_4/chara_4_" + codes[0].ToStdString() + "_" + slot.getString() + ".png", 100, 100);
+				updateBitmap(initPreview.chara_7, "Files/textures/vanilla/chara_7/chara_7_" + codes[0].ToStdString() + "_00.png", 176, 117);
+			}
+			else
+			{
+				updateBitmap(initPreview.chara_1, "Files/textures/vanilla/chara_1/chara_1_random_00.png", 345, 345);
+				updateBitmap(initPreview.chara_2, "Files/textures/vanilla/chara_2/chara_2_random_00.png", 64, 64);
+				updateBitmap(initPreview.chara_4, "Files/textures/vanilla/chara_4/chara_4_random_00.png", 100, 100);
+				updateBitmap(initPreview.chara_7, "Files/textures/vanilla/chara_7/chara_7_random_00.png", 176, 117);
+			}
 		}
 	}
 
@@ -447,6 +593,24 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 	lPanel->SendSizeEvent();
 }
 
+void MainFrame::updateBitmap(wxStaticBitmap* sBitmap, string path, int width, int height)
+{
+	wxImage image = wxBitmap(path, wxBITMAP_TYPE_PNG).ConvertToImage().Scale(width, height);
+	int size = image.GetHeight() * image.GetWidth();
+
+	unsigned char* data = image.GetData();
+	for (unsigned int i = 0; i < size; i++)
+	{
+		data[0] = pow(data[0] / 255.0f, 1.0f / 2.2f) * 255.0f;
+		data[1] = pow(data[1] / 255.0f, 1.0f / 2.2f) * 255.0f;
+		data[2] = pow(data[2] / 255.0f, 1.0f / 2.2f) * 255.0f;
+
+		data += 3;
+	}
+
+	sBitmap->SetBitmap(image);
+}
+
 void MainFrame::readSettings()
 {
 	ifstream settingsFile(iPath + "/Files/settings.data");
@@ -454,6 +618,8 @@ void MainFrame::readSettings()
 	{
 		int bit;
 
+		settingsFile >> bit;
+		settings.preview = (bit == 1) ? true : false;
 		settingsFile >> bit;
 		settings.baseSource = (bit == 1) ? true : false;
 		settingsFile >> bit;
@@ -478,6 +644,7 @@ void MainFrame::updateSettings()
 	ofstream settingsFile(iPath + "/Files/settings.data");
 	if (settingsFile.is_open())
 	{
+		settingsFile << settings.preview << ' ';
 		settingsFile << settings.baseSource << ' ';
 		settingsFile << settings.selectionType << ' ';
 		settingsFile << settings.readBase << ' ';
@@ -560,6 +727,48 @@ void MainFrame::toggleSetting(wxCommandEvent& evt)
 			baseUpToDate = !mHandler.hasAddSlot();
 		}
 		updateControls();
+	}
+	else if (setting == "preview")
+	{
+		settings.preview = !settings.preview;
+		if (settings.preview)
+		{
+			rPanel->Show();
+			initPreview.chara_1->Show();
+			initPreview.chara_2->Show();
+			initPreview.chara_4->Show();
+			initPreview.chara_7->Show();
+
+			finalPreview.chara_1->Show();
+			finalPreview.chara_2->Show();
+			finalPreview.chara_4->Show();
+			finalPreview.chara_7->Show();
+
+			splitter->SplitVertically(lPanel, rPanel);
+
+			log->LogText("> Preview panel is now visible.");
+		}
+		else
+		{
+
+			rPanel->Hide();
+			initPreview.chara_1->Hide();
+			initPreview.chara_2->Hide();
+			initPreview.chara_4->Hide();
+			initPreview.chara_7->Hide();
+
+			finalPreview.chara_1->Hide();
+			finalPreview.chara_2->Hide();
+			finalPreview.chara_4->Hide();
+			finalPreview.chara_7->Hide();
+
+			splitter->Unsplit();
+			log->LogText("> Preview panel is now disabled.");
+		}
+		updateControls(false, false, true);
+
+		this->SetMinClientSize(sizerM->GetMinSize());
+		this->SetSize(sizerM->GetMinSize());
 	}
 
 	updateSettings();

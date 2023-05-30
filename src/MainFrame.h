@@ -30,7 +30,9 @@ private:
 	wxButtons buttons;
 	wxTextCtrl* logWindow;
 	wxLogTextCtrl* log;
-	wxPNGHandler* handler;
+	wxPreview initPreview;
+	wxPreview finalPreview;
+	wxBoxSizer* sizerM;
 
 	/* --- Data Variables --- */
 	ModHandler mHandler;
@@ -41,6 +43,7 @@ private:
 	/* --- HELPER FUNCTIONS --- */
 	// Controls
 	void updateControls(bool character = true, bool fileType = true, bool initSlot = true, bool finalSlot = true, bool newInkSlot = false);
+	void updateBitmap(wxStaticBitmap* bitmap, string path, int width, int height);
 
 	// Settings
 	void readSettings();
