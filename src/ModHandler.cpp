@@ -696,7 +696,7 @@ wxArrayString ModHandler::wxGetSlots(wxArrayString codes, wxArrayString fileType
 	wxArrayString slots;
 	for (auto& slot : slotsSet)
 	{
-		if (slot != "All" || slotsSet.size() == 1)
+		if (slot != "All" || fileTypes.size() == 1)
 		{
 			slots.Add(slot);
 		}
@@ -930,10 +930,9 @@ void ModHandler::readFiles(string path)
 									{
 										slot = 999;
 									}
-
 								}
 								// effectFile is a folder
-								else
+								else if(l.is_directory())
 								{
 									// model folder requires special treatment
 									if (file == "model")
@@ -970,6 +969,11 @@ void ModHandler::readFiles(string path)
 									{
 										slot = 999;
 									}
+								}
+								// Unrelated file
+								else
+								{
+									continue;
 								}
 
 								file = l.path().string();
@@ -1066,7 +1070,7 @@ void ModHandler::readFiles(string path)
 										else
 										{
 											string code = filename.substr(3, dotPos - 3);
-											addFile(code, fileType, -1, file);
+											addFile(code, fileType, 999, file);
 										}
 									}
 									else
@@ -1206,8 +1210,6 @@ void ModHandler::adjustFiles(string action, string code, wxArrayString fileTypes
 									{
 										wxLog("Error! " + initPath.string() + " could not be deleted!");
 									}
-
-									return;
 								}
 							}
 							else

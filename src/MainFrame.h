@@ -37,7 +37,7 @@ private:
 	/* --- Data Variables --- */
 	ModHandler mHandler;
 	Settings settings;
-	string iPath;
+	string exe;
 	bool baseUpToDate;
 
 	/* --- HELPER FUNCTIONS --- */
@@ -71,5 +71,5 @@ public:
 
 public:
 	/* --- CONSTRUCTOR ---	*/
-	MainFrame(const wxString& title);
+	MainFrame(const wxString& title, string exe);
 };

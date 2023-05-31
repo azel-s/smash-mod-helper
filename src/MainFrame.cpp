@@ -7,6 +7,8 @@
 #include <filesystem>
 #include <fstream>
 #include <wx/wx.h>
+#include <wx/filename.h>
+#include <wx/stdpaths.h>
 #include <wx/gbsizer.h>
 namespace fs = std::filesystem;
 using std::ofstream, std::string;
@@ -17,7 +19,7 @@ bool App::OnInit()
 {
 	wxImage::AddHandler(new wxPNGHandler);
 
-	MainFrame* mainFrame = new MainFrame("Smash Ultimate Mod Helper");
+	MainFrame* mainFrame = new MainFrame("Smash Ultimate Mod Helper", GetAppName().ToStdString());
 	mainFrame->SetIcons(wxICON(SMASH_ICON));
 	//mainFrame->SetSize(mainFrame->FromDIP(wxSize(mainFrame->GetBestSize().x, mainFrame->GetBestSize().y * 14.0 / 24)));
 	//mainFrame->SetMinSize(mainFrame->FromDIP(mainFrame->GetSize()));
@@ -26,7 +28,7 @@ bool App::OnInit()
 	return true;
 }
 
-MainFrame::MainFrame(const wxString& title) :
+MainFrame::MainFrame(const wxString& title, string exe) :
 	wxFrame
 	(
 		nullptr,
@@ -47,12 +49,10 @@ MainFrame::MainFrame(const wxString& title) :
 	rPanel->SetBackgroundColour(wxColour(245, 245, 245));
 
 	/* --- Initial path --- */
-	iPath = fs::current_path().string();
-	replace(iPath.begin(), iPath.end(), '\\', '/');
+	this->exe = exe + ".exe";
 
 	/* --- Log window --- */
 	logWindow->SetEditable(false);
-	logWindow->Show(false);
 
 	/* --- Settings --- */
 	readSettings();
@@ -107,7 +107,7 @@ MainFrame::MainFrame(const wxString& title) :
 	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, baseSouceID, wxID_ANY, new wxArgument("baseSource"));
 	optionsMenu->Check(baseSouceID, settings.baseSource);
 
-	auto previewID = optionsMenu->AppendCheckItem(wxID_ANY, "Enable UI Preview", "Shows a preview panel to the right.")->GetId();
+	auto previewID = optionsMenu->AppendCheckItem(wxID_ANY, "UI Preview (Restart)", "Shows a preview panel to the right.")->GetId();
 	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, previewID, wxID_ANY, new wxArgument("preview"));
 	optionsMenu->Check(previewID, settings.preview);
 
@@ -220,15 +220,22 @@ MainFrame::MainFrame(const wxString& title) :
 	lBagSizer->Add(logWindow, wxGBPosition(8, 0), wxGBSpan(4, 6), wxEXPAND);
 
 	// Image Stuff
+	wxFont* boldFont = new wxFont();
+	boldFont->SetWeight(wxFONTWEIGHT_BOLD);
+
 	initPreview.chara_1 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
 	initPreview.chara_2 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
 	initPreview.chara_4 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
 	initPreview.chara_7 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
+	initPreview.text = new wxStaticText(rPanel, wxID_ANY, "Old Slot");
+	initPreview.text->SetFont(*boldFont);
 
 	finalPreview.chara_1 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
 	finalPreview.chara_2 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
 	finalPreview.chara_4 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
 	finalPreview.chara_7 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
+	finalPreview.text = new wxStaticText(rPanel, wxID_ANY, "New Slot");
+	finalPreview.text->SetFont(*boldFont);
 
 	if (settings.preview)
 	{
@@ -252,6 +259,10 @@ MainFrame::MainFrame(const wxString& title) :
 	rBagSizer->Add(finalPreview.chara_4, wxGBPosition(0, 4), wxGBSpan(1, 1), wxEXPAND);
 	rBagSizer->Add(finalPreview.chara_2, wxGBPosition(0, 5), wxGBSpan(1, 1), wxEXPAND);
 	rBagSizer->Add(finalPreview.chara_1, wxGBPosition(1, 3), wxGBSpan(1, 3), wxEXPAND);
+
+
+	rBagSizer->Add(initPreview.text, wxGBPosition(2, 0), wxGBSpan(1, 3), wxALIGN_CENTER_HORIZONTAL);
+	rBagSizer->Add(finalPreview.text, wxGBPosition(2, 3), wxGBSpan(1, 3), wxALIGN_CENTER_HORIZONTAL);
 
 	splitter->SplitVertically(lPanel, rPanel);
 	// splitter->SetMinimumPaneSize(0);
@@ -282,15 +293,18 @@ MainFrame::MainFrame(const wxString& title) :
 	if (!settings.preview)
 	{
 		rPanel->Hide();
+
 		initPreview.chara_1->Hide();
 		initPreview.chara_2->Hide();
 		initPreview.chara_4->Hide();
 		initPreview.chara_7->Hide();
+		finalPreview.text->Hide();
 
 		finalPreview.chara_1->Hide();
 		finalPreview.chara_2->Hide();
 		finalPreview.chara_4->Hide();
 		finalPreview.chara_7->Hide();
+		finalPreview.text->Hide();
 
 		splitter->Unsplit();
 	}
@@ -298,6 +312,9 @@ MainFrame::MainFrame(const wxString& title) :
 	sizerM = new wxBoxSizer(wxVERTICAL);
 	sizerM->Add(splitter, 1, wxEXPAND);
 	this->SetSizerAndFit(sizerM);
+
+	logWindow->Show(false);
+	lPanel->SendSizeEvent();
 }
 
 /* --- HELPER FUNCTIONS --- */
@@ -419,32 +436,40 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 
 						if (fs::exists(path1 + ".bntx"))
 						{
-							wxSetWorkingDirectory("Files/textures");
-
-							wxExecute("ultimate_tex_cli.exe \"" + path1 + ".bntx\" " +
-								"\"" + fs::current_path().string() + "/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() +
+							wxExecute("Files/textures/ultimate_tex_cli.exe \"" + path1 + ".bntx\" " +
+								"\"" + "Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() +
 								"_" + (i == 3 ? "00" : slot.getString()) + ".png\"", wxEXEC_SYNC | wxEXEC_NODISABLE | wxEXEC_HIDE_CONSOLE);
-
-							wxSetWorkingDirectory("../..");
 						}
 						else if (fs::exists(path2 + ".bntx"))
 						{
-							wxSetWorkingDirectory("Files/textures");
-
-							wxExecute("ultimate_tex_cli.exe \"" + path1 + ".bntx\" " +
-								"\"" + fs::current_path().string() + "/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() +
-								"_" + (i == 3 ? "00" : slot.getString()) + ".png\"", wxEXEC_SYNC | wxEXEC_NODISABLE);
-
-							wxSetWorkingDirectory("../..");
+							wxExecute("Files/textures/ultimate_tex_cli.exe \"" + path2 + ".bntx\" " +
+								"\"" + "Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() +
+								"_" + (i == 3 ? "00" : slot.getString()) + ".png\"", wxEXEC_SYNC | wxEXEC_NODISABLE | wxEXEC_HIDE_CONSOLE);
 						}
 						else
 						{
+							string code = codes[0].ToStdString();
+							Slot sSlot(slot);
+
 							if (fs::exists("Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() + "_" + (i == 3 ? "00" : slot.getString()) + ".png"))
 							{
 								fs::remove("Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() + "_" + (i == 3 ? "00" : slot.getString()) + ".png");
 							}
 
-							fs::copy("Files/textures/vanilla/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() + "_" + (i == 3 ? "00" : slot.getString()) + ".png",
+							if (slot.getInt() > 7)
+							{
+								if (baseUpToDate)
+								{
+									sSlot = mHandler.getBaseSlot(codes[0].ToStdString(), slot);
+								}
+								else
+								{
+									code = "random";
+									sSlot = Slot(0);
+								}
+							}
+
+							fs::copy("Files/textures/vanilla/chara_" + arr[i] + "/chara_" + arr[i] + "_" + code + "_" + (i == 3 ? "00" : sSlot.getString()) + ".png",
 								"Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() + "_" + (i == 3 ? "00" : slot.getString()) + ".png");
 						}
 					}
@@ -595,25 +620,32 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 
 void MainFrame::updateBitmap(wxStaticBitmap* sBitmap, string path, int width, int height)
 {
-	wxImage image = wxBitmap(path, wxBITMAP_TYPE_PNG).ConvertToImage().Scale(width, height);
-	int size = image.GetHeight() * image.GetWidth();
-
-	unsigned char* data = image.GetData();
-	for (unsigned int i = 0; i < size; i++)
+	try
 	{
-		data[0] = pow(data[0] / 255.0f, 1.0f / 2.2f) * 255.0f;
-		data[1] = pow(data[1] / 255.0f, 1.0f / 2.2f) * 255.0f;
-		data[2] = pow(data[2] / 255.0f, 1.0f / 2.2f) * 255.0f;
+		wxImage image = wxBitmap(path, wxBITMAP_TYPE_PNG).ConvertToImage().Scale(width, height);
+		int size = image.GetHeight() * image.GetWidth();
 
-		data += 3;
+		unsigned char* data = image.GetData();
+		for (unsigned int i = 0; i < size; i++)
+		{
+			data[0] = pow(data[0] / 255.0f, 1.0f / 2.2f) * 255.0f;
+			data[1] = pow(data[1] / 255.0f, 1.0f / 2.2f) * 255.0f;
+			data[2] = pow(data[2] / 255.0f, 1.0f / 2.2f) * 255.0f;
+
+			data += 3;
+		}
+
+		sBitmap->SetBitmap(image);
 	}
-
-	sBitmap->SetBitmap(image);
+	catch (...)
+	{
+		log->LogText("> Error: Could not update UI for " + path);
+	}
 }
 
 void MainFrame::readSettings()
 {
-	ifstream settingsFile(iPath + "/Files/settings.data");
+	ifstream settingsFile("Files/settings.data");
 	if (settingsFile.is_open())
 	{
 		int bit;
@@ -641,7 +673,7 @@ void MainFrame::readSettings()
 
 void MainFrame::updateSettings()
 {
-	ofstream settingsFile(iPath + "/Files/settings.data");
+	ofstream settingsFile("Files/settings.data");
 	if (settingsFile.is_open())
 	{
 		settingsFile << settings.preview << ' ';
@@ -731,44 +763,10 @@ void MainFrame::toggleSetting(wxCommandEvent& evt)
 	else if (setting == "preview")
 	{
 		settings.preview = !settings.preview;
-		if (settings.preview)
-		{
-			rPanel->Show();
-			initPreview.chara_1->Show();
-			initPreview.chara_2->Show();
-			initPreview.chara_4->Show();
-			initPreview.chara_7->Show();
+		updateSettings();
 
-			finalPreview.chara_1->Show();
-			finalPreview.chara_2->Show();
-			finalPreview.chara_4->Show();
-			finalPreview.chara_7->Show();
-
-			splitter->SplitVertically(lPanel, rPanel);
-
-			log->LogText("> Preview panel is now visible.");
-		}
-		else
-		{
-
-			rPanel->Hide();
-			initPreview.chara_1->Hide();
-			initPreview.chara_2->Hide();
-			initPreview.chara_4->Hide();
-			initPreview.chara_7->Hide();
-
-			finalPreview.chara_1->Hide();
-			finalPreview.chara_2->Hide();
-			finalPreview.chara_4->Hide();
-			finalPreview.chara_7->Hide();
-
-			splitter->Unsplit();
-			log->LogText("> Preview panel is now disabled.");
-		}
-		updateControls(false, false, true);
-
-		this->SetMinClientSize(sizerM->GetMinSize());
-		this->SetSize(sizerM->GetMinSize());
+		wxExecute(wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath() + "/" + exe);
+		Close();
 	}
 
 	updateSettings();
@@ -780,9 +778,21 @@ void MainFrame::onBrowse(wxCommandEvent& evt)
 
 	if (static_cast<wxArgument*>(evt.GetEventUserData())->str == "text")
 	{
-		if (fs::is_directory(browse.text->GetValue().ToStdString()))
+		path = browse.text->GetValue().ToStdString();
+
+		if (!path.empty() && path[0] == '"' && path[path.size() - 1] == '"')
 		{
-			path = browse.text->GetValue();
+			path = path.substr(1);
+
+			if (!path.empty())
+			{
+				path = path.substr(0, path.size() - 1);
+			}
+		}
+
+		if (!fs::is_directory(path))
+		{
+			path = "";
 		}
 	}
 	else

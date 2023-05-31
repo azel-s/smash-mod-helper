@@ -131,6 +131,7 @@ struct wxPreview
 	wxStaticBitmap* chara_2;
 	wxStaticBitmap* chara_4;
 	wxStaticBitmap* chara_7;
+	wxStaticText* text;
 };
 
 struct Name
