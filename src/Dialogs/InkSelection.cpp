@@ -14,6 +14,9 @@ InkSelection::InkSelection
 {
     this->mHandler = mHandler;
 
+    auto allSlots = mHandler->getAllSlots(false);
+    auto inkSlots = allSlots.find("inkling");
+
     list.Add("c00");
     list.Add("c01");
     list.Add("c02");
@@ -22,6 +25,14 @@ InkSelection::InkSelection
     list.Add("c05");
     list.Add("c06");
     list.Add("c07");
+
+    if (inkSlots != allSlots.end())
+    {
+        for (auto i = inkSlots->second.begin(); i != inkSlots->second.end(); i++)
+        {
+            list.Add("c" + i->getString());
+        }
+    }
 
     map<Slot, InklingColor> inklingColors;
 

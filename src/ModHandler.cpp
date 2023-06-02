@@ -2552,6 +2552,7 @@ void ModHandler::create_ink_prcxml(map<Slot, InklingColor>& inklingColors)
 						}
 
 						effectEdit << "    </struct>" << endl;
+						iter++;
 					}
 				}
 				else
