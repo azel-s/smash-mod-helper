@@ -435,33 +435,49 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 			{
 				if (!codes.empty() && slot.getInt() != 999)
 				{
+					string code = codes[0].ToStdString();
+
+					if (code == "eflame")
+					{
+						code = "eflame_first";
+					}
+					else if (code == "elight")
+					{
+						code = "elight_first";
+					}
+
 					string arr[] = { "1", "2", "4", "7" };
 					for (int i = 0; i < 4; i++)
 					{
-						string path1 = mHandler.getPath() + "/ui/replace/chara/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() + "_" + (i == 3 ? "00" : slot.getString());
-						string path2 = mHandler.getPath() + "/ui/replace_patch/chara/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() + "_" + (i == 3 ? "00" : slot.getString());
+						if (i == 3 && code == "elight_first")
+						{
+							code = "eflame_first";
+						}
+
+						string path1 = mHandler.getPath() + "/ui/replace/chara/chara_" + arr[i] + "/chara_" + arr[i] + "_" + code + "_" + (i == 3 ? "00" : slot.getString());
+						string path2 = mHandler.getPath() + "/ui/replace_patch/chara/chara_" + arr[i] + "/chara_" + arr[i] + "_" + code + "_" + (i == 3 ? "00" : slot.getString());
 						string command;
 
 						if (fs::exists(path1 + ".bntx"))
 						{
 							wxExecute("Files/textures/ultimate_tex_cli.exe \"" + path1 + ".bntx\" " +
-								"\"" + "Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() +
+								"\"" + "Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + code +
 								"_" + (i == 3 ? "00" : slot.getString()) + ".png\"", wxEXEC_SYNC | wxEXEC_NODISABLE | wxEXEC_HIDE_CONSOLE);
 						}
 						else if (fs::exists(path2 + ".bntx"))
 						{
 							wxExecute("Files/textures/ultimate_tex_cli.exe \"" + path2 + ".bntx\" " +
-								"\"" + "Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() +
+								"\"" + "Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + code +
 								"_" + (i == 3 ? "00" : slot.getString()) + ".png\"", wxEXEC_SYNC | wxEXEC_NODISABLE | wxEXEC_HIDE_CONSOLE);
 						}
 						else
 						{
-							string code = codes[0].ToStdString();
+							string code2 = code;
 							Slot sSlot(slot);
 
-							if (fs::exists("Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() + "_" + (i == 3 ? "00" : slot.getString()) + ".png"))
+							if (fs::exists("Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + code + "_" + (i == 3 ? "00" : slot.getString()) + ".png"))
 							{
-								fs::remove("Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() + "_" + (i == 3 ? "00" : slot.getString()) + ".png");
+								fs::remove("Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + code + "_" + (i == 3 ? "00" : slot.getString()) + ".png");
 							}
 
 							if (slot.getInt() > 7)
@@ -472,20 +488,35 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 								}
 								else
 								{
-									code = (i == 3 ? code : "random");
+									code2 = (i == 3 ? code : "random");
 									sSlot = Slot(0);
 								}
 							}
 
-							fs::copy("Files/textures/vanilla/chara_" + arr[i] + "/chara_" + arr[i] + "_" + code + "_" + (i == 3 ? "00" : sSlot.getString()) + ".png",
-								"Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codes[0].ToStdString() + "_" + (i == 3 ? "00" : slot.getString()) + ".png");
+							fs::copy("Files/textures/vanilla/chara_" + arr[i] + "/chara_" + arr[i] + "_" + code2 + "_" + (i == 3 ? "00" : sSlot.getString()) + ".png",
+								"Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + code + "_" + (i == 3 ? "00" : slot.getString()) + ".png");
 						}
 					}
 
-					updateBitmap(finalPreview.chara_1, "Files/textures/modded/chara_1/chara_1_" + codes[0].ToStdString() + "_" + slot.getString() + ".png", 345, 345);
-					updateBitmap(finalPreview.chara_2, "Files/textures/modded/chara_2/chara_2_" + codes[0].ToStdString() + "_" + slot.getString() + ".png", 64, 64);
-					updateBitmap(finalPreview.chara_4, "Files/textures/modded/chara_4/chara_4_" + codes[0].ToStdString() + "_" + slot.getString() + ".png", 100, 100);
-					updateBitmap(finalPreview.chara_7, "Files/textures/modded/chara_7/chara_7_" + codes[0].ToStdString() + "_00.png", 176, 117);
+					code = codes[0].ToStdString();
+
+					if (code == "eflame")
+					{
+						code = "eflame_first";
+					}
+					else if (code == "elight")
+					{
+						code = "elight_first";
+					}
+
+					updateBitmap(finalPreview.chara_1, "Files/textures/modded/chara_1/chara_1_" + code + "_" + slot.getString() + ".png", 345, 345);
+					updateBitmap(finalPreview.chara_2, "Files/textures/modded/chara_2/chara_2_" + code + "_" + slot.getString() + ".png", 64, 64);
+					updateBitmap(finalPreview.chara_4, "Files/textures/modded/chara_4/chara_4_" + code + "_" + slot.getString() + ".png", 100, 100);
+					if (code == "elight_first")
+					{
+						code = "eflame_first";
+					}
+					updateBitmap(finalPreview.chara_7, "Files/textures/modded/chara_7/chara_7_" + code + "_00.png", 176, 117);
 				}
 				else
 				{
@@ -555,10 +586,25 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 		{
 			if (!codes.empty() && slot.getInt() <= 7)
 			{
-				updateBitmap(initPreview.chara_1, "Files/textures/vanilla/chara_1/chara_1_" + codes[0].ToStdString() + "_" + slot.getString() + ".png", 345, 345);
-				updateBitmap(initPreview.chara_2, "Files/textures/vanilla/chara_2/chara_2_" + codes[0].ToStdString() + "_" + slot.getString() + ".png", 64, 64);
-				updateBitmap(initPreview.chara_4, "Files/textures/vanilla/chara_4/chara_4_" + codes[0].ToStdString() + "_" + slot.getString() + ".png", 100, 100);
-				updateBitmap(initPreview.chara_7, "Files/textures/vanilla/chara_7/chara_7_" + codes[0].ToStdString() + "_00.png", 176, 117);
+				string code = codes[0].ToStdString();
+
+				if (code == "eflame")
+				{
+					code = "eflame_first";
+				}
+				else if (code == "elight")
+				{
+					code = "elight_first";
+				}
+
+				updateBitmap(initPreview.chara_1, "Files/textures/vanilla/chara_1/chara_1_" + code + "_" + slot.getString() + ".png", 345, 345);
+				updateBitmap(initPreview.chara_2, "Files/textures/vanilla/chara_2/chara_2_" + code + "_" + slot.getString() + ".png", 64, 64);
+				updateBitmap(initPreview.chara_4, "Files/textures/vanilla/chara_4/chara_4_" + code + "_" + slot.getString() + ".png", 100, 100);
+				if (code == "elight_first")
+				{
+					code = "eflame_first";
+				}
+				updateBitmap(initPreview.chara_7, "Files/textures/vanilla/chara_7/chara_7_" + code + "_00.png", 176, 117);
 			}
 			else
 			{
