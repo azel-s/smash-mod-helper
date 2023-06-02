@@ -156,21 +156,13 @@ Path::Path(string path)
 
 				if (modelPos == string::npos || begPos != string::npos)
 				{
-					auto underscorePos = (modelPos != string::npos) ? path.rfind("_c", begPos) : path.rfind("_c");
-					if (underscorePos != string::npos && (modelPos != string::npos) ? (underscorePos < begPos) : (underscorePos > begPos))
+					auto underscorePos = path.rfind("_c", begPos);
+					if (underscorePos != string::npos && underscorePos < begPos)
 					{
 						try
 						{
 							size_t* temp = new size_t;
-							if (modelPos != string::npos)
-							{
-								this->slot = Slot(stoi(path.substr(underscorePos + 2, begPos - underscorePos - 2), temp));
-							}
-							else
-							{
-								this->slot = Slot(stoi(path.substr(underscorePos + 2), temp));
-								begPos = path.size();
-							}
+							this->slot = Slot(stoi(path.substr(underscorePos + 2, begPos - underscorePos - 2), temp));
 							if (*temp != begPos - underscorePos - 2)
 							{
 								this->slot = Slot(999);
@@ -190,7 +182,7 @@ Path::Path(string path)
 			}
 		}
 	}
-	else if (path.find("append") == 0 || path.find("fighter") == 0 || path.find("camera") == 0 || path.find("prebuilt:/movie") == 0)
+	else if (path.find("append") == 0 || path.find("fighter") == 0 || path.find("camera") == 0 || path.find("prebuilt;/movie") == 0 || path.find("prebuilt:/movie") == 0)
 	{
 		if (path.find("append") == 0)
 		{
@@ -248,7 +240,7 @@ Path::Path(string path)
 					this->slot = Slot();
 				}
 			}
-			catch(...)
+			catch (...)
 			{
 				// Invalid slot
 			}
@@ -393,7 +385,7 @@ void Path::setSlot(Slot slot)
 				}
 			}
 		}
-		else if (this->type == "fighter" || this->type == "camera")
+		else if (this->type == "fighter" || this->type == "camera" || this->type == "movie" || this->type == "append")
 		{
 			string toReplace = "/c" + this->slot.getString();
 			path.replace(path.find(toReplace), toReplace.size(), "/c" + slot.getString());

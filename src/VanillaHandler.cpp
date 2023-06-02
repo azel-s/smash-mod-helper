@@ -99,6 +99,43 @@ VanillaHandler::VanillaHandler(string filePath)
 	}
 	dFile.close();
 
+	// Read blacklist
+	ifstream bFile(filePath + "blacklist.data");
+	if(bFile.is_open())
+	{
+		string line;
+		while (!bFile.eof())
+		{
+			getline(bFile, line);
+
+			if (!line.empty())
+			{
+				Path path = Path(line);
+
+				if (line[0] == '.')
+				{
+					blackListedExtensions.insert(path);
+				}
+				else if (line[0] != '#')
+				{
+					if (path.getSlot().getInt() == 8)
+					{
+						for (int i = 0; i < 8; i++)
+						{
+							path.setSlot(i);
+							blackListedFiles.insert(path);
+						}
+					}
+					else
+					{
+						blackListedFiles.insert(path);
+					}
+				}
+			}
+		}
+	}
+	bFile.close();
+
 	// Read effect
 	ifstream eFile(filePath + "effect.data");
 	if (eFile.is_open())
@@ -500,6 +537,36 @@ map<string, map<Slot, Name>> VanillaHandler::read_message_names(string path)
 	return names;
 }
 
+bool VanillaHandler::isFileBlacklisted(Path path)
+{
+	if (blackListedFiles.find(path) != blackListedFiles.end())
+	{
+		return true;
+	}
+	else
+	{
+		try
+		{
+			string extension = fs::path(path.getPath()).extension().string();
+
+			if (blackListedExtensions.find(extension) != blackListedExtensions.end())
+			{
+				return true;
+			}
+		}
+		catch (...)
+		{
+			// Likely couldn't grab extension.
+		}
+	}
+
+	return false;
+}
+
+bool VanillaHandler::isFileBlacklisted(string file)
+{
+	return isFileBlacklisted(Path(file));
+}
 
 bool VanillaHandler::isOkay() const
 {

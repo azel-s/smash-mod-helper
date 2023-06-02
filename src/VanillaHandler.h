@@ -3,6 +3,7 @@
 #include "nlohmann/json.hpp"
 #include "HelperStructures.h"
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 #include <string>
 #include <set>
@@ -26,6 +27,10 @@ private:
 
 	// Key: Character code, Value: Set(Path)
 	unordered_map<string, set<Path>> effectFiles;
+
+	// Key: Character code, Value: Set(Path)
+	set<Path> blackListedFiles;
+	set<Path> blackListedExtensions;
 
 	// Key: Character code, Value: (Key: Slot, Value: (First: Announcer, Second: Announcer Article)
 	unordered_map <string, map<Slot, DBData>> XML;
@@ -60,6 +65,8 @@ public:
 	vector<InklingColor> getInklingColors() const;
 
 	/* --- VERIFIERS --- */
+	bool isFileBlacklisted(Path path);
+	bool isFileBlacklisted(string file);
 	bool isOkay() const;
 
 	/* --- READERS --- */

@@ -224,17 +224,25 @@ MainFrame::MainFrame(const wxString& title, string exe) :
 	boldFont->SetWeight(wxFONTWEIGHT_BOLD);
 
 	initPreview.chara_1 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
+	initPreview.chara_1->SetToolTip("chara_1");
 	initPreview.chara_2 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
+	initPreview.chara_2->SetToolTip("chara_2");
 	initPreview.chara_4 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
+	initPreview.chara_4->SetToolTip("chara_4");
 	initPreview.chara_7 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
-	initPreview.text = new wxStaticText(rPanel, wxID_ANY, "Old Slot");
+	initPreview.chara_7->SetToolTip("chara_7");
+	initPreview.text = new wxStaticText(rPanel, wxID_ANY, "Old Slot (Vanilla)");
 	initPreview.text->SetFont(*boldFont);
 
 	finalPreview.chara_1 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
+	finalPreview.chara_1->SetToolTip("chara_1");
 	finalPreview.chara_2 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
+	finalPreview.chara_2->SetToolTip("chara_2");
 	finalPreview.chara_4 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
+	finalPreview.chara_4->SetToolTip("chara_4");
 	finalPreview.chara_7 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
-	finalPreview.text = new wxStaticText(rPanel, wxID_ANY, "New Slot");
+	finalPreview.chara_7->SetToolTip("chara_7");
+	finalPreview.text = new wxStaticText(rPanel, wxID_ANY, "New Slot (Mod)");
 	finalPreview.text->SetFont(*boldFont);
 
 	if (settings.preview)
@@ -464,7 +472,7 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 								}
 								else
 								{
-									code = "random";
+									code = (i == 3 ? code : "random");
 									sSlot = Slot(0);
 								}
 							}
@@ -806,7 +814,15 @@ void MainFrame::onBrowse(wxCommandEvent& evt)
 
 	if (!path.empty())
 	{
-		mHandler.readFiles(path);
+		try
+		{
+			mHandler.readFiles(path);
+		}
+		catch (...)
+		{
+			log->LogText("> Error: Unable to read files correctly.");
+		}
+
 		browse.text->SetValue(mHandler.getPath());
 		if (settings.baseSource)
 		{

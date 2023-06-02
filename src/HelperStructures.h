@@ -74,11 +74,11 @@ struct Config
 	// files
 	vector<string> newDirInfosBase;
 	// code, slot, base-file, files
-	map<string, map<Slot, map<string, set<string>>>> shareToVanilla;
+	map<string, set<string>> shareToVanilla;
 	// code, slot, base-file, files
-	map<string, map<Slot, map<string, set<string>>>> shareToAdded;
+	map<string, set<string>> shareToAdded;
 	// code, slot, section-label, files
-	map<string, map<Slot, map<string, set<string>>>> newDirFiles;
+	map<string, set<string>> newDirFiles;
 };
 
 struct DBData

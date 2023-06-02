@@ -932,7 +932,7 @@ void ModHandler::readFiles(string path)
 									}
 								}
 								// effectFile is a folder
-								else if(l.is_directory())
+								else if (l.is_directory())
 								{
 									// model folder requires special treatment
 									if (file == "model")
@@ -1015,6 +1015,123 @@ void ModHandler::readFiles(string path)
 											string file = m.path().string();
 
 											addFile(code, fileType, slot, file);
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		else if (fileType == "camera")
+		{
+			fileType = "fighter";
+
+			for (const auto& j : fs::directory_iterator(i))
+			{
+				if (j.is_directory() && j.path().filename() == "fighter")
+				{
+					// Folder = [code]
+					for (const auto& k : fs::directory_iterator(j))
+					{
+						string code = k.path().filename().string();
+
+						for (const auto& l : fs::directory_iterator(k))
+						{
+							// Folder = c[slot]
+							if (l.is_directory())
+							{
+								// c[slot]
+								// c = 1
+								int slot = stoi(l.path().filename().string().substr(1));
+								string file = l.path().string();
+
+								addFile(code, fileType, slot, file);
+							}
+						}
+					}
+				}
+			}
+		}
+		else if (fileType == "prebuilt;")
+		{
+			fileType = "fighter";
+
+			for (const auto& j : fs::directory_iterator(i))
+			{
+				if (j.is_directory() && j.path().filename() == "movie")
+				{
+					// Folder = [code]
+					for (const auto& k : fs::directory_iterator(j))
+					{
+						if (k.is_directory() && k.path().filename() == "fighter")
+						{
+							for (const auto& l : fs::directory_iterator(k))
+							{
+								if (l.is_directory())
+								{
+									string code = l.path().filename().string();
+
+									for (const auto& m : fs::directory_iterator(l))
+									{
+										// Folder = c[slot]
+										if (m.is_directory())
+										{
+											// c[slot]
+											// c = 1
+											int slot = stoi(m.path().filename().string().substr(1));
+											string file = m.path().string();
+
+											addFile(code, fileType, slot, file);
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		else if (fileType == "append")
+		{
+			fileType = "fighter";
+
+			for (const auto& j : fs::directory_iterator(i))
+			{
+				if (j.is_directory() && j.path().filename() == "effect")
+				{
+					// Folder = [code]
+					for (const auto& k : fs::directory_iterator(j))
+					{
+						if (k.is_directory() && k.path().filename() == "fighter")
+						{
+							for (const auto& l : fs::directory_iterator(k))
+							{
+								if (l.is_directory())
+								{
+									if (l.path().filename().string() == "jack_cutin")
+									{
+										for (const auto& m : fs::directory_iterator(l))
+										{
+											if (m.is_directory() && m.path().filename() == "model")
+											{
+												for (const auto& n : fs::directory_iterator(m))
+												{
+													if (n.is_directory())
+													{
+														for (const auto& o : fs::directory_iterator(n))
+														{
+															// c[slot]
+															// c = 1
+															int slot = stoi(o.path().filename().string().substr(1));
+															string file = o.path().string();
+
+															addFile("jack", fileType, slot, file);
+														}
+													}
+												}
+											}
 										}
 									}
 								}
@@ -1325,7 +1442,7 @@ Config ModHandler::getNewDirSlots()
 					slots.extract("ptrainer_low");
 				}
 			}
-			else if(i->first == "kirby")
+			else if (i->first == "kirby")
 			{
 				if (!isKirbyCopyOnly(j->first))
 				{
@@ -1650,11 +1767,70 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 
 					for (auto l = k->second.begin(); l != k->second.end(); l++)
 					{
+						Path ogPath = *l;
 						Path path = *l;
+						path.setSlot(slot);
+
+						if (isFileBlacklisted(ogPath))
+						{
+							continue;
+						}
+						else if (path.getSlot().getInt() != -1)
+						{
+							Path tPath = ogPath;
+
+							// If slot in not base, then only continue if non-base version is non-exisistent
+							if (ogPath.getSlot().getInt() != slotIter->second.getInt())
+							{
+								tPath.setSlot(slotIter->second.getInt());
+
+								if (config.shareToVanilla.find("\"" + tPath.getPath() + "\"") != config.shareToVanilla.end())
+								{
+									continue;
+								}
+								else if (config.shareToAdded.find("\"" + tPath.getPath() + "\"") != config.shareToAdded.end())
+								{
+									continue;
+								}
+								else if (k->second.find(tPath) != k->second.end())
+								{
+									continue;
+								}
+							}
+							// Delete previous entry of non-base-slot file if it exists
+							else
+							{
+								auto temp = { &config.shareToAdded, &config.shareToVanilla };
+								for (auto m : temp)
+								{
+									for (int n = 0; n < 8; n++)
+									{
+										if (n != slotIter->second.getInt())
+										{
+											tPath.setSlot(n);
+
+											auto iter = m->find("\"" + tPath.getPath() + "\"");
+
+											if (iter != m->end() && iter->second.find("\"" + path.getPath() + "\"") != iter->second.end())
+											{
+												if (iter->second.size() == 1)
+												{
+													m->extract("\"" + tPath.getPath() + "\"");
+												}
+												else
+												{
+													iter->second.extract("\"" + path.getPath() + "\"");
+												}
+											}
+										}
+									}
+								}
+							}
+
+						}
 
 						if (path.getSlot().getInt() != -1)
 						{
-							path.setSlot(slot);
 							string label;
 
 							// Camera Files
@@ -1662,37 +1838,41 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 							{
 								label = "\"fighter/" + charcode + "/append/c" + slot.getString() + "\"";
 
-								if (allFiles.find(path) == allFiles.end())
+								if (!fs::exists(this->path + "/" + path.getPath()))
 								{
 									if (path.getPath().find("/motion/") == string::npos)
 									{
-										config.shareToVanilla[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
+										config.shareToVanilla["\"" + ogPath.getPath() + "\""].insert("\"" + path.getPath() + "\"");
 									}
 									else
 									{
-										config.shareToAdded[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
+										config.shareToAdded["\"" + ogPath.getPath() + "\""].insert("\"" + path.getPath() + "\"");
 									}
 								}
 							}
 							else if (k->first == "camera")
 							{
 								label = "\"fighter/" + charcode + "/camera/c" + slot.getString() + "\"";
-								config.shareToAdded[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
+
+								if (!fs::exists(this->path + "/" + path.getPath()))
+								{
+									config.shareToAdded["\"" + ogPath.getPath() + "\""].insert("\"" + path.getPath() + "\"");
+								}
 							}
 							// Fighter Files
 							else if (k->first == "vanilla" || k->first == "added")
 							{
 								label = "\"fighter/" + charcode + "/c" + slot.getString() + "\"";
 
-								if (allFiles.find(path) == allFiles.end())
+								if (!fs::exists(this->path + "/" + path.getPath()))
 								{
 									if (k->first == "vanilla")
 									{
-										config.shareToVanilla[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
+										config.shareToVanilla["\"" + ogPath.getPath() + "\""].insert("\"" + path.getPath() + "\"");
 									}
 									else
 									{
-										config.shareToAdded[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
+										config.shareToAdded["\"" + ogPath.getPath() + "\""].insert("\"" + path.getPath() + "\"");
 									}
 								}
 							}
@@ -1701,15 +1881,18 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 							{
 								label = "\"fighter/" + charcode + "/movie/c" + slot.getString() + "\"";
 
-								if (allFiles.find(path) == allFiles.end())
+								string existPath = path.getPath();
+								existPath[8] = ';';
+
+								if (!fs::exists(this->path + "/" + existPath))
 								{
 									if (path.getPath().find("/motion/") == string::npos)
 									{
-										config.shareToVanilla[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
+										config.shareToVanilla["\"" + ogPath.getPath() + "\""].insert("\"" + path.getPath() + "\"");
 									}
 									else
 									{
-										config.shareToAdded[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
+										config.shareToAdded["\"" + ogPath.getPath() + "\""].insert("\"" + path.getPath() + "\"");
 									}
 								}
 							}
@@ -1718,15 +1901,15 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 							{
 								label = "\"fighter/" + charcode + "/result/c" + slot.getString() + "\"";
 
-								if (allFiles.find(path) == allFiles.end())
+								if (!fs::exists(this->path + "/" + path.getPath()))
 								{
 									if (path.getPath().find("/motion/") == string::npos)
 									{
-										config.shareToVanilla[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
+										config.shareToVanilla["\"" + ogPath.getPath() + "\""].insert("\"" + path.getPath() + "\"");
 									}
 									else
 									{
-										config.shareToAdded[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
+										config.shareToAdded["\"" + ogPath.getPath() + "\""].insert("\"" + path.getPath() + "\"");
 									}
 								}
 							}
@@ -1739,39 +1922,43 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 								{
 									if (path.getPath().find("/motion/") == string::npos)
 									{
-										config.shareToVanilla[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
+										config.shareToVanilla["\"" + ogPath.getPath() + "\""].insert("\"" + path.getPath() + "\"");
 									}
 									else
 									{
-										config.shareToAdded[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
+										// config.shareToAdded["\"" + ogPath.getPath() + "\""].insert("\"" + path.getPath() + "\"");
 									}
 								}
 							}
 							else
 							{
-								wxLog("> WARN: Ignoring [" + k->first + "]: " + l->getPath());
+								wxLog("> WARN: Ignoring [" + k->first + "]: " + ogPath.getPath());
 								continue;
 							}
 
-							config.newDirFiles[code][slot][label].insert("\"" + path.getPath() + "\"");
+							config.newDirFiles[label].insert("\"" + path.getPath() + "\"");
 						}
 						else
 						{
 							if (k->first == "append")
 							{
-								config.shareToVanilla[code][slotIter->second]["\"" + l->getPath() + "\""].insert("\"" + path.getPath() + "\"");
-								config.newDirFiles[code][slot]["\"fighter/" + charcode + "/append/c" + slot.getString() + "\""].insert("\"" + path.getPath() + "\"");
+								if (!fs::exists(this->path + "/" + path.getPath()))
+								{
+									config.shareToVanilla["\"" + ogPath.getPath() + "\""].insert("\"" + path.getPath() + "\"");
+								}
+
+								config.newDirFiles["\"fighter/" + charcode + "/append/c" + slot.getString() + "\""].insert("\"" + path.getPath() + "\"");
 							}
 							else
 							{
-								wxLog("> WARN: Ignored " + l->getPath(), debug);
+								wxLog("> WARN: Ignored " + ogPath.getPath(), debug);
 							}
 						}
 					}
 				}
 
 				// Add empty sections if non-existent
-				auto temp = &config.newDirFiles[code][slot];
+				auto temp = &config.newDirFiles;
 
 				if (temp->find("\"fighter/" + charcode + "/c" + slot.getString() + "\"") == temp->end())
 				{
@@ -1781,10 +1968,10 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 				{
 					(*temp)["\"fighter/" + charcode + "/camera/c" + slot.getString() + "\""];
 				}
-				if (charcode != "kirby" && temp->find("\"fighter/" + charcode + "/kirbycopy/c" + slot.getString() + "\"") == temp->end())
-				{
-					(*temp)["\"fighter/" + charcode + "/kirbycopy/c" + slot.getString() + "\""];
-				}
+				// if (charcode != "kirby" && temp->find("\"fighter/" + charcode + "/kirbycopy/c" + slot.getString() + "\"") == temp->end())
+				// {
+				// 	(*temp)["\"fighter/" + charcode + "/kirbycopy/c" + slot.getString() + "\""];
+				// }
 				if (temp->find("\"fighter/" + charcode + "/movie/c" + slot.getString() + "\"") == temp->end())
 				{
 					(*temp)["\"fighter/" + charcode + "/movie/c" + slot.getString() + "\""];
@@ -1808,29 +1995,32 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 
 				for (auto k = fighterFiles.begin(); k != fighterFiles.end(); k++)
 				{
-					Path path = Path(*k);
-					if (additionalSlot)
+					if (k->getType() != "movie")
 					{
-						path.setSlot(slotIter->second);
-					}
-
-					bool found = false;
-					for (auto l = baseFiles.begin(); l != baseFiles.end(); l++)
-					{
-						if (l->second.find(path) != l->second.end())
+						Path path = Path(*k);
+						if (additionalSlot)
 						{
-							found = true;
-							break;
+							path.setSlot(slotIter->second);
 						}
-					}
 
-					if (!found)
-					{
-						// TODO: Do a getFiles(code of path, slot, kirbyCopyFiles) and check exsistence in there.
-						//       Might be too much work for little gain.
-						if (charcode != "kirby" || path.getPath().find("copy_") == string::npos)
+						bool found = false;
+						for (auto l = baseFiles.begin(); l != baseFiles.end(); l++)
 						{
-							config.newDirFiles[code][slot]["\"fighter/" + charcode + "/c" + slot.getString() + "\""].insert("\"" + k->getPath() + "\"");
+							if (l->second.find(path) != l->second.end())
+							{
+								found = true;
+								break;
+							}
+						}
+
+						if (!found)
+						{
+							// TODO: Do a getFiles(code of path, slot, kirbyCopyFiles) and check exsistence in there.
+							//       Might be too much work for little gain.
+							if (charcode != "kirby" || path.getPath().find("copy_") == string::npos)
+							{
+								config.newDirFiles["\"fighter/" + charcode + "/c" + slot.getString() + "\""].insert("\"" + k->getPath() + "\"");
+							}
 						}
 					}
 				}
@@ -1841,7 +2031,7 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 			{
 				if (!additionalSlot && !slotHasFighter)
 				{
-					if(VanillaHandler::getFiles(code, slot, baseFiles) != 0)
+					if (VanillaHandler::getFiles(code, slot, baseFiles) != 0)
 					{
 						wxLog("> Error: Unknown error encountered while gathering files from vanilla JSON.");
 					}
@@ -1858,8 +2048,11 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 
 						if (effectFiles.find(path) == effectFiles.end())
 						{
-							config.shareToVanilla[code][Slot(999)]["\"" + k->getPath() + "\""].insert("\"" + path.getPath() + "\"");
-							config.newDirFiles[code][slot]["\"fighter/" + charcode + "/c" + slot.getString() + "\""].insert("\"" + path.getPath() + "\"");
+							if (!isFileBlacklisted(path))
+							{
+								config.shareToVanilla["\"" + k->getPath() + "\""].insert("\"" + path.getPath() + "\"");
+								config.newDirFiles["\"fighter/" + charcode + "/c" + slot.getString() + "\""].insert("\"" + path.getPath() + "\"");
+							}
 						}
 					}
 
@@ -1868,7 +2061,7 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 					{
 						if (effIter->second.find(*k) == effIter->second.end())
 						{
-							config.newDirFiles[code][slot]["\"fighter/" + charcode + "/c" + slot.getString() + "\""].insert("\"" + k->getPath() + "\"");
+							config.newDirFiles["\"fighter/" + charcode + "/c" + slot.getString() + "\""].insert("\"" + k->getPath() + "\"");
 						}
 					}
 				}
@@ -1956,52 +2149,48 @@ void ModHandler::create_config()
 						file << "\n\t\"new-dir-files\": {";
 					}
 
+					set<string> old;
+
 					for (auto j = sectionType[i]->begin(); j != sectionType[i]->end(); j++)
 					{
+						bool firstBox = true;
+
 						for (auto k = j->second.begin(); k != j->second.end(); k++)
 						{
-							for (auto l = k->second.begin(); l != k->second.end(); l++)
+							if (first)
 							{
-								bool firstBox = true;
-
-								for (auto m = l->second.begin(); m != l->second.end(); m++)
-								{
-									if (first)
-									{
-										first = false;
-									}
-									else
-									{
-										file << ",";
-									}
-
-									if (firstBox)
-									{
-										file << "\n\t\t" + l->first << ": [";
-										firstBox = false;
-									}
-
-									file << "\n\t\t\t" << *m;
-								}
-
-								if (!firstBox)
-								{
-									file << "\n\t\t]";
-								}
-								else
-								{
-									if (first)
-									{
-										first = false;
-									}
-									else
-									{
-										file << ",";
-									}
-
-									file << "\n\t\t" + l->first << ": []";
-								}
+								first = false;
 							}
+							else
+							{
+								file << ",";
+							}
+
+							if (firstBox)
+							{
+								file << "\n\t\t" + j->first << ": [";
+								firstBox = false;
+							}
+
+							file << "\n\t\t\t" << *k;
+						}
+
+						if (!firstBox)
+						{
+							file << "\n\t\t]";
+						}
+						else
+						{
+							if (first)
+							{
+								first = false;
+							}
+							else
+							{
+								file << ",";
+							}
+
+							file << "\n\t\t" + j->first << ": []";
 						}
 					}
 
