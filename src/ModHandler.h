@@ -19,6 +19,8 @@ private:
 	unordered_map<string, unordered_map<string, map<Slot, set<Path>>>> files;
 	// Access Order: code, final-slot, base-slot,
 	unordered_map<string, map<Slot, Slot>> slots;
+	// Access Order: new-code, code
+	map<string, map<string, map<Slot, Slot>>> css_redirects;
 
 	wxLogTextCtrl* log;
 
@@ -27,7 +29,6 @@ private:
 	/* --- HELPERS (UNIVERSAL) --- */
 	void addFile(string code, string fileType, int slot, string file);
 	void outputUTF(wofstream& file, wxString str, bool parse = false);
-	void deleteEmptyDirs(string path);
 
 public:
 	/* --- CONSTRUCTORS --- */
@@ -35,6 +36,7 @@ public:
 
 	/* --- SETTERS (UNIVERSAL) --- */
 	void setBaseSlots(map<string, map<Slot, set<Slot>>> slots);
+	void setCssRedirects(map<string, map<string, map<Slot, Slot>>> redirects);
 	void setDebug(bool debug);
 
 	/* --- SETTERS (WX) --- */
@@ -49,6 +51,9 @@ public:
 	Slot getBaseSlot(string code, Slot slot) const;
 	InklingColor getInklingColor(Slot slot);
 	Name getMessage(string code, Slot slot) const;
+	Slot getMaxSlot(string code) const;
+	string getRedirectCode(string newCode);
+	Slot getRedirectSlot(string newCode, Slot slot);
 
 	/* --- GETTERS (WX) --- */
 	wxArrayString wxGetCharacterNames(string fileType = "") const;
@@ -70,7 +75,8 @@ public:
 
 	/* --- FUNCTIONS (UNIVERSAL) --- */
 	void readFiles(string path);
-	void remove_desktop_ini();
+	void deleteEmptyDirs(string path);
+	void deleteDesktopINI(string path);
 
 	/* --- FUNCTIONS (WX) --- */
 	void wxLog(string message, bool debug = true);
@@ -95,6 +101,8 @@ public:
 	void create_ink_prcxml(map<Slot, InklingColor>& inklingColors);
 
 	// Readers
+	// og charcode, start_index, data
+	map<string, map<int, CssData>> read_prcxml_css();
 	map<string, map<Slot, Slot>> read_config_slots();
 	map<string, map<Slot, Name>> read_message_names();
 	map<Slot, InklingColor> read_ink_colors();

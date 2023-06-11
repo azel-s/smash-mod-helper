@@ -23,7 +23,7 @@
     <ClInclude Include="src\Dialogs\BatchSelection.h" />
     <ClInclude Include="src\Dialogs\InkSelection.h" />
     <ClInclude Include="src\Dialogs\PrcSelection.h" />
-    <ClInclude Include="src\Dialogs\RenameSelection.h" />
+    <ClInclude Include="src\Dialogs\CssRedirectSelection.h" />
     <ClInclude Include="src\HelperStructures.h" />
     <ClInclude Include="src\MainFrame.h" />
     <ClInclude Include="src\ModHandler.h" />
@@ -34,7 +34,7 @@
     <ClCompile Include="src\Dialogs\BatchSelection.cpp" />
     <ClCompile Include="src\Dialogs\InkSelection.cpp" />
     <ClCompile Include="src\Dialogs\PrcSelection.cpp" />
-    <ClCompile Include="src\Dialogs\RenameSelection.cpp" />
+    <ClCompile Include="src\Dialogs\CssRedirectSelection.cpp" />
     <ClCompile Include="src\HelperStructures.cpp" />
     <ClCompile Include="src\MainFrame.cpp" />
     <ClCompile Include="src\ModHandler.cpp" />

@@ -23,7 +23,14 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
     slotList.Add("c06");
     slotList.Add("c07");
 
-    auto slots = settings.baseSource ? mHandler->getAllSlots(false) : mHandler->getAddSlots();
+    slots = settings.baseSource ? mHandler->getAllSlots(false) : mHandler->getAddSlots();
+    for (auto i = slots.begin(); i != slots.end(); i++)
+    {
+        if (mHandler->getName(i->first).empty())
+        {
+            slots.extract(i->first);
+        }
+    }
 
     map<string, map<Slot, Slot>> prevBaseSlots;
     bool hasChar = false;
@@ -142,7 +149,6 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
 map<string, map<Slot, set<Slot>>> BaseSelection::getBaseSlots()
 {
     map<string, map<Slot, set<Slot>>> result;
-    auto slots = settings.baseSource ? mHandler->getAllSlots(false) : mHandler->getAddSlots();
 
     int index = 0;
     for (auto i = slots.begin(); i != slots.end(); i++)

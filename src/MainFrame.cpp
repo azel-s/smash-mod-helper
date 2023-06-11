@@ -2,7 +2,7 @@
 #include "Dialogs/BaseSelection.h"
 #include "Dialogs/PrcSelection.h"
 #include "Dialogs/InkSelection.h"
-#include "Dialogs/RenameSelection.h"
+#include "Dialogs/CssRedirectSelection.h"
 #include "Dialogs/BatchSelection.h"
 #include <filesystem>
 #include <fstream>
@@ -45,7 +45,6 @@ MainFrame::MainFrame(const wxString& title, string exe) :
 	log(new wxLogTextCtrl(logWindow)),
 	mHandler(log)
 {
-	//lPanel->SetBackgroundColour(wxColour(200, 100, 100));
 	rPanel->SetBackgroundColour(wxColour(245, 245, 245));
 
 	/* --- Initial path --- */
@@ -69,15 +68,12 @@ MainFrame::MainFrame(const wxString& title, string exe) :
 	// Tools menu
 	wxMenu* toolsMenu = new wxMenu();
 	inkMenu = new wxMenuItem(toolsMenu, wxID_ANY, "Edit Inkling Colors", "Open a directory to enable this feature.");
-	deskMenu = new wxMenuItem(toolsMenu, wxID_ANY, "Delete Desktop.ini Files", "Open a directory to enable this feature.");
-	/*renameMenu = new wxMenuItem(toolsMenu, wxID_ANY, "Rename UI Character Code", "Open a directory to enable this feature.");*/
+	// cssMenu = new wxMenuItem(toolsMenu, wxID_ANY, "CSS Redirect", "Open a directory to enable this feature.");
 	this->Bind(wxEVT_MENU, &MainFrame::onInkPressed, this, toolsMenu->Append(inkMenu)->GetId());
-	this->Bind(wxEVT_MENU, &MainFrame::onDeskPressed, this, toolsMenu->Append(deskMenu)->GetId());
-	/*this->Bind(wxEVT_MENU, &MainFrame::onRenamePressed, this, toolsMenu->Append(renameMenu)->GetId());*/
+	// this->Bind(wxEVT_MENU, &MainFrame::onCSSPressed, this, toolsMenu->Append(cssMenu)->GetId());
 	this->Bind(wxEVT_MENU, &MainFrame::onBatchPressed, this, toolsMenu->Append(wxID_ANY, "Batch Config/PRCXML")->GetId());
 	inkMenu->Enable(false);
-	deskMenu->Enable(false);
-	/*renameMenu->Enable(false);*/
+	// cssMenu->Enable(false);
 
 	// Options Menu
 	wxMenu* optionsMenu = new wxMenu();
@@ -94,8 +90,11 @@ MainFrame::MainFrame(const wxString& title, string exe) :
 	loadFromMod->Check(readNameID, settings.readNames);
 	loadFromMod->Check(readInkID, settings.readInk);
 
+	wxMenu* selection = new wxMenu();
+	optionsMenu->AppendSubMenu(selection, "File type boxes");
+
 	wxMenu* selectionType = new wxMenu();
-	optionsMenu->AppendSubMenu(selectionType, "Selection type");
+	selection->AppendSubMenu(selectionType, "Selection type");
 	auto selectUnionID = selectionType->AppendRadioItem(wxID_ANY, "Union", "Mario [c00 & c02] + Luigi [c00 + c03] -> [c01, c02, c03]")->GetId();
 	auto selectIntersectID = selectionType->AppendRadioItem(wxID_ANY, "Intersect", "Mario [c00 & c02] + Luigi [c00 + c03] -> [c00]")->GetId();
 	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, selectUnionID, wxID_ANY, new wxArgument("select"));
@@ -103,13 +102,16 @@ MainFrame::MainFrame(const wxString& title, string exe) :
 	selectionType->Check(selectUnionID, !settings.selectionType);
 	selectionType->Check(selectIntersectID, settings.selectionType);
 
+	auto selectAllByDefaultID = selection->AppendCheckItem(wxID_ANY, "Select all by default", "Enable to select all available file types by default on selection.")->GetId();
+	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, selectAllByDefaultID, wxID_ANY, new wxArgument("selectAllByDefault"));
+
 	auto baseSouceID = optionsMenu->AppendCheckItem(wxID_ANY, "Base Slots for c00-c07", "Adjusts ui-info of base slots (e.g. Align Kazuya suit correctly on non-suit)")->GetId();
 	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, baseSouceID, wxID_ANY, new wxArgument("baseSource"));
 	optionsMenu->Check(baseSouceID, settings.baseSource);
 
-	auto previewID = optionsMenu->AppendCheckItem(wxID_ANY, "UI Preview (Restart)", "Shows a preview panel to the right.")->GetId();
-	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, previewID, wxID_ANY, new wxArgument("preview"));
-	optionsMenu->Check(previewID, settings.preview);
+	auto previewMenu = new wxMenuItem(optionsMenu, wxID_ANY, "UI Preview (Restart)", "Shows a preview panel to the right.", wxITEM_CHECK);
+	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, optionsMenu->Append(previewMenu)->GetId(), wxID_ANY, new wxArgument("preview"));
+	previewMenu->Check(settings.preview);
 
 	menuBar->Append(fileMenu, "&File");
 	menuBar->Append(toolsMenu, "&Tools");
@@ -195,10 +197,17 @@ MainFrame::MainFrame(const wxString& title, string exe) :
 
 	lBagSizer->Add(charsList, wxGBPosition(1, 0), wxGBSpan(6, 3), wxEXPAND);
 
-	lBagSizer->Add(fileTypeBoxes[0], wxGBPosition(2, 3), wxGBSpan(1, 1));
-	lBagSizer->Add(fileTypeBoxes[1], wxGBPosition(3, 3), wxGBSpan(1, 1));
-	lBagSizer->Add(fileTypeBoxes[2], wxGBPosition(4, 3), wxGBSpan(1, 1));
-	lBagSizer->Add(fileTypeBoxes[3], wxGBPosition(5, 3), wxGBSpan(1, 1));
+	wxBoxSizer* sizerBoxes = new wxBoxSizer(wxVERTICAL);
+
+	sizerBoxes->Add(fileTypeBoxes[0], 1, wxALIGN_LEFT);
+	sizerBoxes->AddSpacer(10);
+	sizerBoxes->Add(fileTypeBoxes[1], 1, wxALIGN_LEFT);
+	sizerBoxes->AddSpacer(10);
+	sizerBoxes->Add(fileTypeBoxes[2], 1, wxALIGN_LEFT);
+	sizerBoxes->AddSpacer(10);
+	sizerBoxes->Add(fileTypeBoxes[3], 1, wxALIGN_LEFT);
+
+	lBagSizer->Add(sizerBoxes, wxGBPosition(1, 3), wxGBSpan(6, 1), wxALIGN_CENTER_VERTICAL);
 
 	lBagSizer->Add(initSlots.text, wxGBPosition(1, 4), wxGBSpan(1, 1), wxALIGN_CENTER_VERTICAL);
 	lBagSizer->Add(initSlots.list, wxGBPosition(1, 5), wxGBSpan(1, 1), wxEXPAND);
@@ -235,16 +244,48 @@ MainFrame::MainFrame(const wxString& title, string exe) :
 	initPreview.text->SetFont(*boldFont);
 
 	finalPreview.chara_1 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
-	finalPreview.chara_1->SetToolTip("chara_1");
+	finalPreview.chara_1->SetToolTip("chara_1: Double click to toggle gamma correction.");
+	finalPreview.chara_1->Bind(wxEVT_LEFT_DCLICK, &MainFrame::onGammaPressed, this);
 	finalPreview.chara_2 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
-	finalPreview.chara_2->SetToolTip("chara_2");
+	finalPreview.chara_2->SetToolTip("chara_2: Double click to toggle gamma correction.");
+	finalPreview.chara_2->Bind(wxEVT_LEFT_DCLICK, &MainFrame::onGammaPressed, this);
 	finalPreview.chara_4 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
-	finalPreview.chara_4->SetToolTip("chara_4");
+	finalPreview.chara_4->SetToolTip("chara_4: Double click to toggle gamma correction.");
+	finalPreview.chara_4->Bind(wxEVT_LEFT_DCLICK, &MainFrame::onGammaPressed, this);
 	finalPreview.chara_7 = new wxStaticBitmap(rPanel, wxID_ANY, wxBitmap());
-	finalPreview.chara_7->SetToolTip("chara_7");
+	finalPreview.chara_7->SetToolTip("chara_7: Double click to toggle gamma correction.");
+	finalPreview.chara_7->Bind(wxEVT_LEFT_DCLICK, &MainFrame::onGammaPressed, this);
 	finalPreview.text = new wxStaticText(rPanel, wxID_ANY, "New Slot (Mod)");
 	finalPreview.text->SetFont(*boldFont);
 
+
+	int files = 0;
+	if (fs::exists("Files/textures/vanilla"))
+	{
+		for (auto i : fs::directory_iterator("Files/textures/vanilla"))
+		{
+			if (i.is_directory())
+			{
+				for (auto j : fs::directory_iterator(i))
+				{
+					if (j.path().extension() == ".png")
+					{
+						files++;
+					}
+				}
+			}
+		}
+	}
+	if (files < 2266)
+	{
+		settings.preview = false;
+		updateSettings();
+
+		previewMenu->SetHelp("Missing textures: Files/textures/vanilla has " + to_string(files) + "/2266 files.");
+		previewMenu->Enable(false);
+		previewMenu->Check(false);
+	}
+	
 	if (settings.preview)
 	{
 		updateBitmap(initPreview.chara_1, "Files/textures/vanilla/chara_1/chara_1_random_00.png", 345, 345);
@@ -262,14 +303,12 @@ MainFrame::MainFrame(const wxString& title, string exe) :
 	rBagSizer->Add(initPreview.chara_4, wxGBPosition(0, 1), wxGBSpan(1, 1), wxEXPAND);
 	rBagSizer->Add(initPreview.chara_2, wxGBPosition(0, 2), wxGBSpan(1, 1), wxEXPAND);
 	rBagSizer->Add(initPreview.chara_1, wxGBPosition(1, 0), wxGBSpan(1, 3), wxEXPAND);
+	rBagSizer->Add(initPreview.text, wxGBPosition(2, 0), wxGBSpan(1, 3), wxALIGN_CENTER_HORIZONTAL);
 
 	rBagSizer->Add(finalPreview.chara_7, wxGBPosition(0, 3), wxGBSpan(1, 1), wxEXPAND);
 	rBagSizer->Add(finalPreview.chara_4, wxGBPosition(0, 4), wxGBSpan(1, 1), wxEXPAND);
 	rBagSizer->Add(finalPreview.chara_2, wxGBPosition(0, 5), wxGBSpan(1, 1), wxEXPAND);
 	rBagSizer->Add(finalPreview.chara_1, wxGBPosition(1, 3), wxGBSpan(1, 3), wxEXPAND);
-
-
-	rBagSizer->Add(initPreview.text, wxGBPosition(2, 0), wxGBSpan(1, 3), wxALIGN_CENTER_HORIZONTAL);
 	rBagSizer->Add(finalPreview.text, wxGBPosition(2, 3), wxGBSpan(1, 3), wxALIGN_CENTER_HORIZONTAL);
 
 	splitter->SplitVertically(lPanel, rPanel);
@@ -381,6 +420,10 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 			if (j < selectablefileTypes.size() && selectablefileTypes[j] == allFileTypes[i])
 			{
 				fileTypeBoxes[i]->Enable();
+				if (settings.selectAllByDefault)
+				{
+					fileTypeBoxes[i]->SetValue(true);
+				}
 				j++;
 			}
 			else
@@ -488,9 +531,14 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 								}
 								else
 								{
-									code2 = (i == 3 ? code : "random");
+									code2 = (i == 3 && !mHandler.getName(code).empty()) ? code : "random";
 									sSlot = Slot(0);
 								}
+							}
+							else if (mHandler.getName(code).empty())
+							{
+								code2 = "random";
+								sSlot = Slot(0);
 							}
 
 							fs::copy("Files/textures/vanilla/chara_" + arr[i] + "/chara_" + arr[i] + "_" + code2 + "_" + (i == 3 ? "00" : sSlot.getString()) + ".png",
@@ -584,7 +632,7 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 
 		if (settings.preview)
 		{
-			if (!codes.empty() && slot.getInt() <= 7)
+			if (!codes.empty() && !mHandler.getName(codes[0].ToStdString()).empty() && slot.getInt() <= 7)
 			{
 				string code = codes[0].ToStdString();
 
@@ -642,19 +690,8 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 			inkMenu->SetHelp("Add or modify colors. Required for additional slots.");
 		}
 
-		deskMenu->Enable();
-		deskMenu->SetHelp("desktop.ini files can cause file-conflict issues.");
-
-		/*if (mHandler.hasFileType("ui"))
-		{
-			renameMenu->Enable();
-			renameMenu->SetHelp("Renames ui files' character code to selected code. Useful for CSS Addition.");
-		}
-		else
-		{
-			renameMenu->Enable(false);
-			renameMenu->SetHelp("Mod directory contains no ui folder.");
-		}*/
+		//cssMenu->Enable();
+		//cssMenu->SetHelp("Renames ui files' character code to selected code. Useful for CSS Addition.");
 	}
 	else
 	{
@@ -665,31 +702,35 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 		inkMenu->Enable(false);
 		inkMenu->SetHelp("Open a directory to enable this feature.");
 
-		deskMenu->Enable(false);
-		deskMenu->SetHelp("Open a directory to enable this feature.");
+		//cssMenu->Enable(false);
+		//cssMenu->SetHelp("Open a directory to enable this feature.");
 	}
 
 	lPanel->SendSizeEvent();
 }
 
-void MainFrame::updateBitmap(wxStaticBitmap* sBitmap, string path, int width, int height)
+void MainFrame::updateBitmap(wxStaticBitmap* sBitmap, string path, int width, int height, bool gammaFix)
 {
 	try
 	{
 		wxImage image = wxBitmap(path, wxBITMAP_TYPE_PNG).ConvertToImage().Scale(width, height);
 		int size = image.GetHeight() * image.GetWidth();
 
-		unsigned char* data = image.GetData();
-		for (unsigned int i = 0; i < size; i++)
+		if (gammaFix)
 		{
-			data[0] = pow(data[0] / 255.0f, 1.0f / 2.2f) * 255.0f;
-			data[1] = pow(data[1] / 255.0f, 1.0f / 2.2f) * 255.0f;
-			data[2] = pow(data[2] / 255.0f, 1.0f / 2.2f) * 255.0f;
+			unsigned char* data = image.GetData();
+			for (unsigned int i = 0; i < size; i++)
+			{
+				data[0] = pow(data[0] / 255.0f, 1.0f / 2.2f) * 255.0f;
+				data[1] = pow(data[1] / 255.0f, 1.0f / 2.2f) * 255.0f;
+				data[2] = pow(data[2] / 255.0f, 1.0f / 2.2f) * 255.0f;
 
-			data += 3;
+				data += 3;
+			}
 		}
 
 		sBitmap->SetBitmap(image);
+		sBitmap->SetName(path);
 	}
 	catch (...)
 	{
@@ -704,6 +745,8 @@ void MainFrame::readSettings()
 	{
 		int bit;
 
+		settingsFile >> bit;
+		settings.selectAllByDefault = (bit == 1) ? true : false;
 		settingsFile >> bit;
 		settings.preview = (bit == 1) ? true : false;
 		settingsFile >> bit;
@@ -730,6 +773,7 @@ void MainFrame::updateSettings()
 	ofstream settingsFile("Files/settings.data");
 	if (settingsFile.is_open())
 	{
+		settingsFile << settings.selectAllByDefault << ' ';
 		settingsFile << settings.preview << ' ';
 		settingsFile << settings.baseSource << ' ';
 		settingsFile << settings.selectionType << ' ';
@@ -821,6 +865,18 @@ void MainFrame::toggleSetting(wxCommandEvent& evt)
 
 		wxExecute(wxFileName(wxStandardPaths::Get().GetExecutablePath()).GetPath() + "/" + exe);
 		Close();
+	}
+	else if (setting == "selectAllByDefault")
+	{
+		settings.selectAllByDefault = !settings.selectAllByDefault;
+		if (settings.selectAllByDefault)
+		{
+			log->LogText("> All available file types will be selected by default on selection.");
+		}
+		else
+		{
+			log->LogText("> No file types will be selected by default on selection.");
+		}
 	}
 
 	updateSettings();
@@ -1001,9 +1057,14 @@ void MainFrame::onConfigPressed(wxCommandEvent& evt)
 
 void MainFrame::onPrcPressed(wxCommandEvent& evt)
 {
+	onPrcPressed();
+}
+
+void MainFrame::onPrcPressed(map<string, map<int, CssData>>* css)
+{
 	if (mHandler.hasChar())
 	{
-		PrcSelection dlg(this, wxID_ANY, "Make Selection", &mHandler, settings);
+		PrcSelection dlg(this, wxID_ANY, "Make Selection", &mHandler, settings, css);
 		if (dlg.ShowModal() == wxID_OK)
 		{
 			auto maxSlots = dlg.getMaxSlots();
@@ -1067,23 +1128,64 @@ void MainFrame::onInkPressed(wxCommandEvent& evt)
 	}
 }
 
-void MainFrame::onDeskPressed(wxCommandEvent& evt)
+void MainFrame::onCSSPressed(wxCommandEvent& evt)
 {
-	mHandler.remove_desktop_ini();
-}
-
-void MainFrame::onRenamePressed(wxCommandEvent& evt)
-{
-	RenameSelection dlg(this, wxID_ANY, "Rename character codes", &mHandler);
+	CssRedirectSelection dlg(this, wxID_ANY, "Redirect CSS", &mHandler);
 	if (dlg.ShowModal() == wxID_OK)
 	{
-		auto names = dlg.getNames();
+		auto res = dlg.getChanges();
 
-		for (auto name : names)
+		// Rename UI stuff
+		for (auto i = res.begin(); i != res.end(); i++)
 		{
-			log->LogText(name.first + " was changed to " + name.second);
+			for (auto j = i->second.begin(); j != i->second.end(); j++)
+			{
+				for (int k = 0; k < 12; k++)
+				{
+					if (k == 7)
+					{
+						// TODO:
+						/*string oldF = mHandler.getPath() + "/ui/replace/chara/chara_7/chara_7_" + i->first + "_00.bntx";
+
+						if (fs::exists(oldF))
+						{
+							string newF = mHandler.getPath() + "/ui/replace/chara/chara_7/chara_7_" + j->first + "_00.bntx";
+							fs::rename(oldF, newF);
+						}*/
+					}
+					else
+					{
+						for (int l = 0; l < j->second.color_num; l++)
+						{
+							string oldF = mHandler.getPath() + "/ui/replace/chara/chara_" + to_string(k) + "/chara_" + to_string(k) + "_" + i->first + "_" + Slot(l + j->second.color_start_index).getString() + ".bntx";
+
+							if (fs::exists(oldF))
+							{
+								string newF = mHandler.getPath() + "/ui/replace/chara/chara_" + to_string(k) + "/chara_" + to_string(k) + "_" + j->second.code + "_" + Slot(l).getString() + ".bntx";
+								fs::rename(oldF, newF);
+							}
+						}
+					}
+				}
+			}
 		}
+
+		mHandler.readFiles(mHandler.getPath());
+		mHandler.setCssRedirects(dlg.getRedirects());
+		updateControls(true, true, true, true, false);
+
+		onPrcPressed(&res);
 	}
+}
+
+void MainFrame::onGammaPressed(wxMouseEvent& event)
+{
+	gammaFix = !gammaFix;
+	
+	updateBitmap(finalPreview.chara_1, finalPreview.chara_1->GetName().ToStdString(), 345, 345, gammaFix);
+	updateBitmap(finalPreview.chara_2, finalPreview.chara_2->GetName().ToStdString(), 64, 64, gammaFix);
+	updateBitmap(finalPreview.chara_4, finalPreview.chara_4->GetName().ToStdString(), 100, 100, gammaFix);
+	updateBitmap(finalPreview.chara_7, finalPreview.chara_7->GetName().ToStdString(), 176, 117, gammaFix);
 }
 
 void MainFrame::onMenuClose(wxCommandEvent& evt)
@@ -1100,7 +1202,8 @@ wxArrayString MainFrame::getSelectedCharCodes()
 	wxArrayString codes;
 	for (auto& selection : selections)
 	{
-		codes.Add(mHandler.getCode(charsList->GetString(selection).ToStdString()));
+		string code = mHandler.getCode(charsList->GetString(selection).ToStdString());
+		codes.Add(code.empty() ? charsList->GetString(selection).ToStdString() : code);
 	}
 	return codes;
 }

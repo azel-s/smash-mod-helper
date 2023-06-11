@@ -32,8 +32,10 @@ VanillaHandler::VanillaHandler(string filePath)
 	ifstream nFile(filePath + "names.data");
 	if (nFile.is_open())
 	{
+		string temp;
 		string code;
 		string name;
+		int id;
 		while (!nFile.eof())
 		{
 			// Code
@@ -41,9 +43,13 @@ VanillaHandler::VanillaHandler(string filePath)
 
 			// Name
 			getline(nFile, name, ' ');
-			getline(nFile, name);
+			getline(nFile, name, ',');
 
-			insertCodeName(code, name);
+			// id
+			getline(nFile, temp);
+			id = stoi(temp);
+
+			insertCodeNameId(code, name, id);
 
 			// Create DBData for each name
 			for (int i = 0; i < 8; i++)
@@ -163,26 +169,11 @@ VanillaHandler::VanillaHandler(string filePath)
 	inklingColors.push_back(InklingColor(wxColour(0.04 * 255, 0.0462798 * 255, 0.114017 * 255), wxColour(0.25 * 255, 0.212 * 255, 0.556 * 255)));
 }
 
-VanillaHandler::~VanillaHandler()
+void VanillaHandler::insertCodeNameId(string code, string name, int id)
 {
-	for (auto i = code_name.begin(); i != code_name.end(); i++)
-	{
-		delete i->second;
-	}
-
-	for (auto i = name_code.begin(); i != name_code.end(); i++)
-	{
-		delete i->second;
-	}
-}
-
-void VanillaHandler::insertCodeName(string code, string name)
-{
-	auto namePtr = new string(name);
-	auto codePtr = new string(code);
-
-	code_name[code] = namePtr;
-	name_code[name] = codePtr;
+	code_name[code] = name;
+	name_code[name] = code;
+	id_code[id] = code;
 }
 
 string VanillaHandler::getName(string code) const
@@ -191,12 +182,24 @@ string VanillaHandler::getName(string code) const
 
 	if (iter != code_name.end())
 	{
-		return *iter->second;
+		return iter->second;
 	}
 	else
 	{
 		return "";
 	}
+}
+
+string VanillaHandler::getName(int id) const
+{
+	string code = getCode(id);
+	
+	if (!code.empty())
+	{
+		return getName(code);
+	}
+
+	return "";
 }
 
 // @INPUT: Character's codename.
@@ -207,7 +210,21 @@ string VanillaHandler::getCode(string name) const
 
 	if (iter != name_code.end())
 	{
-		return *iter->second;
+		return iter->second;
+	}
+	else
+	{
+		return "";
+	}
+}
+
+string VanillaHandler::getCode(int id) const
+{
+	auto iter = id_code.find(id);
+
+	if (iter != id_code.end())
+	{
+		return iter->second;
 	}
 	else
 	{

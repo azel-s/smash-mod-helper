@@ -16,6 +16,14 @@ public:
 	int num;
 };
 
+struct CssData
+{
+	string code = "";
+	string original_ui_chara_hash = "";
+	int color_num = 0;
+	int color_start_index = 0;
+};
+
 class Slot
 {
 private:
@@ -61,6 +69,7 @@ struct Settings
 	bool preview = true;
 	bool baseSource = true;
 	bool selectionType = false;
+	bool selectAllByDefault = false;
 
 	bool readBase = true;
 	bool readNames = true;

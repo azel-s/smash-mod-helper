@@ -20,8 +20,7 @@ private:
 	wxPanel* lPanel;
 	wxPanel* rPanel;
 	wxMenuItem* inkMenu;
-	wxMenuItem* deskMenu;
-	wxMenuItem* renameMenu;
+	wxMenuItem* cssMenu;
 	wxBrowse browse;
 	wxListBox* charsList;
 	vector<wxCheckBox*> fileTypeBoxes;
@@ -39,11 +38,14 @@ private:
 	Settings settings;
 	string exe;
 	bool baseUpToDate;
+	bool gammaFix = true;
 
 	/* --- HELPER FUNCTIONS --- */
 	// Controls
 	void updateControls(bool character = true, bool fileType = true, bool initSlot = true, bool finalSlot = true, bool newInkSlot = false);
-	void updateBitmap(wxStaticBitmap* bitmap, string path, int width, int height);
+	void updateBitmap(wxStaticBitmap* bitmap, string path, int width, int height, bool gammaFix = true);
+
+	void onPrcPressed(map<string, map<int, CssData>>* css = nullptr);
 
 	// Settings
 	void readSettings();
@@ -60,8 +62,8 @@ private:
 	void onConfigPressed(wxCommandEvent& evt);
 	void onPrcPressed(wxCommandEvent& evt);
 	void onInkPressed(wxCommandEvent& evt);
-	void onDeskPressed(wxCommandEvent& evt);
-	void onRenamePressed(wxCommandEvent& evt);
+	void onCSSPressed(wxCommandEvent& evt);
+	void onGammaPressed(wxMouseEvent& event);
 	void onMenuClose(wxCommandEvent& evt);
 
 public:

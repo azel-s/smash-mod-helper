@@ -35,7 +35,9 @@ void ModHandler::addFile(string code, string fileType, int slot, string file)
 	}
 	else
 	{
-		wxLog("> Error: " + code + "'s name could not be determined.");
+		// wxLog("> Found CSS Redirect of " + code);
+		files[code][fileType][Slot(slot)].insert(Path(file));
+		slots[code][Slot(slot)] = Slot(slot > 7 ? 0 : slot);
 	}
 }
 
@@ -116,7 +118,7 @@ void ModHandler::deleteEmptyDirs(string path)
 	}
 }
 
-void ModHandler::remove_desktop_ini()
+void ModHandler::deleteDesktopINI(string path)
 {
 	int count = 0;
 
@@ -125,43 +127,47 @@ void ModHandler::remove_desktop_ini()
 
 	while (!folders.empty())
 	{
-		for (const auto& i : fs::directory_iterator(folders.front()))
+		try
 		{
-			if (i.is_directory())
+			for (const auto& i : fs::directory_iterator(folders.front()))
 			{
-				folders.push(i);
-			}
-			else
-			{
-				string filename = i.path().filename().string();
-
-				for (int i = 0; i < filename.size(); i++)
+				if (i.is_directory())
 				{
-					filename[i] = tolower(filename[i]);
+					folders.push(i);
 				}
-
-				if (filename == "desktop.ini")
+				else
 				{
-					fs::remove(i);
-					count++;
+					string filename = i.path().filename().string();
 
-					string path = i.path().string();
-					replace(path.begin(), path.end(), '\\', '/');
-					path = path.substr(path.size());
+					for (int i = 0; i < filename.size(); i++)
+					{
+						filename[i] = tolower(filename[i]);
+					}
 
-					wxLog("> Success: Deleted " + path);
+					if (filename == "desktop.ini")
+					{
+						fs::remove(i);
+						count++;
+
+						string path = i.path().string();
+						replace(path.begin(), path.end(), '\\', '/');
+						path = path.substr(path.size());
+
+						wxLog("> Success: Deleted " + path);
+					}
 				}
 			}
+
+			folders.pop();
 		}
-
-		folders.pop();
+		catch (...)
+		{
+			// Permission issue
+			folders.pop();
+		}
 	}
 
-	if (count == 0)
-	{
-		wxLog("> Success: No desktop.ini files were found.");
-	}
-	else
+	if (count != 0)
 	{
 		wxLog("> Success: " + to_string(count) + " desktop.ini files were deleted.");
 	}
@@ -213,6 +219,11 @@ void ModHandler::setBaseSlots(map<string, map<Slot, set<Slot>>> slots)
 			}
 		}
 	}
+}
+
+void ModHandler::setCssRedirects(map<string, map<string, map<Slot, Slot>>> redirects)
+{
+	this->css_redirects = redirects;
 }
 
 void ModHandler::setDebug(bool debug)
@@ -281,6 +292,48 @@ Name ModHandler::getMessage(string code, Slot slot) const
 	}
 
 	return message;
+}
+
+Slot ModHandler::getMaxSlot(string code) const
+{
+	auto iter = slots.find(code);
+
+	if (iter != slots.end())
+	{
+		return iter->second.rbegin()->first;
+	}
+	else
+	{
+		return Slot(-1);
+	}
+}
+
+string ModHandler::getRedirectCode(string newCode)
+{
+	auto iter = css_redirects.find(newCode);
+	if (iter != css_redirects.end())
+	{
+		return iter->second.begin()->first;
+	}
+	else
+	{
+		return "";
+	}
+}
+
+Slot ModHandler::getRedirectSlot(string newCode, Slot slot)
+{
+	auto iter = css_redirects.find(newCode);
+	if (iter != css_redirects.end())
+	{
+		auto iter2 = iter->second.begin()->second;
+		if (iter2.find(slot) != iter2.end())
+		{
+			return iter2.find(slot)->second;
+		}
+	}
+
+	return Slot(-1);
 }
 
 int ModHandler::getNumCharacters()
@@ -368,7 +421,8 @@ wxArrayString ModHandler::wxGetCharacterNames(string fileType) const
 	{
 		if (fileType.empty() || i->second.find(fileType) != i->second.end())
 		{
-			characters.Add(VanillaHandler::getName(i->first));
+			string name = VanillaHandler::getName(i->first);
+			characters.Add(name.empty() ? i->first : name);
 		}
 	}
 	return characters;
@@ -889,6 +943,7 @@ void ModHandler::readFiles(string path)
 	this->path = path;
 
 	deleteEmptyDirs(path);
+	deleteDesktopINI(path);
 
 	for (const auto& i : fs::directory_iterator(path))
 	{
@@ -1159,6 +1214,21 @@ void ModHandler::readFiles(string path)
 
 								if (filename.find("vc_") == 0 || filename.find("se_") == 0)
 								{
+									size_t plusPos = filename.find('+');
+									if (plusPos != string::npos)
+									{
+										try
+										{
+											filename = filename.substr(0, plusPos) + l.path().extension().string();
+											fs::rename(file, l.path().parent_path().string() + "/" + filename);
+											file = l.path().parent_path().string() + "/" + filename;
+										}
+										catch (...)
+										{
+											wxLog("> Error: Could not remove sound file's extra info.");
+										}
+									}
+
 									// vc_[code] || se_[code]
 									// vc_ = 3       || se_ = 3
 									size_t dotPos = filename.rfind('.');
@@ -1216,7 +1286,7 @@ void ModHandler::readFiles(string path)
 							for (const auto& l : fs::directory_iterator(k))
 							{
 								// Folder = chara_[x]
-								if (l.is_directory())
+								if (l.is_directory() && l.path().filename() != "chara_7")
 								{
 									// File = chara_[x]_[code]_[slot].bntx
 									for (const auto& m : fs::directory_iterator(l))
@@ -1384,26 +1454,32 @@ void ModHandler::adjustFiles(string action, string code, wxArrayString fileTypes
 			wxLog("> Error! " + code + " does not exist!");
 		}
 
+		string name = VanillaHandler::getName(code);
+		if (name.empty())
+		{
+			name = code;
+		}
+
 		if (action != "delete")
 		{
 			if (iSlot.getInt() == 999)
 			{
-				wxLog("> Success! " + VanillaHandler::getName(code) + "'s default slot was " + action + "d to c" + fSlot.getString() + "!");
+				wxLog("> Success! " + name + "'s default slot was " + action + "d to c" + fSlot.getString() + "!");
 			}
 			else
 			{
-				wxLog("> Success! " + VanillaHandler::getName(code) + "'s c" + iSlot.getString() + " was " + action + "d to c" + fSlot.getString() + "!");
+				wxLog("> Success! " + name + "'s c" + iSlot.getString() + " was " + action + "d to c" + fSlot.getString() + "!");
 			}
 		}
 		else
 		{
 			if (iSlot.getInt() == 999)
 			{
-				wxLog("> Success! " + VanillaHandler::getName(code) + "'s default slot was deleted!");
+				wxLog("> Success! " + name + "'s default slot was deleted!");
 			}
 			else
 			{
-				wxLog("> Success! " + VanillaHandler::getName(code) + "'s c" + iSlot.getString() + " was deleted!");
+				wxLog("> Success! " + name + "'s c" + iSlot.getString() + " was deleted!");
 			}
 		}
 	}
@@ -1449,7 +1525,7 @@ Config ModHandler::getNewDirSlots()
 					getNewDirSlots(i->first, j->first, config);
 				}
 			}
-			else
+			else if (!VanillaHandler::getName(i->first).empty())
 			{
 				getNewDirSlots(i->first, j->first, config);
 			}
@@ -1779,16 +1855,19 @@ void ModHandler::getNewDirSlots(string code, Slot slot, Config& config)
 						{
 							Path tPath = ogPath;
 
-							// If slot in not base, then only continue if non-base version is non-exisistent
+							// If slot in not base, then keep going only if non-base version is non-exisistent
 							if (ogPath.getSlot().getInt() != slotIter->second.getInt())
 							{
 								tPath.setSlot(slotIter->second.getInt());
 
-								if (config.shareToVanilla.find("\"" + tPath.getPath() + "\"") != config.shareToVanilla.end())
+								auto stv = config.shareToVanilla.find("\"" + tPath.getPath() + "\"");
+								auto sta = config.shareToAdded.find("\"" + tPath.getPath() + "\"");
+
+								if (stv != config.shareToVanilla.end() && stv->second.find("\"" + path.getPath() + "\"") != stv->second.end())
 								{
 									continue;
 								}
-								else if (config.shareToAdded.find("\"" + tPath.getPath() + "\"") != config.shareToAdded.end())
+								else if (sta != config.shareToAdded.end() && sta->second.find("\"" + path.getPath() + "\"") != sta->second.end())
 								{
 									continue;
 								}
@@ -2590,6 +2669,166 @@ void ModHandler::create_ink_prcxml(map<Slot, InklingColor>& inklingColors)
 }
 
 // Readers
+map<string, map<int, CssData>> ModHandler::read_prcxml_css()
+{
+	map<string, map<int, CssData>> result;
+
+	if (fs::exists(path + "/ui/param/database/ui_chara_db.prcxml"))
+	{
+		ifstream file(path + "/ui/param/database/ui_chara_db.prcxml");
+		if (file.is_open())
+		{
+			string line;
+			bool action = false;
+
+			CssData currData;
+
+			while (!file.eof())
+			{
+				getline(file, line);
+
+				if (action)
+				{
+					if (line.find("\"ui_chara_id\"") != string::npos)
+					{
+						try
+						{
+							int begin = line.find(">") + 1;
+							int end = line.find("<", begin);
+							currData.code = line.substr(begin, end - begin);
+							currData.code = currData.code.substr(9);
+						}
+						catch (...)
+						{
+							wxLog("> Error: Could not read ui_chara_id in prcxml, continuing...");
+							action = false;
+						}
+					}
+					else if (line.find("\"color_num\"") != string::npos)
+					{
+						try
+						{
+							int begin = line.find(">") + 1;
+							int end = line.find("<", begin);
+							currData.color_num = stoi(line.substr(begin, end - begin));
+						}
+						catch (...)
+						{
+							wxLog("> Error: Could not read color_num in prcxml, continuing...");
+							action = false;
+						}
+					}
+					else if (line.find("\"color_start_index\"") != string::npos)
+					{
+						try
+						{
+							int begin = line.find(">") + 1;
+							int end = line.find("<", begin);
+							currData.color_start_index = stoi(line.substr(begin, end - begin));
+						}
+						catch (...)
+						{
+							wxLog("> Error: Could not read color_start_index in prcxml, continuing...");
+							action = false;
+						}
+					}
+					else if (line.find("\"original_ui_chara_hash\"") != string::npos)
+					{
+						int begin = line.find(">") + 1;
+						int end = line.find("<", begin);
+						currData.original_ui_chara_hash = line.substr(begin, end - begin);
+
+						if (currData.code.empty())
+						{
+							currData.code = currData.original_ui_chara_hash.substr(9);
+						}
+					}
+					else if (line.find("</struct>") != string::npos)
+					{
+						if (currData.original_ui_chara_hash.size() > 9)
+						{
+							string ogCode = currData.original_ui_chara_hash.substr(9);
+
+							if (result.find(ogCode) == result.end())
+							{
+								result[ogCode][currData.color_start_index] = currData;
+							}
+							else if (result[ogCode].find(currData.color_start_index) == result[ogCode].end())
+							{
+								result[ogCode][currData.color_start_index] = currData;
+							}
+						}
+
+						action = false;
+					}
+				}
+				else if (line.find("<struct index=") != string::npos)
+				{
+					int begin = line.find("\"") + 1;
+					int end = line.find("\"", begin);
+					currData.code = getCode(stoi(line.substr(begin, end - begin)));
+
+					action = true;
+				}
+			}
+		}
+		else
+		{
+			wxLog("> Error: " + path + "/ui/param/database/ui_chara_db.prcxml could not be opened!");
+		}
+	}
+
+	// Once file read, do calcs
+	for (auto i = result.begin(); i != result.end(); i++)
+	{
+		Slot max = getMaxSlot(i->first);
+		bool invalid = false;
+
+		if (VanillaHandler::getName(i->first).empty() || max.getInt() == -1)
+		{
+			invalid = true;
+		}
+		else
+		{
+			int currMax = 0;
+
+			for (auto j = i->second.begin(); j != i->second.end(); j++)
+			{
+				if (currMax != j->first)
+				{
+					if (currMax != j->first && (currMax != 0 || j->first != 8))
+					{
+						invalid = true;
+						break;
+					}
+					else
+					{
+						i->second[0].code = i->first;
+						i->second[0].original_ui_chara_hash = "ui_chara_" + i->first;
+						i->second[0].color_start_index = 0;
+						i->second[0].color_num = 8;
+						currMax += 8;
+					}
+				}
+
+				currMax += j->second.color_num;
+			}
+
+			if (currMax != max.getInt() + 1)
+			{
+				invalid = true;
+			}
+		}
+
+		if (invalid)
+		{
+			result.extract(i->first);
+		}
+	}
+
+	return result;
+}
+
 map<string, map<Slot, Slot>> ModHandler::read_config_slots()
 {
 	map<string, map<Slot, Slot>> slots;
@@ -2717,6 +2956,5 @@ map<Slot, InklingColor> ModHandler::read_ink_colors()
 			}
 		}
 	}
-
 	return inkColors;
 }

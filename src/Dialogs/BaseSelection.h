@@ -5,6 +5,7 @@
 class BaseSelection : public wxDialog
 {
 private:
+    map<string, set<Slot>> slots;
     vector<wxChoice*> baseSlots;
     ModHandler* mHandler;
     Settings settings;

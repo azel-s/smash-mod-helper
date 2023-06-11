@@ -42,7 +42,7 @@
     <ClInclude Include="src\Dialogs\BatchSelection.h">
       <Filter>Header Files\Dialogs</Filter>
     </ClInclude>
-    <ClInclude Include="src\Dialogs\RenameSelection.h">
+    <ClInclude Include="src\Dialogs\CssRedirectSelection.h">
       <Filter>Header Files\Dialogs</Filter>
     </ClInclude>
   </ItemGroup>
@@ -71,7 +71,7 @@
     <ClCompile Include="src\Dialogs\BatchSelection.cpp">
       <Filter>Source Files\Dialogs</Filter>
     </ClCompile>
-    <ClCompile Include="src\Dialogs\RenameSelection.cpp">
+    <ClCompile Include="src\Dialogs\CssRedirectSelection.cpp">
       <Filter>Source Files\Dialogs</Filter>
     </ClCompile>
   </ItemGroup>

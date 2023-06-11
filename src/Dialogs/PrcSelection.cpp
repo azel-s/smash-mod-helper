@@ -5,6 +5,7 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 	const wxString& title,
 	ModHandler* mHandler,
 	Settings settings,
+	map<string, map<int, CssData>>* css,
 	const wxPoint& pos,
 	const wxSize& size,
 	long style,
@@ -26,10 +27,46 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 
 	gridSizer->SetFlexibleDirection(wxBOTH);
 
-	auto allSlots = mHandler->getAllSlots(false);
+	allSlots = mHandler->getAllSlots(false);
+
 	if (allSlots.find("kirby") != allSlots.end() && mHandler->isKirbyCopyOnly())
 	{
 		allSlots.extract("kirby");
+	}
+
+	for (auto i = allSlots.begin(); i != allSlots.end(); i++)
+	{
+		if (mHandler->getName(i->first).empty())
+		{
+			allSlots.extract(i->first);
+		}
+	}
+
+	if (css || settings.readBase)
+	{
+		map<string, map<int, CssData>> tmp;
+
+		if (!css)
+		{
+			tmp = mHandler->read_prcxml_css();
+			css = &tmp;
+		}
+
+		for (auto i = css->begin(); i != css->end(); i++)
+		{
+			for (auto j = i->second.begin(); j != i->second.end(); j++)
+			{
+				if (allSlots.find(j->second.code) != allSlots.end())
+				{
+					allSlots.extract(j->second.code);
+				}
+
+				for (int k = 0; k < j->second.color_num; k++)
+				{
+					allSlots[j->second.code].insert(Slot(k));
+				}
+			}
+		}
 	}
 
 	auto prevNames = mHandler->read_message_names();
@@ -127,7 +164,8 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 	// Create fields
 	for (auto i = allSlots.begin(); i != allSlots.end(); i++)
 	{
-		text = new wxStaticText(panel, wxID_ANY, mHandler->getName(i->first));
+		string nameStr = mHandler->getName(i->first);
+		text = new wxStaticText(panel, wxID_ANY, nameStr.empty() ? i->first : nameStr);
 
 		if (i->first != "element")
 		{
@@ -244,6 +282,8 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 				slotNames[charcode][*j].vsName = textCtrl;
 				gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 				currCol++;
+
+				slotNames[charcode][*j].cspName->Bind(wxEVT_TEXT, &PrcSelection::onType, this, wxID_ANY, wxID_ANY, new prcArgument(textCtrl));
 
 				if (charcode != "pzenigame" && charcode != "plizardon" && charcode != "pfushigisou")
 				{
@@ -377,6 +417,8 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 						gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 						currCol += 2;
 
+						slotNames["eflame_first"][*j].cspName->Bind(wxEVT_TEXT, &PrcSelection::onType, this, wxID_ANY, wxID_ANY, new prcArgument(textCtrl));
+
 						textCtrl = new wxTextCtrl(panel, wxID_ANY, "Default", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 						slotNames["eflame_first"][*j].announcer = textCtrl;
 						gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
@@ -444,6 +486,8 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 						gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
 						currCol += 2;
 
+						slotNames["elight_first"][*j].cspName->Bind(wxEVT_TEXT, &PrcSelection::onType, this, wxID_ANY, wxID_ANY, new prcArgument(textCtrl));
+
 						textCtrl = new wxTextCtrl(panel, wxID_ANY, "Default", wxDefaultPosition, wxDefaultSize, wxTE_CENTRE);
 						slotNames["elight_first"][*j].announcer = textCtrl;
 						gridSizer->Add(textCtrl, wxGBPosition(currRow, currCol), wxGBSpan(), wxEXPAND | wxALIGN_CENTER_VERTICAL);
@@ -506,6 +550,15 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 	}
 }
 
+void PrcSelection::onType(wxCommandEvent& evt)
+{
+	wxTextCtrl* text = static_cast<prcArgument*>(evt.GetEventUserData())->text;
+	if (text)
+	{
+		text->SetValue(evt.GetString().MakeUpper());
+	}
+}
+
 void PrcSelection::onLoadPressed(wxCommandEvent& evt)
 {
 	for (auto i = slotNames.begin(); i != slotNames.end(); i++)
@@ -550,12 +603,6 @@ void PrcSelection::onClosePressed(wxCommandEvent& evt)
 
 map<string, Slot> PrcSelection::getMaxSlots()
 {
-	auto allSlots = mHandler->getAllSlots(false);
-	if (allSlots.find("kirby") != allSlots.end() && mHandler->isKirbyCopyOnly())
-	{
-		allSlots.extract("kirby");
-	}
-
 	map<string, Slot> result;
 
 	if (!maxSlots.empty())
@@ -624,6 +671,7 @@ map<string, map<Slot, Name>> PrcSelection::getNames()
 					&& j->second.stageName->GetValue() != message.stageName
 					)
 				|| j->second.announcer->GetValue() != "Default"
+				|| mHandler->getName(i->first).empty()
 				)
 			{
 				result[i->first][j->first].cspName = j->second.cspName->GetValue();
@@ -659,8 +707,21 @@ map<string, map<Slot, int>> PrcSelection::getDB(string type)
 	{
 		for (auto j = i->second.begin(); j != i->second.end(); j++)
 		{
-			auto dbInit = mHandler->getXMLData(i->first, j->first);
-			auto dbFinal = mHandler->getXMLData(i->first, mHandler->getBaseSlot(i->first, j->first));
+			string code;
+			Slot baseSlot;
+			if (!mHandler->getName(i->first).empty())
+			{
+				code = i->first;
+				baseSlot = mHandler->getBaseSlot(code, j->first);
+			}
+			else
+			{
+				code = mHandler->getRedirectCode(i->first);
+				baseSlot = mHandler->getBaseSlot(code, mHandler->getRedirectSlot(i->first, j->first));
+			}
+
+			auto dbInit = mHandler->getXMLData(code, j->first);
+			auto dbFinal = mHandler->getXMLData(code, baseSlot.getInt());
 
 			if (type == "cGroup")
 			{
@@ -671,7 +732,7 @@ map<string, map<Slot, int>> PrcSelection::getDB(string type)
 						result[i->first][j->first] = dbFinal.cGroup;
 					}
 				}
-				else if (dbInit.cGroup != dbFinal.cGroup)
+				else if (dbInit.cGroup != dbFinal.cGroup || mHandler->getName(i->first).empty())
 				{
 					result[i->first][j->first] = dbFinal.cGroup;
 				}
@@ -685,14 +746,14 @@ map<string, map<Slot, int>> PrcSelection::getDB(string type)
 						result[i->first][j->first] = dbFinal.cIndex;
 					}
 				}
-				else if (dbInit.cIndex != dbFinal.cIndex)
+				else if (dbInit.cIndex != dbFinal.cIndex || mHandler->getName(i->first).empty())
 				{
 					result[i->first][j->first] = dbFinal.cIndex;
 				}
 			}
 			else if (type == "nIndex")
 			{
-				auto message = mHandler->getMessage(i->first, j->first);
+				auto message = mHandler->getMessage(code, baseSlot);
 
 				if (
 					(j->first.getInt() == 0 && j->second.cssName->GetValue() != message.cssName)
@@ -707,6 +768,7 @@ map<string, map<Slot, int>> PrcSelection::getDB(string type)
 						&& j->second.stageName->GetValue() != message.stageName
 						)
 					|| j->second.announcer->GetValue() != "Default"
+					|| mHandler->getName(i->first).empty()
 					)
 				{
 					result[i->first][j->first] = j->first.getInt() + 8;
@@ -737,7 +799,18 @@ map<string, map<int, Name>> PrcSelection::getAnnouncers()
 	{
 		for (auto j = i->second.begin(); j != i->second.end(); j++)
 		{
-			Slot baseSlot = mHandler->getBaseSlot(i->first, j->first);
+			string code;
+			Slot baseSlot;
+			if (!mHandler->getName(i->first).empty())
+			{
+				code = i->first;
+				baseSlot = mHandler->getBaseSlot(code, j->first);
+			}
+			else
+			{
+				code = mHandler->getRedirectCode(i->first);
+				baseSlot = mHandler->getBaseSlot(code, mHandler->getRedirectSlot(i->first, j->first));
+			}
 
 			if (baseSlot.getInt() == -1 && (i->first == "elight_only" || i->first == "elight_first"))
 			{
@@ -751,8 +824,8 @@ map<string, map<int, Name>> PrcSelection::getAnnouncers()
 
 			if (baseSlot.getInt() != -1)
 			{
-				auto message = mHandler->getMessage(i->first, j->first);
-				auto db = mHandler->getXMLData(i->first, baseSlot);
+				auto message = mHandler->getMessage(code, j->first);
+				auto db = mHandler->getXMLData(code, baseSlot);
 
 				if (
 					(j->first.getInt() == 0 && j->second.cssName->GetValue() != message.cssName)
@@ -767,6 +840,7 @@ map<string, map<int, Name>> PrcSelection::getAnnouncers()
 						&& j->second.stageName->GetValue() != message.stageName
 						)
 					|| j->second.announcer->GetValue() != "Default"
+					|| mHandler->getName(i->first).empty()
 					)
 				{
 					if (j->second.announcer->GetValue() == "Default")

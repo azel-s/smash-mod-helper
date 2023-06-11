@@ -156,13 +156,21 @@ Path::Path(string path)
 
 				if (modelPos == string::npos || begPos != string::npos)
 				{
-					auto underscorePos = path.rfind("_c", begPos);
-					if (underscorePos != string::npos && underscorePos < begPos)
+					auto underscorePos = (modelPos != string::npos) ? path.rfind("_c", begPos) : path.rfind("_c");
+					if (underscorePos != string::npos && (modelPos != string::npos) ? (underscorePos < begPos) : (underscorePos > begPos))
 					{
 						try
 						{
 							size_t* temp = new size_t;
-							this->slot = Slot(stoi(path.substr(underscorePos + 2, begPos - underscorePos - 2), temp));
+							if (modelPos != string::npos)
+							{
+								this->slot = Slot(stoi(path.substr(underscorePos + 2, begPos - underscorePos - 2), temp));
+							}
+							else
+							{
+								this->slot = Slot(stoi(path.substr(underscorePos + 2), temp));
+								begPos = path.size();
+							}
 							if (*temp != begPos - underscorePos - 2)
 							{
 								this->slot = Slot(999);

@@ -18,9 +18,11 @@ private:
 	bool okay;
 
 	// Key: Character code, Value: Character name
-	unordered_map<string, string*> code_name;
+	unordered_map<string, string> code_name;
 	// Key: Character name, Value: Character code
-	unordered_map<string, string*> name_code;
+	unordered_map<string, string> name_code;
+	// Key: Character id, Value: Character code
+	unordered_map<int, string> id_code;
 
 	// Key: Character code, Value: (Key: Slot, Value: Name)
 	map<string, map<Slot, Name>> messages;
@@ -40,18 +42,18 @@ private:
 
 	/* --- Helper Functions --- */
 	void insertFiles(const json& tJson, map<string, set<Path>>& files, string type) const;
-	void insertCodeName(string code, string name);
+	void insertCodeNameId(string code, string name, int id);
 
 public:
 	/* --- CONSTRUCTOR/DESTRUCTOR --- */
 	VanillaHandler(string filePath = "Files/");
-	// INFO: Deletes dynamic strings for code/name.
-	~VanillaHandler();
 
 	/* --- GETTERS --- */
 	// Character code/name/message
 	string getName(string code) const;
+	string getName(int id) const;
 	string getCode(string name) const;
+	string getCode(int id) const;
 	Name getMessage(string code, Slot slot) const;
 
 	// JSON (and effect.data) Info
