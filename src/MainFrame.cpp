@@ -104,6 +104,7 @@ MainFrame::MainFrame(const wxString& title, string exe) :
 
 	auto selectAllByDefaultID = selection->AppendCheckItem(wxID_ANY, "Select all by default", "Enable to select all available file types by default on selection.")->GetId();
 	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, selectAllByDefaultID, wxID_ANY, new wxArgument("selectAllByDefault"));
+	selection->Check(selectAllByDefaultID, settings.selectAllByDefault);
 
 	auto baseSouceID = optionsMenu->AppendCheckItem(wxID_ANY, "Base Slots for c00-c07", "Adjusts ui-info of base slots (e.g. Align Kazuya suit correctly on non-suit)")->GetId();
 	this->Bind(wxEVT_MENU, &MainFrame::toggleSetting, this, baseSouceID, wxID_ANY, new wxArgument("baseSource"));
