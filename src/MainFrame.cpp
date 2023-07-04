@@ -68,12 +68,12 @@ MainFrame::MainFrame(const wxString& title, string exe) :
 	// Tools menu
 	wxMenu* toolsMenu = new wxMenu();
 	inkMenu = new wxMenuItem(toolsMenu, wxID_ANY, "Edit Inkling Colors", "Open a directory to enable this feature.");
-	// cssMenu = new wxMenuItem(toolsMenu, wxID_ANY, "CSS Redirect", "Open a directory to enable this feature.");
+	//cssMenu = new wxMenuItem(toolsMenu, wxID_ANY, "CSS Redirect", "Open a directory to enable this feature.");
 	this->Bind(wxEVT_MENU, &MainFrame::onInkPressed, this, toolsMenu->Append(inkMenu)->GetId());
-	// this->Bind(wxEVT_MENU, &MainFrame::onCSSPressed, this, toolsMenu->Append(cssMenu)->GetId());
+	//this->Bind(wxEVT_MENU, &MainFrame::onCSSPressed, this, toolsMenu->Append(cssMenu)->GetId());
 	this->Bind(wxEVT_MENU, &MainFrame::onBatchPressed, this, toolsMenu->Append(wxID_ANY, "Batch Config/PRCXML")->GetId());
 	inkMenu->Enable(false);
-	// cssMenu->Enable(false);
+	//cssMenu->Enable(false);
 
 	// Options Menu
 	wxMenu* optionsMenu = new wxMenu();
@@ -477,7 +477,7 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 
 			if (settings.preview)
 			{
-				if (!codes.empty() && slot.getInt() != 999)
+				if (!codes.empty() && slot.getInt() != 999 && codes[0] != "element")
 				{
 					string code = codes[0].ToStdString();
 
@@ -500,7 +500,20 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 
 						string path1 = mHandler.getPath() + "/ui/replace/chara/chara_" + arr[i] + "/chara_" + arr[i] + "_" + code + "_" + (i == 3 ? "00" : slot.getString());
 						string path2 = mHandler.getPath() + "/ui/replace_patch/chara/chara_" + arr[i] + "/chara_" + arr[i] + "_" + code + "_" + (i == 3 ? "00" : slot.getString());
+						string path3 = "";
+						string path4 = "";
+						string codeT;
 						string command;
+
+						if (code == "eflame_first" || code == "elight_first")
+						{
+							codeT = code.substr(0, 7) + "only";
+
+							mHandler.wxLog(codeT);
+
+							path3 = mHandler.getPath() + "/ui/replace/chara/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codeT + "_" + (i == 3 ? "00" : slot.getString());
+							path4 = mHandler.getPath() + "/ui/replace_patch/chara/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codeT + "_" + (i == 3 ? "00" : slot.getString());
+						}
 
 						if (fs::exists(path1 + ".bntx"))
 						{
@@ -511,6 +524,18 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 						else if (fs::exists(path2 + ".bntx"))
 						{
 							wxExecute("Files/textures/ultimate_tex_cli.exe \"" + path2 + ".bntx\" " +
+								"\"" + "Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + code +
+								"_" + (i == 3 ? "00" : slot.getString()) + ".png\"", wxEXEC_SYNC | wxEXEC_NODISABLE | wxEXEC_HIDE_CONSOLE);
+						}
+						else if (!path3.empty() && fs::exists(path3 + ".bntx"))
+						{
+							wxExecute("Files/textures/ultimate_tex_cli.exe \"" + path3 + ".bntx\" " +
+								"\"" + "Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + code +
+								"_" + (i == 3 ? "00" : slot.getString()) + ".png\"", wxEXEC_SYNC | wxEXEC_NODISABLE | wxEXEC_HIDE_CONSOLE);
+						}
+						else if (!path4.empty() && fs::exists(path4 + ".bntx"))
+						{
+							wxExecute("Files/textures/ultimate_tex_cli.exe \"" + path4 + ".bntx\" " +
 								"\"" + "Files/textures/modded/chara_" + arr[i] + "/chara_" + arr[i] + "_" + code +
 								"_" + (i == 3 ? "00" : slot.getString()) + ".png\"", wxEXEC_SYNC | wxEXEC_NODISABLE | wxEXEC_HIDE_CONSOLE);
 						}
@@ -644,6 +669,10 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 				else if (code == "elight")
 				{
 					code = "elight_first";
+				}
+				else if (code == "element")
+				{
+					code = "random";
 				}
 
 				updateBitmap(initPreview.chara_1, "Files/textures/vanilla/chara_1/chara_1_" + code + "_" + slot.getString() + ".png", 345, 345);

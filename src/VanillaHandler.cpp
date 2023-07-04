@@ -171,9 +171,12 @@ VanillaHandler::VanillaHandler(string filePath)
 
 void VanillaHandler::insertCodeNameId(string code, string name, int id)
 {
-	code_name[code] = name;
-	name_code[name] = code;
-	id_code[id] = code;
+	if (id != 115 && id != 116 && id != 117 && id != 118)
+	{
+		code_name[code] = name;
+		name_code[name] = code;
+		id_code[id] = code;
+	}
 }
 
 string VanillaHandler::getName(string code) const

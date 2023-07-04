@@ -2348,7 +2348,12 @@ void ModHandler::create_message_xmsbt(map<string, map<Slot, Name>>& names)
 						outputUTF(msgUTF, "</text>");
 						outputUTF(msgUTF, "\n\t</entry>");
 
-						if (i->first != "eflame_first" && i->first != "elight_first")
+						if (
+							i->first != "eflame_first"
+							&& i->first != "elight_first"
+							&& i->first != "pzenigame"
+							&& i->first != "plizardon"
+							&& i->first != "pfushigisou")
 						{
 							outputUTF(msgUTF, "\n\t<entry label=\"nam_stage_name_" + nIndex + "_" + i->first + "\">");
 							outputUTF(msgUTF, "\n\t\t<text>");
@@ -2766,7 +2771,16 @@ map<string, map<int, CssData>> ModHandler::read_prcxml_css()
 				{
 					int begin = line.find("\"") + 1;
 					int end = line.find("\"", begin);
-					currData.code = getCode(stoi(line.substr(begin, end - begin)));
+
+					try
+					{
+						int index = stoi(line.substr(begin, end - begin));
+						currData.code = getCode(index);
+					}
+					catch (...)
+					{
+						currData.code = line.substr(begin, end - begin);
+					}
 
 					action = true;
 				}
