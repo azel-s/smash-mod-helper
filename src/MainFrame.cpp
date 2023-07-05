@@ -509,8 +509,6 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 						{
 							codeT = code.substr(0, 7) + "only";
 
-							mHandler.wxLog(codeT);
-
 							path3 = mHandler.getPath() + "/ui/replace/chara/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codeT + "_" + (i == 3 ? "00" : slot.getString());
 							path4 = mHandler.getPath() + "/ui/replace_patch/chara/chara_" + arr[i] + "/chara_" + arr[i] + "_" + codeT + "_" + (i == 3 ? "00" : slot.getString());
 						}
