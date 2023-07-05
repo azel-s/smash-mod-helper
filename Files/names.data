@@ -88,11 +88,15 @@ tantan, Min Min, 111
 pickel, Steve, 112
 edge, Sephiroth, 113
 element, Rex, 114
-eflame, Pyra, 1151
-elight, Mythra, 1161
 flame_first, Pyra, 115
+eflame_first, Pyra, 1151
 light_first, Mythra, 116
+elight_first, Mythra, 1161
 flame_only, Pyra, 117
+eflame_only, Pyra, 1171
 light_only, Mythra, 118
+elight_only, Mythra, 1181
+eflame, Pyra, 1152
+elight, Mythra, 1162
 demon, Kazuya, 119
 trail, Sora, 120
