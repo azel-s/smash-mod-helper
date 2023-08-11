@@ -223,7 +223,24 @@ void ModHandler::setBaseSlots(map<string, map<Slot, set<Slot>>> slots)
 
 void ModHandler::setCssRedirects(map<string, map<string, map<Slot, Slot>>> redirects)
 {
-	this->css_redirects = redirects;
+	this->css_redirects = redirects;/*
+
+	for (auto i = css_redirects.begin(); i != css_redirects.end(); i++)
+	{
+		if (!getName(i->first).empty())
+		{
+			for (auto j = i->second.begin(); j != i->second.end(); j++)
+			{
+				if (!getName(j->first).empty())
+				{
+					for (auto k = j->second.begin(); k != j->second.end(); k++)
+					{
+						
+					}
+				}
+			}
+		}
+	}*/
 }
 
 void ModHandler::setDebug(bool debug)
@@ -411,6 +428,21 @@ Slot ModHandler::getBaseSlot(string code, Slot slot) const
 		}
 	}
 	return Slot(-1);
+}
+
+map<string, map<Slot, set<Slot>>> ModHandler::getBaseSlots() const
+{
+	map<string, map<Slot, set<Slot>>> result;
+
+	for (auto i = slots.begin(); i != slots.end(); i++)
+	{
+		for (auto j = i->second.begin(); j != i->second.end(); j++)
+		{
+			result[i->first][j->second].insert(j->first);
+		}
+	}
+
+	return result;
 }
 
 /* --- GETTERS (WX) --- */
@@ -2515,10 +2547,165 @@ void ModHandler::create_db_prcxml
 						status = 0;
 					}
 
-					// Skip everything else as demon is the last code.
+					// Skip everything else as trail is the last code.
 					if (currIndex == "120")
 					{
 						break;
+					}
+				}
+			}
+
+			for (auto i = maxSlots.begin(); i != maxSlots.end(); i++)
+			{
+				// TODO: Change
+				int index = 121;
+
+				string oldCode = this->getRedirectCode(i->first);
+				if (!oldCode.empty())
+				{
+					uiVanilla.close();
+					uiVanilla.clear();
+					uiVanilla.open("Files/prc/ui_chara_db.xml");
+
+					while (!uiVanilla.eof())
+					{
+						getline(uiVanilla, line);
+
+						if (line.find("\"name_id\"") != string::npos)
+						{
+							int begin = line.find(">") + 1;
+							int end = line.find("<", begin);
+							code = line.substr(begin, end - begin);
+
+							if (code == oldCode)
+							{
+								uiEdit << "\n\t\t<struct index=\"" << to_string(index) << "\">";
+								uiEdit << "\n\t\t\t<hash40 hash=\"ui_chara_id\">ui_chara_" << i->first << "</hash40>";
+								uiEdit << "\n\t\t\t<string hash=\"name_id\">" << i->first << "</string>";
+
+								while (!uiVanilla.eof())
+								{
+									getline(uiVanilla, line);
+
+									if (line.find("color_num") != string::npos)
+									{
+										uiEdit << "\n\t\t\t<byte hash=\"color_num\">" << to_string(i->second.getInt()) << "</byte>";
+									}
+									else if (line.find("c00_index") != string::npos)
+									{
+										try
+										{
+											for (auto j = cIndex[i->first].begin(); j != cIndex[i->first].end(); j++)
+											{
+												uiEdit << "\n\t\t\t<byte hash=\"c" << j->first.getString() << "_index\">" << to_string(j->second) << "</byte>";
+											}
+										}
+										catch (...)
+										{
+											wxLog("> ERROR: Could not find cXX_index for " + i->first + "!");
+										}
+
+										for (int j = 0; j < 7; j++)
+										{
+											getline(uiVanilla, line);
+										}
+										continue;
+									}
+									else if (line.find("c00_index") != string::npos || line.find("n00_index") != string::npos || line.find("c00_group") != string::npos)
+									{
+										map<string, map<Slot, int>>* typeMap;
+										string typeBeg;
+										string typeEnd;
+										if (line.find("c00_index") != string::npos)
+										{
+											typeMap = &cIndex;
+											typeBeg = 'c';
+											typeEnd = "_index";
+										}
+										else if (line.find("n00_index") != string::npos)
+										{
+											typeMap = &nIndex;
+											typeBeg = 'n';
+											typeEnd = "_index";
+										}
+										else
+										{
+											typeMap = &cGroup;
+											typeBeg = 'c';
+											typeEnd = "_group";
+										}
+
+										try
+										{
+											for (auto j = (*typeMap)[i->first].begin(); j != (*typeMap)[i->first].end(); j++)
+											{
+												uiEdit << "\n\t\t\t<byte hash=\"" << typeBeg << j->first.getString() << typeEnd << "\">" << to_string(j->second) << "</byte>";
+											}
+										}
+										catch (...)
+										{
+											wxLog("> ERROR: Could not find " + typeBeg + "XX" + typeEnd + " for " + i->first + "!");
+										}
+
+										for (int j = 0; j < 7; j++)
+										{
+											getline(uiVanilla, line);
+										}
+										continue;
+									}
+									else if (line.find("characall_label_") != string::npos)
+									{
+										bool isArticle = line.find("characall_label_c") == string::npos;
+
+										try
+										{
+											for (auto j = announcers[i->first].begin(); j != announcers[i->first].end(); j++)
+											{
+												if (isArticle)
+												{
+													uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_article_c" << Slot(j->first).getString() << "\">" << j->second.article << "</hash40>";
+												}
+												else
+												{
+													uiEdit << "\n\t\t\t<hash40 hash=\"characall_label_c" << Slot(j->first).getString() << "\">" << j->second.announcer << "</hash40>";
+												}
+											}
+										}
+										catch (...)
+										{
+											wxLog("> ERROR: Could not find announcer info for " + i->first + "!");
+										}
+
+										for (int j = 0; j < 7; j++)
+										{
+											getline(uiVanilla, line);
+										}
+										continue;
+									}
+									else if(line.find("struct>") == string::npos)
+									{
+										line = line.substr(6);
+										uiEdit << "\n\t\t\t" << line;
+									}
+									else
+									{
+										try
+										{
+											uiEdit << "\n\t\t\t<byte hash=\"color_start_index\">" << to_string(css_redirects[i->first][oldCode].begin()->second.getInt()) << "</byte>";
+											uiEdit << "\n\t\t\t<hash40 hash=\"original_ui_chara_hash\">ui_chara_" << oldCode << "</hash40>";
+											uiEdit << "\n\t\t</struct>";
+										}
+										catch (...)
+										{
+											wxLog("> ERROR: Could not find starting slot for " + i->first + "!");
+										}
+										break;
+									}
+								}
+
+								// Do stuff
+							}
+						}
 					}
 				}
 			}

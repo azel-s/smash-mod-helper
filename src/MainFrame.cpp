@@ -68,12 +68,12 @@ MainFrame::MainFrame(const wxString& title, string exe) :
 	// Tools menu
 	wxMenu* toolsMenu = new wxMenu();
 	inkMenu = new wxMenuItem(toolsMenu, wxID_ANY, "Edit Inkling Colors", "Open a directory to enable this feature.");
-	//cssMenu = new wxMenuItem(toolsMenu, wxID_ANY, "CSS Redirect", "Open a directory to enable this feature.");
+	cssMenu = new wxMenuItem(toolsMenu, wxID_ANY, "CSS Redirect", "Open a directory to enable this feature.");
 	this->Bind(wxEVT_MENU, &MainFrame::onInkPressed, this, toolsMenu->Append(inkMenu)->GetId());
-	//this->Bind(wxEVT_MENU, &MainFrame::onCSSPressed, this, toolsMenu->Append(cssMenu)->GetId());
+	this->Bind(wxEVT_MENU, &MainFrame::onCSSPressed, this, toolsMenu->Append(cssMenu)->GetId());
 	this->Bind(wxEVT_MENU, &MainFrame::onBatchPressed, this, toolsMenu->Append(wxID_ANY, "Batch Config/PRCXML")->GetId());
 	inkMenu->Enable(false);
-	//cssMenu->Enable(false);
+	cssMenu->Enable(false);
 
 	// Options Menu
 	wxMenu* optionsMenu = new wxMenu();
@@ -718,8 +718,8 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 			inkMenu->SetHelp("Add or modify colors. Required for additional slots.");
 		}
 
-		//cssMenu->Enable();
-		//cssMenu->SetHelp("Renames ui files' character code to selected code. Useful for CSS Addition.");
+		cssMenu->Enable();
+		cssMenu->SetHelp("Renames ui files' character code to selected code. Useful for CSS Addition.");
 	}
 	else
 	{
@@ -730,8 +730,8 @@ void MainFrame::updateControls(bool character, bool fileType, bool initSlot, boo
 		inkMenu->Enable(false);
 		inkMenu->SetHelp("Open a directory to enable this feature.");
 
-		//cssMenu->Enable(false);
-		//cssMenu->SetHelp("Open a directory to enable this feature.");
+		cssMenu->Enable(false);
+		cssMenu->SetHelp("Open a directory to enable this feature.");
 	}
 
 	lPanel->SendSizeEvent();
@@ -931,6 +931,10 @@ void MainFrame::onBrowse(wxCommandEvent& evt)
 		if (!fs::is_directory(path))
 		{
 			path = "";
+		}
+		else if (path[path.size() - 1] == '/' || path[path.size() - 1] == '\\')
+		{
+			path = path.substr(0, path.size() - 1);
 		}
 	}
 	else
@@ -1172,14 +1176,13 @@ void MainFrame::onCSSPressed(wxCommandEvent& evt)
 				{
 					if (k == 7)
 					{
-						// TODO:
-						/*string oldF = mHandler.getPath() + "/ui/replace/chara/chara_7/chara_7_" + i->first + "_00.bntx";
+						string oldF = mHandler.getPath() + "/ui/replace/chara/chara_7/chara_7_" + i->first + "_00.bntx";
 
 						if (fs::exists(oldF))
 						{
-							string newF = mHandler.getPath() + "/ui/replace/chara/chara_7/chara_7_" + j->first + "_00.bntx";
+							string newF = mHandler.getPath() + "/ui/replace/chara/chara_7/chara_7_" + j->second.code + "_00.bntx";
 							fs::rename(oldF, newF);
-						}*/
+						}
 					}
 					else
 					{
@@ -1198,8 +1201,11 @@ void MainFrame::onCSSPressed(wxCommandEvent& evt)
 			}
 		}
 
+
+		auto oldBase = mHandler.getBaseSlots();
 		mHandler.readFiles(mHandler.getPath());
 		mHandler.setCssRedirects(dlg.getRedirects());
+		mHandler.setBaseSlots(oldBase);
 		updateControls(true, true, true, true, false);
 
 		onPrcPressed(&res);

@@ -157,12 +157,19 @@ CssRedirectSelection::CssRedirectSelection(wxWindow* parent, wxWindowID id,
 {
 	this->mHandler = mHandler;
 	auto slots = mHandler->getAllSlots(false);
+	vector<string> temp;
+
 	for (auto i = slots.begin(); i != slots.end(); i++)
 	{
 		if (mHandler->getName(i->first).empty())
 		{
-			slots.extract(i->first);
+			temp.push_back(i->first);
 		}
+	}
+
+	for (auto v : temp)
+	{
+		slots.extract(v);
 	}
 
 	auto css = mHandler->read_prcxml_css();
@@ -326,10 +333,13 @@ map<string, map<string, map<Slot, Slot>>> CssRedirectSelection::getRedirects()
 		{
 			for (int j = 0; j < iter->data->right.getInt() + 1 - iter->data->left.getInt(); j++)
 			{
-				result[iter->data->charcode->GetValue().ToStdString()][i->first][Slot(j)] = iter->data->left.getInt() + j;
-				if (result[iter->data->charcode->GetValue().ToStdString()][i->first][Slot(j)].getInt() == -1)
+				if (mHandler->getName(iter->data->charcode->GetValue().ToStdString()).empty())
 				{
-					result[iter->data->charcode->GetValue().ToStdString()][i->first][Slot(j)] = Slot(00);
+					result[iter->data->charcode->GetValue().ToStdString()][i->first][Slot(j)] = iter->data->left.getInt() + j;
+					if (result[iter->data->charcode->GetValue().ToStdString()][i->first][Slot(j)].getInt() == -1)
+					{
+						result[iter->data->charcode->GetValue().ToStdString()][i->first][Slot(j)] = Slot(00);
+					}
 				}
 			}
 			iter = iter->next;

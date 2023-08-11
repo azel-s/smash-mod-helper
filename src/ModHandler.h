@@ -19,7 +19,7 @@ private:
 	unordered_map<string, unordered_map<string, map<Slot, set<Path>>>> files;
 	// Access Order: code, final-slot, base-slot,
 	unordered_map<string, map<Slot, Slot>> slots;
-	// Access Order: new-code, code
+	// Access Order: new-code, old-code, base-slot, final-slot
 	map<string, map<string, map<Slot, Slot>>> css_redirects;
 
 	wxLogTextCtrl* log;
@@ -49,6 +49,7 @@ public:
 	set<Slot> getAddSlots(string code)  const;
 	map<string, set<Slot>> getAddSlots() const;
 	Slot getBaseSlot(string code, Slot slot) const;
+	map<string, map<Slot, set<Slot>>> getBaseSlots() const;
 	InklingColor getInklingColor(Slot slot);
 	Name getMessage(string code, Slot slot) const;
 	Slot getMaxSlot(string code) const;

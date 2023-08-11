@@ -30,6 +30,14 @@ ice_climber 04 article vc_narration_characall_iceclimber_article
 ice_climber 05 article vc_narration_characall_iceclimber_article
 ice_climber 06 article vc_narration_characall_iceclimber_article
 ice_climber 07 article vc_narration_characall_iceclimber_article
+roy 00 label vc_narration_characall_roy_append
+roy 01 label vc_narration_characall_roy_append
+roy 02 label vc_narration_characall_roy_append
+roy 03 label vc_narration_characall_roy_append
+roy 04 label vc_narration_characall_roy_append
+roy 05 label vc_narration_characall_roy_append
+roy 06 label vc_narration_characall_roy_append
+roy 07 label vc_narration_characall_roy_append
 pitb 00 article vc_narration_characall_pitb_article
 pitb 01 article vc_narration_characall_pitb_article
 pitb 02 article vc_narration_characall_pitb_article

@@ -34,14 +34,20 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 		allSlots.extract("kirby");
 	}
 
+	vector<string> temp;
 	for (auto i = allSlots.begin(); i != allSlots.end(); i++)
 	{
 		if (mHandler->getName(i->first).empty())
 		{
-			allSlots.extract(i->first);
+			temp.push_back(i->first);
 		}
 	}
+	for (auto v : temp)
+	{
+		allSlots.extract(v);
+	}
 
+	map<string, int> cssMax;
 	if (css || settings.readBase)
 	{
 		map<string, map<int, CssData>> tmp;
@@ -52,18 +58,36 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 			css = &tmp;
 		}
 
+		temp.clear();
+
 		for (auto i = css->begin(); i != css->end(); i++)
 		{
 			for (auto j = i->second.begin(); j != i->second.end(); j++)
 			{
 				if (allSlots.find(j->second.code) != allSlots.end())
 				{
-					allSlots.extract(j->second.code);
+					for (auto k = allSlots[j->second.code].begin(); k != allSlots[j->second.code].end(); k++)
+					{
+						if (k->getInt() >= j->second.color_start_index + j->second.color_num)
+						{
+							temp.push_back(k->getString());
+						}
+					}
+				}
+
+				cssMax[j->second.code] = j->second.color_num;
+
+				for (auto v : temp)
+				{
+					allSlots[j->second.code].extract(Slot(v));
 				}
 
 				for (int k = 0; k < j->second.color_num; k++)
 				{
-					allSlots[j->second.code].insert(Slot(k));
+					if (mHandler->getName(j->second.code).empty())
+					{
+						allSlots[j->second.code].insert(Slot(k));
+					}
 				}
 			}
 		}
@@ -183,11 +207,15 @@ PrcSelection::PrcSelection(wxWindow* parent, wxWindowID id,
 			wxSpinCtrl* userSlot;
 			if (i->first == "element" || i->first == "eflame" || i->first == "elight")
 			{
-				userSlot = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, FromDIP(wxSize(50, -1)), wxSP_WRAP, 8, 255, rpm);
+				userSlot = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, FromDIP(wxSize(50, -1)), wxSP_WRAP, 1, 255, rpm);
+			}
+			else if (i->second.empty())
+			{
+				userSlot = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, FromDIP(wxSize(50, -1)), wxSP_WRAP, 1, 255, cssMax.find(i->first) != cssMax.end() ? cssMax[i->first] : 8);
 			}
 			else
 			{
-				userSlot = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, FromDIP(wxSize(50, -1)), wxSP_WRAP, 8, 255, i->second.rbegin()->getInt() + 1);
+				userSlot = new wxSpinCtrl(panel, wxID_ANY, "", wxDefaultPosition, FromDIP(wxSize(50, -1)), wxSP_WRAP, 1, 255, i->second.rbegin()->getInt() + 1);
 			}
 
 			maxSlots.push_back(userSlot);
@@ -610,7 +638,7 @@ map<string, Slot> PrcSelection::getMaxSlots()
 		int index = 0;
 		for (auto i = allSlots.begin(); i != allSlots.end(); i++)
 		{
-			if (maxSlots[index]->GetValue() != 8)
+			if (maxSlots[index]->GetValue() != 8 || mHandler->getName(i->first).empty())
 			{
 				if (i->first == "eflame")
 				{

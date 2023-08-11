@@ -23,13 +23,20 @@ BaseSelection::BaseSelection(wxWindow* parent, wxWindowID id,
     slotList.Add("c06");
     slotList.Add("c07");
 
+    vector<string> temp;
+
     slots = settings.baseSource ? mHandler->getAllSlots(false) : mHandler->getAddSlots();
     for (auto i = slots.begin(); i != slots.end(); i++)
     {
         if (mHandler->getName(i->first).empty())
         {
-            slots.extract(i->first);
+            temp.push_back(i->first);
         }
+    }
+
+    for (auto v : temp)
+    {
+        slots.extract(v);
     }
 
     map<string, map<Slot, Slot>> prevBaseSlots;
