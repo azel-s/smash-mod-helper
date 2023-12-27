@@ -1,83 +1,77 @@
 #pragma once
-#include "SmashData.h"
+#include "ModHandler.h"
 #include "HelperStructures.h"
 #include <wx/wx.h>
+#include <wx/splitter.h>
 #include <wx/spinctrl.h>
 using std::vector;
+
+class App : public wxApp
+{
+public:
+	bool OnInit();
+};
 
 class MainFrame : public wxFrame
 {
 private:
-	// Data Variables
-	SmashData data;
-
-	// Settings
-	Settings settings;
-
-	// GUI Parts
-	wxPanel* panel;
-	wxMenuBar* menuBar;
+	/* --- GUI Parts --- */
+	wxSplitterWindow* splitter;
+	wxPanel* lPanel;
+	wxPanel* rPanel;
 	wxMenuItem* inkMenu;
-	wxMenuItem* deskMenu;
-
+	wxMenuItem* cssMenu;
 	wxBrowse browse;
 	wxListBox* charsList;
-	wxCheckBox** fileTypeBoxes;
+	vector<wxCheckBox*> fileTypeBoxes;
 	wxInitSlots initSlots;
 	wxFinalSlots finalSlots;
 	wxButtons buttons;
-	wxLogTextCtrl* log;
 	wxTextCtrl* logWindow;
-	wxStatusBar* statusBar;
+	wxLogTextCtrl* log;
+	wxPreview initPreview;
+	wxPreview finalPreview;
+	wxBoxSizer* sizerM;
 
-	string initPath;
+	/* --- Data Variables --- */
+	ModHandler mHandler;
+	Settings settings;
+	string exe;
+	bool baseUpToDate;
+	bool gammaFix = true;
 
-	// Reset Helpers
-	void resetFileTypeBoxes();
-	void resetButtons();
+	/* --- HELPER FUNCTIONS --- */
+	// Controls
+	void updateControls(bool character = true, bool fileType = true, bool initSlot = true, bool finalSlot = true, bool newInkSlot = false);
+	void updateBitmap(wxStaticBitmap* bitmap, string path, int width, int height, bool gammaFix = true);
 
-	// Getters
-	wxArrayString getSelectedFileTypes();
-	bool isFileTypeSelected();
+	void onPrcPressed(map<string, map<int, CssData>>* css = nullptr);
 
 	// Settings
 	void readSettings();
 	void updateSettings();
 
-	// Test Function
-	void onTestPressed(wxCommandEvent& evt);
-
-	// Updaters/Modifiers
-	void updateFileTypeBoxes();
-	void updateButtons();
-	void updateInkMenu();
-
-	// Bind Functions
-	void togglePRCOutput(wxCommandEvent& evt);
-	void toggleBaseReading(wxCommandEvent& evt);
-	void toggleNameReading(wxCommandEvent& evt);
-	void toggleInkReading(wxCommandEvent& evt);
+	/* --- BOUND FUNCTIONS --- */
+	void toggleSetting(wxCommandEvent& evt);
 	void onBrowse(wxCommandEvent& evt);
-	void onCharSelect(wxCommandEvent& evt);
-	void onFileTypeSelect(wxCommandEvent& evt);
-	void onModSlotSelect(wxCommandEvent& evt);
-	void onUserSlotSelect(wxCommandEvent& evt);
-	void onMovePressed(wxCommandEvent& evt);
-	void onDuplicatePressed(wxCommandEvent& evt);
-	void onDeletePressed(wxCommandEvent& evt);
+	void onSelect(wxCommandEvent& evt);
+	void onActionPressed(wxCommandEvent& evt);
+	void onBatchPressed(wxCommandEvent& evt);
 	void onLogPressed(wxCommandEvent& evt);
-	void onConfigPressed(wxCommandEvent& evt);
 	void onBasePressed(wxCommandEvent& evt);
-	void onInkPressed(wxCommandEvent& evt);
-	void onDeskPressed(wxCommandEvent& evt);
+	void onConfigPressed(wxCommandEvent& evt);
 	void onPrcPressed(wxCommandEvent& evt);
+	void onInkPressed(wxCommandEvent& evt);
+	void onCSSPressed(wxCommandEvent& evt);
+	void onGammaPressed(wxMouseEvent& event);
 	void onMenuClose(wxCommandEvent& evt);
-	void onClose(wxCloseEvent& evt);
-
-	// Destructor
-	~MainFrame();
 
 public:
-	// Constructor
-	MainFrame(const wxString& title);
+	/* --- GETTERS ---	*/
+	wxArrayString getSelectedCharCodes();
+	wxArrayString getSelectedFileTypes();
+
+public:
+	/* --- CONSTRUCTOR ---	*/
+	MainFrame(const wxString& title, string exe);
 };

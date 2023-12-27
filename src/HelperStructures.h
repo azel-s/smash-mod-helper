@@ -1,18 +1,107 @@
 #pragma once
 #include <wx/wx.h>
 #include <wx/spinctrl.h>
+#include <vector>
 #include <string>
-#include <locale>
+#include <map>
+#include <set>
 using namespace std;
+
+class wxArgument : public wxObject
+{
+public:
+	wxArgument(string str = "", int num = 0) : str(str), num(num) {}
+
+	string str;
+	int num;
+};
+
+struct CssData
+{
+	string code = "";
+	string original_ui_chara_hash = "";
+	int color_num = 0;
+	int color_start_index = 0;
+};
+
+class Slot
+{
+private:
+	int slot;
+
+public:
+	Slot();
+	Slot(int slot);
+	Slot(string slot);
+
+	int getInt() const;
+	string getString() const;
+
+	void set(Slot slot);
+	void set(int slot);
+	void set(string slot);
+
+	bool operator <(const Slot& rhs) const;
+};
+
+class Path
+{
+private:
+	string path;
+	string type;
+	Slot slot;
+public:
+	Path(string path = "");
+
+	string getPath() const;
+	string getType() const;
+	Slot getSlot() const;
+
+	void setSlot(Slot slot);
+	void setSlot(int slot);
+	void setSlot(string slot);
+
+	bool operator <(const Path& rhs) const;
+};
 
 struct Settings
 {
-	bool prcxOutput = false;
-	bool showLogWindow = false;
+	bool preview = true;
+	bool baseSource = true;
+	bool selectionType = false;
+	bool selectAllByDefault = false;
 
 	bool readBase = true;
 	bool readNames = true;
 	bool readInk = true;
+};
+
+struct Config
+{
+	// files
+	vector<string> newDirInfos;
+	// files
+	vector<string> newDirInfosBase;
+	// code, slot, base-file, files
+	map<string, set<string>> shareToVanilla;
+	// code, slot, base-file, files
+	map<string, set<string>> shareToAdded;
+	// code, slot, section-label, files
+	map<string, set<string>> newDirFiles;
+};
+
+struct DBData
+{
+	int nIndex;
+	int cIndex;
+	int cGroup;
+
+	string label;
+	string article;
+
+	// Constructors
+	DBData();
+	DBData(string code);
 };
 
 struct wxBrowse
@@ -42,7 +131,16 @@ struct wxButtons
 	wxButton* log;
 	wxButton* base;
 	wxButton* config;
-	wxButton* prc;
+	wxButton* prcxml;
+};
+
+struct wxPreview
+{
+	wxStaticBitmap* chara_1;
+	wxStaticBitmap* chara_2;
+	wxStaticBitmap* chara_4;
+	wxStaticBitmap* chara_7;
+	wxStaticText* text;
 };
 
 struct Name
@@ -52,6 +150,7 @@ struct Name
 	wxString vsName;
 	wxString stageName;
 	wxString announcer;
+	wxString article;
 };
 
 struct wxName
@@ -68,15 +167,6 @@ struct InklingColor
 	wxColour effect;
 	wxColour arrow;
 
-	InklingColor()
-	{
-		effect.Set(0, 0, 0);
-		arrow.Set(0, 0, 0);
-	}
-
-	InklingColor(wxColour effect, wxColour arrow)
-	{
-		this->effect.SetRGB(effect.GetRGB());
-		this->arrow.SetRGB(arrow.GetRGB());
-	}
+	InklingColor() : effect(0, 0, 0), arrow(0, 0, 0) {}
+	InklingColor(wxColour effect, wxColour arrow) : effect(effect), arrow(arrow) {}
 };

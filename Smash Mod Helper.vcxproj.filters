@@ -18,45 +18,60 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\App.h">
+    <ClInclude Include="src\MainFrame.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ModHandler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\VanillaHandler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\HelperStructures.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\MainFrame.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\SmashData.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\PrcSelection.h">
+    <ClInclude Include="src\Dialogs\BaseSelection.h">
       <Filter>Header Files\Dialogs</Filter>
     </ClInclude>
-    <ClInclude Include="src\InkSelection.h">
+    <ClInclude Include="src\Dialogs\InkSelection.h">
       <Filter>Header Files\Dialogs</Filter>
     </ClInclude>
-    <ClInclude Include="src\BaseSelection.h">
+    <ClInclude Include="src\Dialogs\PrcSelection.h">
+      <Filter>Header Files\Dialogs</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Dialogs\BatchSelection.h">
+      <Filter>Header Files\Dialogs</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Dialogs\CssRedirectSelection.h">
       <Filter>Header Files\Dialogs</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\App.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\MainFrame.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\SmashData.cpp">
+    <ClCompile Include="src\ModHandler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\BaseSelection.cpp">
+    <ClCompile Include="src\VanillaHandler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\HelperStructures.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Dialogs\BaseSelection.cpp">
       <Filter>Source Files\Dialogs</Filter>
     </ClCompile>
-    <ClCompile Include="src\InkSelection.cpp">
+    <ClCompile Include="src\Dialogs\InkSelection.cpp">
       <Filter>Source Files\Dialogs</Filter>
     </ClCompile>
-    <ClCompile Include="src\PrcSelection.cpp">
+    <ClCompile Include="src\Dialogs\PrcSelection.cpp">
+      <Filter>Source Files\Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Dialogs\BatchSelection.cpp">
+      <Filter>Source Files\Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Dialogs\CssRedirectSelection.cpp">
       <Filter>Source Files\Dialogs</Filter>
     </ClCompile>
   </ItemGroup>
